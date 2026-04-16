@@ -1,8 +1,10 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import pool from '../db';
 
-const migrationsPath = path.join(import.meta.dirname, '../../migrations');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const migrationsPath = path.join(__dirname, '../../migrations');
 
 /**
  * Utilidad para ejecutar migraciones de base de datos automáticamente
