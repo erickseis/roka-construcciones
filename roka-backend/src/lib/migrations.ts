@@ -1,10 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import pool from '../db';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const migrationsPath = path.join(import.meta.dirname, '../../migrations');
 
 /**
  * Utilidad para ejecutar migraciones de base de datos automáticamente
@@ -25,8 +23,6 @@ export async function runMigrations() {
     `);
 
     // 2. Leer archivos de la carpeta migrations
-    const migrationsPath = path.join(__dirname, '../../migrations');
-    
     if (!fs.existsSync(migrationsPath)) {
       console.warn('⚠️ La carpeta de migraciones no existe.');
       return;
