@@ -1,0 +1,342 @@
+import React, { useState } from 'react';
+import { motion } from 'motion/react';
+import { Plus, FileText, Eye, Trash2 } from 'lucide-react';
+import { DataTable } from '../ui/DataTable';
+import { StatusBadge } from '../ui/StatusBadge';
+import { Modal } from '../ui/Modal';
+import { useApi } from '@/hooks/useApi';
+import { getSolicitudes, createSolicitud, deleteSolicitud, getProyectos } from '@/lib/api';
+
+export default function SolicitudesPage() {
+  const [showForm, setShowForm] = useState(false);
+  const [showDetail, setShowDetail] = useState<any | null>(null);
+  const { data: solicitudes, loading, refetch } = useApi(() => getSolicitudes(), []);
+  const { data: proyectos } = useApi(() => getProyectos(), []);
+
+  // Form state
+  const [form, setForm] = useState({
+    proyecto_id: '',
+    solicitante: '',
+    items: [{ nombre_material: '', cantidad_requerida: '', unidad: 'Unidades' }],
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const addItem = () => {
+    setForm(prev => ({
+      ...prev,
+      items: [...prev.items, { nombre_material: '', cantidad_requerida: '', unidad: 'Unidades' }],
+    }));
+  };
+
+  const removeItem = (idx: number) => {
+    setForm(prev => ({ ...prev, items: prev.items.filter((_, i) => i !== idx) }));
+  };
+
+  const updateItem = (idx: number, field: string, value: string) => {
+    setForm(prev => ({
+      ...prev,
+      items: prev.items.map((item, i) => (i === idx ? { ...item, [field]: value } : item)),
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await createSolicitud({
+        proyecto_id: Number(form.proyecto_id),
+        solicitante: form.solicitante,
+        items: form.items.map(i => ({
+          nombre_material: i.nombre_material,
+          cantidad_requerida: Number(i.cantidad_requerida),
+          unidad: i.unidad,
+        })),
+      });
+      setShowForm(false);
+      setForm({
+        proyecto_id: '',
+        solicitante: '',
+        items: [{ nombre_material: '', cantidad_requerida: '', unidad: 'Unidades' }],
+      });
+      refetch();
+    } catch (err) {
+      alert('Error al crear solicitud');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('¿Eliminar esta solicitud?')) return;
+    try {
+      await deleteSolicitud(id);
+      refetch();
+    } catch {
+      alert('Error al eliminar');
+    }
+  };
+
+  const columns = [
+    {
+      key: 'id',
+      header: 'ID',
+      sortable: true,
+      render: (row: any) => (
+        <span className="font-mono text-xs font-bold text-amber-600">SOL-{String(row.id).padStart(3, '0')}</span>
+      ),
+    },
+    { key: 'proyecto_nombre', header: 'Proyecto', sortable: true },
+    { key: 'solicitante', header: 'Solicitante', sortable: true },
+    {
+      key: 'fecha',
+      header: 'Fecha',
+      sortable: true,
+      render: (row: any) => new Date(row.fecha).toLocaleDateString('es-ES'),
+    },
+    {
+      key: 'total_items',
+      header: 'Ítems',
+      render: (row: any) => (
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">
+          {row.total_items}
+        </span>
+      ),
+    },
+    {
+      key: 'estado',
+      header: 'Estado',
+      sortable: true,
+      render: (row: any) => <StatusBadge status={row.estado} />,
+    },
+    {
+      key: 'actions',
+      header: '',
+      className: 'w-20',
+      render: (row: any) => (
+        <div className="flex gap-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowDetail(row); }}
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+          >
+            <Eye size={14} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  const unidades = ['Unidades', 'kg', 'm³', 'Toneladas', 'Sacos', 'Galones', 'Piezas', 'ml', 'Litros'];
+
+  return (
+    <div>
+      {/* Page Header */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <p className="mb-1 text-xs font-bold uppercase tracking-widest text-amber-600">Módulo 1</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-slate-900">
+              Solicitudes de Materiales
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Gestiona las solicitudes de materiales para cada proyecto de obra.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 hover:shadow-amber-500/30 active:scale-[0.98]"
+          >
+            <Plus size={18} />
+            Nueva Solicitud
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Stats Row */}
+      <div className="mb-6 grid grid-cols-3 gap-4">
+        {[
+          { label: 'Pendientes', value: solicitudes?.filter((s: any) => s.estado === 'Pendiente').length || 0, color: 'text-amber-600' },
+          { label: 'Cotizando', value: solicitudes?.filter((s: any) => s.estado === 'Cotizando').length || 0, color: 'text-blue-600' },
+          { label: 'Aprobadas', value: solicitudes?.filter((s: any) => s.estado === 'Aprobado').length || 0, color: 'text-emerald-600' },
+        ].map(stat => (
+          <div key={stat.label} className="rounded-xl bg-white p-4 shadow-sm border border-slate-100">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stat.label}</p>
+            <p className={`text-2xl font-black ${stat.color}`}>{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Table */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <div className="rounded-xl bg-white p-6 shadow-sm">
+          <DataTable
+            columns={columns}
+            data={solicitudes || []}
+            loading={loading}
+            searchable
+            searchPlaceholder="Buscar por proyecto, solicitante..."
+            emptyTitle="Sin solicitudes"
+            emptyMessage="Crea tu primera solicitud de materiales"
+          />
+        </div>
+      </motion.div>
+
+      {/* Create Form Modal */}
+      <Modal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        title="Nueva Solicitud de Materiales"
+        subtitle="Agrega los materiales requeridos para el proyecto"
+        size="xl"
+      >
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Proyecto</label>
+              <select
+                required
+                value={form.proyecto_id}
+                onChange={e => setForm({ ...form, proyecto_id: e.target.value })}
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+              >
+                <option value="">Seleccionar proyecto...</option>
+                {proyectos?.map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Solicitante</label>
+              <input
+                required
+                type="text"
+                value={form.solicitante}
+                onChange={e => setForm({ ...form, solicitante: e.target.value })}
+                placeholder="Nombre del solicitante"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+              />
+            </div>
+          </div>
+
+          {/* Items */}
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Materiales</label>
+              <button type="button" onClick={addItem} className="flex items-center gap-1 text-xs font-bold text-amber-600 hover:text-amber-700">
+                <Plus size={14} /> Agregar ítem
+              </button>
+            </div>
+            <div className="space-y-2">
+              {form.items.map((item, idx) => (
+                <div key={idx} className="flex items-center gap-2 rounded-lg bg-slate-50 p-2">
+                  <input
+                    required
+                    type="text"
+                    placeholder="Material"
+                    value={item.nombre_material}
+                    onChange={e => updateItem(idx, 'nombre_material', e.target.value)}
+                    className="flex-1 rounded-md border border-slate-200 bg-white px-2.5 py-2 text-sm outline-none focus:border-amber-400"
+                  />
+                  <input
+                    required
+                    type="number"
+                    placeholder="Cant."
+                    min="0.01"
+                    step="0.01"
+                    value={item.cantidad_requerida}
+                    onChange={e => updateItem(idx, 'cantidad_requerida', e.target.value)}
+                    className="w-24 rounded-md border border-slate-200 bg-white px-2.5 py-2 text-sm outline-none focus:border-amber-400"
+                  />
+                  <select
+                    value={item.unidad}
+                    onChange={e => updateItem(idx, 'unidad', e.target.value)}
+                    className="w-28 rounded-md border border-slate-200 bg-white px-2 py-2 text-sm outline-none focus:border-amber-400"
+                  >
+                    {unidades.map(u => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                  {form.items.length > 1 && (
+                    <button type="button" onClick={() => removeItem(idx)} className="p-1 text-slate-400 hover:text-red-500">
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 disabled:opacity-60"
+            >
+              <FileText size={16} />
+              {submitting ? 'Creando...' : 'Crear Solicitud'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Detail Modal */}
+      <Modal
+        isOpen={!!showDetail}
+        onClose={() => setShowDetail(null)}
+        title={showDetail ? `Solicitud SOL-${String(showDetail.id).padStart(3, '0')}` : ''}
+        subtitle={showDetail?.proyecto_nombre}
+        size="lg"
+      >
+        {showDetail && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="rounded-lg bg-slate-50 p-3">
+                <p className="text-[10px] font-bold uppercase text-slate-400">Solicitante</p>
+                <p className="text-sm font-bold text-slate-800">{showDetail.solicitante}</p>
+              </div>
+              <div className="rounded-lg bg-slate-50 p-3">
+                <p className="text-[10px] font-bold uppercase text-slate-400">Fecha</p>
+                <p className="text-sm font-bold text-slate-800">{new Date(showDetail.fecha).toLocaleDateString('es-ES')}</p>
+              </div>
+              <div className="rounded-lg bg-slate-50 p-3">
+                <p className="text-[10px] font-bold uppercase text-slate-400">Estado</p>
+                <StatusBadge status={showDetail.estado} size="md" />
+              </div>
+            </div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-2">Ítems de la solicitud</p>
+            <div className="rounded-lg border border-slate-200 overflow-hidden">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-50"><tr>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Material</th>
+                  <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Cantidad</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Unidad</th>
+                </tr></thead>
+                <tbody>
+                  {showDetail.items ? showDetail.items.map((item: any) => (
+                    <tr key={item.id} className="border-t border-slate-100">
+                      <td className="px-3 py-2 font-medium text-slate-800">{item.nombre_material}</td>
+                      <td className="px-3 py-2 text-right font-mono text-slate-600">{Number(item.cantidad_requerida).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-slate-500">{item.unidad}</td>
+                    </tr>
+                  )) : (
+                    <tr><td colSpan={3} className="px-3 py-4 text-center text-xs text-slate-400">Cargando ítems...</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
