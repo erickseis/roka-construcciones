@@ -72,7 +72,7 @@ export default function CotizacionesPage() {
     
     setSubmitting(true);
     try {
-      const proveedorData: { proveedor_id?: number; proveedor: string } = {};
+      const proveedorData: { proveedor_id?: number; proveedor: string } = { proveedor: '' };
       
       if (proveedorId) {
         proveedorData.proveedor_id = Number(proveedorId);

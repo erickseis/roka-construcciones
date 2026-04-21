@@ -96,7 +96,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-40 ml-64 flex w-[calc(100%-16rem)] items-center justify-between border-b border-slate-200/50 bg-slate-50/80 px-8 py-4 backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-900/80">
+    <header className="sticky top-0 z-40 ml-64 flex w-[calc(100%-16rem)] items-center justify-between border-b border-slate-200/50 bg-slate-50/80 px-8 py-4 backdrop-blur-xl dark:border-[#1e293b] dark:bg-[#0b0e14]/90">
       <div className="flex-1" />
 
       <div className="flex items-center gap-6">

@@ -31,7 +31,7 @@ export function CopilotButton() {
     <>
       <button
         onClick={handleToggle}
-        className={`fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all duration-300 group ${
+        className={`fixed bottom-6 right-24 z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all duration-300 group ${
           isOpen
             ? 'bg-slate-700 hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500 shadow-slate-900/20'
             : 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/40 hover:shadow-amber-500/50 hover:scale-105'
