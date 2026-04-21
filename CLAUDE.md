@@ -51,7 +51,10 @@ Referencia: `roka-backend/.env.example`
 
 ### 3.2 Proyectos y Presupuestos
 
-- Proyectos (CRUD logico y metricas): `src/routes/proyectos.ts`
+- Proyectos (CRUD logico, metricas, y datos de licitacion): `src/routes/proyectos.ts`
+- Campos de licitacion: numero, descripcion, fecha apertura, monto referencial, archivo
+- Upload de licitaciones (PDF, Excel, CSV): `src/lib/upload.ts` con multer (20MB limit)
+- Descarga de archivos: `GET /api/proyectos/:id/licitacion-archivo`
 - Presupuestos por proyecto y categorias: `src/routes/presupuestos.ts`
 - Compromisos presupuestarios y alertas de umbral/sobreconsumo: `src/routes/presupuestos.ts`
 
@@ -80,21 +83,22 @@ El esquema se construye incrementalmente con migraciones:
 - `004_notifications.sql`: trazabilidad de creador y tabla `notificaciones`.
 - `005_master_data_materials.sql`: unidades y maestro de materiales, link opcional de `solicitud_items` a `materiales`.
 - `006_material_categories.sql`: normaliza categorias de materiales en tabla dedicada.
+- `007_licitaciones.sql`: campos de licitacion en `proyectos` (numero, descripcion, fecha_apertura, monto_referencial, archivo_path, archivo_nombre).
 
 ### Entidades core (vision de negocio)
 
-- `proyectos`
+- `proyectos` (con campos: numero_licitacion, descripcion_licitacion, fecha_apertura_licitacion, monto_referencial_licitacion, archivo_licitacion_path, archivo_licitacion_nombre)
 - `presupuestos_proyecto`
 - `presupuesto_categorias`
 - `presupuesto_movimientos`
 - `solicitudes_material`
-- `solicitud_items`
+- `solicitud_items` (ahora auto-vincula nombre y unidad desde materiales maestro)
 - `cotizaciones`
 - `cotizacion_items`
 - `ordenes_compra`
 - `usuarios`, `roles`, `permisos`, `rol_permisos`
 - `notificaciones`
-- `materiales`, `unidades_medida`, `material_categorias`
+- `materiales` (incluye precio_referencial usado en solicitudes), `unidades_medida`, `material_categorias`
 
 ## 5) Flujo End-to-End de la Aplicacion
 
@@ -127,6 +131,17 @@ Permisos base definidos:
 - `config.manage`
 - `notificaciones.view`
 
+## 5.3 Gestión de Licitaciones
+
+Cada proyecto puede vincularse a un proceso de licitación:
+
+- `POST /api/proyectos`: acepta `multipart/form-data` con archivo de licitación (PDF, Excel, CSV, max 20MB)
+- Campos guardados en proyecto: `numero_licitacion`, `descripcion_licitacion`, `fecha_apertura_licitacion`, `monto_referencial_licitacion`
+- Archivos almacenados en disco bajo `uploads/licitaciones/` con timestamp para unicidad
+- `GET /api/proyectos/:id/licitacion-archivo`: descarga el archivo adjunto
+- Frontend: UI colapsable en formulario de proyecto para agregar/editar datos de licitación
+- Badge visual en tabla de proyectos indica presencia de licitación
+
 ## 5.4 Flujo de Compras
 
 ### Paso A: Solicitud de Material
@@ -135,6 +150,8 @@ Permisos base definidos:
 - Requiere `proyecto_id`, `solicitante` e `items`.
 - Crea encabezado en `solicitudes_material` + detalle en `solicitud_items` en transaccion.
 - Estado inicial tipico: `Pendiente`.
+- **Vínculo de materiales mejorado**: Si item tiene `material_id`, backend auto-busca y sobrescribe `nombre_material` y `unidad` desde catálogo maestro (garantiza consistencia de datos).
+- En GET detalle, respuesta incluye `precio_referencial` del material para costeo.
 
 ### Paso B: Cotizaciones
 
@@ -189,7 +206,17 @@ Tambien se expone:
 - administracion de categorias
 - alertas de uso (`/api/presupuestos/alertas/listado`)
 
-## 5.6 Notificaciones In-App
+## 5.6 Visibilidad del Flujo (FlowStepper)
+
+Componente visual que indica progreso en el pipeline de compras:
+
+- **Ubicación frontend**: `roka-front/src/components/ui/FlowStepper.tsx`
+- **Pasos**: Solicitud → Cotización → Orden de Compra → Entrega
+- **Integración**: visible en modales de detalle de solicitudes, cotizaciones y órdenes
+- **Props**: `currentStep`, `estado`, `tipo` (solicitud|cotizacion|orden)
+- **Beneficio**: usuario ve claramente en qué fase está cada documento del pipeline
+
+## 5.7 Notificaciones In-App
 
 Modulo implementado con:
 
@@ -200,7 +227,7 @@ Modulo implementado con:
 
 Usa `notificaciones` con `payload` JSONB para contexto flexible por evento.
 
-## 5.7 Dashboard
+## 5.8 Dashboard
 
 KPIs expuestos en `src/routes/dashboard.ts`:
 
@@ -208,6 +235,7 @@ KPIs expuestos en `src/routes/dashboard.ts`:
 - Gasto por proyecto
 - Tiempo de conversion Solicitud -> OC
 - Endpoint compuesto: `/api/dashboard/resumen`
+- `GET /api/dashboard/proyectos`
 
 ## 6) Estados y Reglas de Negocio Criticas
 
@@ -278,11 +306,12 @@ Hay endpoints sin proteccion estricta que un agente debe considerar riesgo y pri
 
 ### Proyectos
 
-- `GET /api/proyectos`
-- `GET /api/proyectos/:id`
-- `POST /api/proyectos`
-- `PATCH /api/proyectos/:id`
-- `PATCH /api/proyectos/:id/active`
+- `GET /api/proyectos` — listar todos (con filtros estado, is_active)
+- `GET /api/proyectos/:id` — detalle con resumen presupuesto y metricas
+- `POST /api/proyectos` — crear (acepta `multipart/form-data` con archivo_licitacion)
+- `PATCH /api/proyectos/:id` — actualizar (acepta `multipart/form-data` con archivo_licitacion)
+- `PATCH /api/proyectos/:id/active` — activar/desactivar
+- `GET /api/proyectos/:id/licitacion-archivo` — descargar archivo de licitacion adjunto
 
 ### Presupuestos
 
@@ -352,11 +381,12 @@ Hay endpoints sin proteccion estricta que un agente debe considerar riesgo y pri
 
 ## 9.2 Antes de modificar logica critica
 
-- Verificar impacto en estados de flujo.
+- Verificar impacto en estados de flujo (incluyendo en FlowStepper visual).
 - Verificar impacto en presupuesto comprometido y movimientos.
 - Verificar eventos de notificacion relacionados.
 - Preferir transacciones para cambios multi-tabla.
 - Mantener compatibilidad con permisos por rol.
+- Cuando se modifique material_id en solicitud_items, recordar que el backend ahora auto-vincula nombre y unidad: esto garantiza consistencia pero requiere cuidado si se modifica el comportamiento.
 
 ## 9.3 Invariantes que no deben romperse
 
@@ -365,17 +395,36 @@ Hay endpoints sin proteccion estricta que un agente debe considerar riesgo y pri
 - No se debe comprometer presupuesto sobre el disponible.
 - Alertas deben dispararse al cruzar umbral y/o 100%.
 
-## 9.4 Mejoras recomendadas (backlog tecnico)
+## 9.4 Cambios Recientes (Licitaciones y UX)
 
-- Homogeneizar proteccion de endpoints con auth + permisos.
+**Implementados a partir de migration 007:**
+
+- **Licitaciones en Proyectos**: Cada proyecto puede adjuntar archivo de licitación (PDF/Excel/CSV) y guardar datos: número, descripción, fecha apertura, monto referencial. Backend usa multer para upload seguro.
+- **Auto-vínculo de Materiales**: En solicitudes, si item tiene `material_id`, backend auto-busca catálogo y sobrescribe `nombre_material` y `unidad`. Elimina inconsistencias de texto libre.
+- **Precio Referencial en Solicitudes**: GET detalle ahora incluye `precio_referencial` del material, permitiendo al frontend mostrar subtotales y total estimado.
+- **FlowStepper Visual**: Componente nuevo que muestra progreso Solicitud→Cotización→OC→Entrega. Integrado en detalles de solicitudes, cotizaciones y órdenes.
+- **Reorganización Sidebar**: "Gestiona Materiales" → "Catálogo de Materiales", movido a Administración (datos maestros, no operacional diario).
+
+**Cambios en el Frontend:**
+- Nuevas props en Proyecto: numero_licitacion, descripcion_licitacion, fecha_apertura_licitacion, monto_referencial_licitacion
+- Detalle de solicitud enriquecido: muestra precio, subtotal, total estimado, cotizaciones relacionadas
+- Modales de detalle incluyen FlowStepper para visibilidad de flujo
+
+## 9.5 Mejoras recomendadas (backlog tecnico)
+
+- Homogeneizar proteccion de endpoints con auth + permisos (solicitudes, materiales, dashboard aun sin authMiddleware).
 - Endurecer configuracion: eliminar secretos/URLs fallback en produccion.
 - Agregar suite de tests de flujo (Solicitud -> Cotizacion -> OC -> Presupuesto).
 - Estandarizar manejo de errores y auditoria de eventos.
+- **Pendiente**: Parser automatico de PDFs de licitacion para extraer items (requiere OCR o plantillas estructuradas).
+- **Pendiente**: Integración más profunda de licitación con solicitudes (vincular automáticamente items de licitación a nuevas solicitudes).
 
 ## 10) Contexto Minimo que un Agente Debe Retener
 
 Si un agente solo retiene una cosa, debe retener esto:
 
-- ROKA es un sistema transaccional de compras para proyectos, donde la OC es el hito que compromete presupuesto y dispara trazabilidad/notificaciones.
-- El flujo esta gobernado por estados, permisos por rol y validaciones de disponibilidad presupuestaria.
-- La consistencia de datos depende de transacciones y del orden correcto del flujo de negocio.
+- ROKA es un sistema transaccional de compras para proyectos de construccion, donde la OC es el hito que compromete presupuesto y dispara trazabilidad/notificaciones.
+- El flujo esta gobernado por estados (Solicitud→Cotización→OC→Entrega), permisos por rol, validaciones presupuestarias, y vínculo de materiales desde catálogo maestro.
+- Cada proyecto puede adjuntar documentos de licitación para compliance/traceabilidad.
+- La consistencia de datos depende de transacciones, auto-vinculación de materiales, y el orden correcto del flujo de negocio.
+- Frontend proporciona visibilidad clara del pipeline mediante FlowStepper, detalles enriquecidos con costos, y navegación intuitiva.
