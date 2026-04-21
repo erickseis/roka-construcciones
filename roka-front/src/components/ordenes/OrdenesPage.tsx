@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus, Eye, Truck, PackageCheck } from 'lucide-react';
+import { Plus, Eye, Truck, PackageCheck, FileText } from 'lucide-react';
 import { DataTable } from '../ui/DataTable';
 import { StatusBadge } from '../ui/StatusBadge';
 import { Modal } from '../ui/Modal';
 import FlowStepper from '../ui/FlowStepper';
+import OCPreviewModal from './OCPreviewModal';
 import { useApi } from '@/hooks/useApi';
 import {
   getOrdenes, generarOrden, updateEstadoEntrega,
-  getCotizaciones
+  getCotizaciones, getOrden
 } from '@/lib/api';
 
 export default function OrdenesPage() {
   const [showForm, setShowForm] = useState(false);
   const [showDetail, setShowDetail] = useState<any | null>(null);
+  const [ocPreview, setOcPreview] = useState<any | null>(null);
+  const [loadingOc, setLoadingOc] = useState(false);
   const { data: ordenes, loading, refetch } = useApi(() => getOrdenes(), []);
 
   // Form state
@@ -49,6 +52,18 @@ export default function OrdenesPage() {
       refetch();
     } catch {
       alert('Error al actualizar estado');
+    }
+  };
+
+  const handlePreviewOC = async (id: number) => {
+    setLoadingOc(true);
+    try {
+      const data = await getOrden(id);
+      setOcPreview(data);
+    } catch (err: any) {
+      alert(err.message || 'Error al cargar orden de compra');
+    } finally {
+      setLoadingOc(false);
     }
   };
 
@@ -96,9 +111,16 @@ export default function OrdenesPage() {
     {
       key: 'actions',
       header: '',
-      className: 'w-28',
+      className: 'w-40',
       render: (row: any) => (
         <div className="flex gap-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); handlePreviewOC(row.id); }}
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
+            title="Ver / Imprimir OC"
+          >
+            <FileText size={14} />
+          </button>
           <button
             onClick={(e) => { e.stopPropagation(); setShowDetail(row); }}
             className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
@@ -309,6 +331,13 @@ export default function OrdenesPage() {
           </div>
         )}
       </Modal>
+
+      {/* OC Preview Modal */}
+      <OCPreviewModal
+        isOpen={!!ocPreview}
+        onClose={() => setOcPreview(null)}
+        orden={ocPreview}
+      />
     </div>
   );
 }
