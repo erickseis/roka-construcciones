@@ -180,7 +180,7 @@ export default function BulkImportModal({
             <select
               value={proyectoId}
               onChange={e => setProyectoId(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-amber-500/50 dark:focus:ring-amber-500/10"
             >
               <option value="">Seleccionar proyecto...</option>
               {proyectos.map(p => (
@@ -195,7 +195,7 @@ export default function BulkImportModal({
               value={solicitante}
               onChange={e => setSolicitante(e.target.value)}
               placeholder="Nombre de quien solicita"
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-amber-500/50 dark:focus:ring-amber-500/10"
             />
           </div>
         </div>
@@ -204,7 +204,7 @@ export default function BulkImportModal({
         {!file ? (
           <div 
             onClick={() => fileInputRef.current?.click()}
-            className="group relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 py-10 transition-all hover:border-amber-400 hover:bg-amber-50"
+            className="group relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 py-10 transition-all hover:border-amber-400 hover:bg-amber-50 dark:border-slate-800 dark:bg-slate-900/50 dark:hover:border-amber-500/50 dark:hover:bg-amber-500/5"
           >
             <input 
               type="file" 
@@ -213,11 +213,11 @@ export default function BulkImportModal({
               accept=".xlsx, .xls, .csv"
               className="hidden" 
             />
-            <div className="mb-3 rounded-full bg-white p-3 shadow-sm transition-transform group-hover:scale-110">
+            <div className="mb-3 rounded-full bg-white p-3 shadow-sm transition-transform group-hover:scale-110 dark:bg-slate-800">
               <Upload className="text-amber-500" size={24} />
             </div>
-            <p className="text-sm font-bold text-slate-700">Haz clic para subir o arrastra un archivo</p>
-            <p className="mt-1 text-xs text-slate-500">Excel (.xlsx, .xls) o CSV</p>
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Haz clic para subir o arrastra un archivo</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Excel (.xlsx, .xls) o CSV</p>
             
             <button 
               type="button"
@@ -235,8 +235,8 @@ export default function BulkImportModal({
                   <FileSpreadsheet size={20} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-slate-900">{file.name}</p>
-                  <p className="text-[10px] text-slate-500">{(file.size / 1024).toFixed(1)} KB — {parsedData.length} ítems encontrados</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{file.name}</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">{(file.size / 1024).toFixed(1)} KB — {parsedData.length} ítems encontrados</p>
                 </div>
               </div>
               <button 
@@ -266,9 +266,9 @@ export default function BulkImportModal({
               </span>
             </div>
             
-            <div className="max-h-60 overflow-y-auto rounded-lg border border-slate-200 bg-white">
+            <div className="max-h-60 overflow-y-auto rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
               <table className="w-full text-left text-[11px]">
-                <thead className="sticky top-0 bg-slate-50 font-bold text-slate-500 uppercase border-b border-slate-200">
+                <thead className="sticky top-0 bg-slate-50 font-bold text-slate-500 uppercase border-b border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700">
                   <tr>
                     <th className="px-3 py-2 text-center w-8">#</th>
                     <th className="px-3 py-2">Material</th>
@@ -281,17 +281,17 @@ export default function BulkImportModal({
                 <tbody className="divide-y divide-slate-100">
                   {parsedData.map((item, idx) => (
                     <tr key={item.id} className={!item.is_valid ? 'bg-red-50/30' : ''}>
-                      <td className="px-3 py-2 text-center text-slate-400">{idx + 1}</td>
+                      <td className="px-3 py-2 text-center text-slate-400 dark:text-slate-500">{idx + 1}</td>
                       <td className="px-3 py-2">
-                        <div className="font-bold text-slate-700">{item.nombre_material || 'N/A'}</div>
+                        <div className="font-bold text-slate-700 dark:text-slate-200">{item.nombre_material || 'N/A'}</div>
                         {item.material_id && (
-                          <div className="text-[9px] text-amber-600 font-medium">Vinculado al catálogo</div>
+                          <div className="text-[9px] text-amber-600 font-medium dark:text-amber-400">Vinculado al catálogo</div>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-right font-mono font-bold text-slate-600">
+                      <td className="px-3 py-2 text-right font-mono font-bold text-slate-600 dark:text-slate-300">
                         {item.cantidad_requerida}
                       </td>
-                      <td className="px-3 py-2 text-slate-500 italic">{item.unidad}</td>
+                      <td className="px-3 py-2 text-slate-500 italic dark:text-slate-400">{item.unidad}</td>
                       <td className="px-3 py-2 text-center">
                         {item.is_valid ? (
                           <CheckCircle2 size={14} className="mx-auto text-emerald-500" />

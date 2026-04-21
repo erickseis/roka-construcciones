@@ -14,6 +14,7 @@ import presupuestosRouter from './routes/presupuestos';
 import notificacionesRouter from './routes/notificaciones';
 import materialesRouter from './routes/materiales';
 import proveedoresRouter from './routes/proveedores';
+import chatRouter from './routes/chat';
 import { runMigrations } from './lib/migrations';
 
 dotenv.config();
@@ -44,6 +45,7 @@ runMigrations().then(() => {
   app.use('/api/notificaciones', notificacionesRouter);
   app.use('/api/materiales', materialesRouter);
   app.use('/api/proveedores', proveedoresRouter);
+  app.use('/api/chat', chatRouter);
 
   // Health check
   app.get('/api/health', (_req, res) => {

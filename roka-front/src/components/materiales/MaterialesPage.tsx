@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import {
   Plus,
   Search,
@@ -211,30 +212,30 @@ export default function MaterialesPage() {
         </div>
 
         <div className="flex gap-2">
-          <button
-            onClick={() => setActiveTab('materiales')}
-            className={`rounded-xl px-5 py-2.5 text-sm font-bold transition-all ${activeTab === 'materiales' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200 dark:bg-slate-900 dark:border-slate-800'}`}
-          >
-            Materiales
-          </button>
-          <button
-            onClick={() => setActiveTab('categorias')}
-            className={`rounded-xl px-5 py-2.5 text-sm font-bold transition-all ${activeTab === 'categorias' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200 dark:bg-slate-900 dark:border-slate-800'}`}
-          >
-            Categorías
-          </button>
-          <button
-            onClick={() => setActiveTab('unidades')}
-            className={`rounded-xl px-5 py-2.5 text-sm font-bold transition-all ${activeTab === 'unidades' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200 dark:bg-slate-900 dark:border-slate-800'}`}
-          >
-            Unidades
-          </button>
-          <button
-            onClick={() => setActiveTab('solicitados')}
-            className={`rounded-xl px-5 py-2.5 text-sm font-bold transition-all ${activeTab === 'solicitados' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200 dark:bg-slate-900 dark:border-slate-800'}`}
-          >
-            Solicitados
-          </button>
+          {[
+            { id: 'materiales', label: 'Materiales' },
+            { id: 'categorias', label: 'Categorías' },
+            { id: 'unidades', label: 'Unidades' },
+            { id: 'solicitados', label: 'Solicitados' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`relative rounded-xl px-6 py-2.5 text-sm font-bold transition-all duration-300 ${
+                activeTab === tab.id
+                  ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-[0_4px_20px_rgba(245,158,11,0.4)] scale-105 z-10'
+                  : 'bg-white/50 text-slate-500 hover:bg-white border border-slate-200 dark:bg-slate-900/50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800'
+              }`}
+            >
+              {tab.label}
+              {activeTab === tab.id && (
+                <motion.div
+                  layoutId="activeTabGlow"
+                  className="absolute -bottom-1 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full bg-amber-400 blur-[2px]"
+                />
+              )}
+            </button>
+          ))}
           
           <button
             onClick={() => {
@@ -244,15 +245,15 @@ export default function MaterialesPage() {
               } else if (activeTab === 'categorias') {
                 setEditingCategory(null);
                 setIsCategoryModalOpen(true);
-              } else {
+              } else if (activeTab === 'unidades') {
                 setEditingUnidad(null);
                 setIsUnidadModalOpen(true);
               }
             }}
-            className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-black text-white shadow-lg transition-all hover:bg-slate-800 active:scale-95 dark:bg-slate-50 dark:text-slate-900"
+            className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-black text-white shadow-xl transition-all hover:bg-slate-800 active:scale-95 dark:bg-white dark:text-slate-900"
           >
             <Plus size={18} />
-            {activeTab === 'materiales' ? 'Registrar Material' : activeTab === 'categorias' ? 'Nueva Categoría' : activeTab === 'solicitados' ? 'Nueva Solicitud' : 'Nueva Unidad'}
+            {activeTab === 'materiales' ? 'Registrar Material' : activeTab === 'categorias' ? 'Nueva Categoría' : activeTab === 'unidades' ? 'Nueva Unidad' : 'Registrar'}
           </button>
         </div>
       </div>
@@ -464,12 +465,12 @@ export default function MaterialesPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/50">
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Material Solicitado</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Proyecto / Obra</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Solicitante</th>
-                  <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Cantidad</th>
-                  <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha</th>
+                <tr className="border-b border-slate-100 bg-slate-50/50 dark:border-slate-800/50 dark:bg-slate-900/40">
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Material Solicitado</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Proyecto / Obra</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Solicitante</th>
+                  <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Cantidad</th>
+                  <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Fecha</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
