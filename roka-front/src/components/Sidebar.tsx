@@ -12,7 +12,8 @@ import {
   Settings,
   LogOut,
   User,
-  Package
+  Package,
+  Truck
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
@@ -30,6 +31,7 @@ const secondaryItems = [
   { icon: Construction, label: 'Proyectos', to: '/proyectos' },
   { icon: CreditCard, label: 'Presupuesto', to: '/presupuestos' },
   { icon: Package, label: 'Catálogo de Materiales', to: '/materiales' },
+  { icon: Truck, label: 'Proveedores', to: '/proveedores' },
   { icon: Settings, label: 'Configuración', to: '/config' },
 ];
 

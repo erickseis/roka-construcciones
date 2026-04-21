@@ -8,6 +8,7 @@ import FlowStepper from '../ui/FlowStepper';
 import { useApi } from '@/hooks/useApi';
 import {
   getSolicitudes,
+  getSolicitud,
   createSolicitud,
   deleteSolicitud,
   getProyectos,
@@ -25,6 +26,7 @@ export default function SolicitudesPage() {
   const [showForm, setShowForm] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showDetail, setShowDetail] = useState<any | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   const { data: solicitudes, loading, refetch } = useApi(() => getSolicitudes(), []);
   const { data: proyectos } = useApi(() => getProyectos(), []);
@@ -138,7 +140,19 @@ export default function SolicitudesPage() {
       render: (row: any) => (
         <div className="flex gap-1">
           <button
-            onClick={(e) => { e.stopPropagation(); setShowDetail(row); }}
+            onClick={async (e) => {
+              e.stopPropagation();
+              setLoadingDetail(true);
+              try {
+                const detail = await getSolicitud(row.id);
+                setShowDetail(detail);
+              } catch (err) {
+                console.error('Error al cargar detalle:', err);
+                alert('Error al cargar los detalles de la solicitud');
+              } finally {
+                setLoadingDetail(false);
+              }
+            }}
             className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
           >
             <Eye size={14} />
@@ -428,7 +442,9 @@ export default function SolicitudesPage() {
                   <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Subtotal</th>
                 </tr></thead>
                 <tbody>
-                  {showDetail.items ? showDetail.items.map((item: any) => {
+                  {loadingDetail ? (
+                    <tr><td colSpan={5} className="px-3 py-4 text-center text-xs text-slate-400">Cargando ítems...</td></tr>
+                  ) : showDetail.items ? showDetail.items.map((item: any) => {
                     const subtotal = item.precio_referencial ? Number(item.precio_referencial) * Number(item.cantidad_requerida) : null;
                     return (
                       <tr key={item.id} className="border-t border-slate-100">
@@ -445,13 +461,13 @@ export default function SolicitudesPage() {
                       </tr>
                     );
                   }) : (
-                    <tr><td colSpan={5} className="px-3 py-4 text-center text-xs text-slate-400">Cargando ítems...</td></tr>
+                    <tr><td colSpan={5} className="px-3 py-4 text-center text-xs text-slate-400">Sin ítems</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
 
-            {showDetail.items && (
+            {!loadingDetail && showDetail.items && (
               <div className="rounded-lg bg-blue-50 p-3 border border-blue-200">
                 <p className="text-[10px] font-bold uppercase text-blue-600 mb-2">Total Estimado</p>
                 <p className="text-2xl font-black text-blue-900">

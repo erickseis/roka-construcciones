@@ -287,3 +287,17 @@ export const updateMaterialCategoria = (id: number, data: { nombre: string; desc
 
 export const deleteMaterialCategoria = (id: number) =>
   fetchApi<any>(`/materiales/categorias/${id}`, { method: 'DELETE' });
+
+// ---- Proveedores ----
+export const getProveedores = () => fetchApi<any[]>('/proveedores');
+
+export const getProveedor = (id: number) => fetchApi<any>(`/proveedores/${id}`);
+
+export const createProveedor = (data: any) =>
+  fetchApi<any>('/proveedores', { method: 'POST', body: JSON.stringify(data) });
+
+export const updateProveedor = (id: number, data: any) =>
+  fetchApi<any>(`/proveedores/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+
+export const deleteProveedor = (id: number) =>
+  fetchApi<any>(`/proveedores/${id}`, { method: 'DELETE' });
