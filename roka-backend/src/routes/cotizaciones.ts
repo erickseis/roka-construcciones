@@ -76,9 +76,9 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 // POST /api/cotizaciones — Crear cotización con precios por ítem
 router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const { solicitud_id, proveedor, items } = req.body;
+  const { solicitud_id, proveedor_id, proveedor, items } = req.body;
 
-  if (!solicitud_id || !proveedor || !items || items.length === 0) {
+  if (!solicitud_id || (!proveedor_id && !proveedor) || !items || items.length === 0) {
     return res.status(400).json({ error: 'Faltan campos requeridos' });
   }
 
@@ -93,6 +93,15 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     if (!solicitud) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Solicitud no encontrada' });
+    }
+
+    // Obtener nombre del proveedor si se seleccionó del catálogo
+    let nombreProveedor = proveedor;
+    if (proveedor_id && !proveedor) {
+      const { rows: [prov] } = await client.query(
+        'SELECT nombre FROM proveedores WHERE id = $1', [proveedor_id]
+      );
+      if (prov) nombreProveedor = prov.nombre;
     }
 
     // Calcular total y crear cotización
@@ -118,9 +127,9 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     }
 
     const { rows: [cotizacion] } = await client.query(
-      `INSERT INTO cotizaciones (solicitud_id, proveedor, total, created_by_usuario_id)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [solicitud_id, proveedor, total, req.user?.id || null]
+      `INSERT INTO cotizaciones (solicitud_id, proveedor_id, proveedor, total, created_by_usuario_id)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [solicitud_id, proveedor_id || null, nombreProveedor, total, req.user?.id || null]
     );
 
     for (const vi of validatedItems) {

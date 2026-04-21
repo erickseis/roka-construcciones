@@ -8,8 +8,9 @@ import FlowStepper from '../ui/FlowStepper';
 import { useApi } from '@/hooks/useApi';
 import {
   getCotizaciones, createCotizacion, aprobarCotizacion, rechazarCotizacion,
-  getSolicitudes, getSolicitud
+  getSolicitudes, getSolicitud, getProveedores
 } from '@/lib/api';
+import ProveedorModal from '../proveedores/ProveedorModal';
 
 export default function CotizacionesPage() {
   const [showForm, setShowForm] = useState(false);
@@ -18,7 +19,8 @@ export default function CotizacionesPage() {
 
   // Form state
   const [solicitudId, setSolicitudId] = useState('');
-  const [proveedor, setProveedor] = useState('');
+  const [proveedorId, setProveedorId] = useState<number | ''>('');
+  const [proveedorOtro, setProveedorOtro] = useState('');
   const [solicitudItems, setSolicitudItems] = useState<any[]>([]);
   const [precios, setPrecios] = useState<Record<number, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -27,6 +29,12 @@ export default function CotizacionesPage() {
   // Fetch solicitudes for dropdown
   const { data: solicitudes } = useApi(() => getSolicitudes({ estado: undefined }), []);
   const solicitudesForQuote = solicitudes?.filter((s: any) => s.estado !== 'Aprobado') || [];
+
+  // Fetch proveedores for dropdown
+  const { data: proveedores, refetch: refetchProveedores } = useApi(() => getProveedores(), []);
+
+  // Modal de proveedor
+  const [showProveedorModal, setShowProveedorModal] = useState(false);
 
   // When user selects a solicitud, fetch its items
   useEffect(() => {
@@ -55,11 +63,28 @@ export default function CotizacionesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validar que hay proveedor seleccionado o escrito
+    if (!proveedorId && !proveedorOtro) {
+      alert('Debes seleccionar un proveedor del catálogo o escribir el nombre de otro proveedor');
+      return;
+    }
+    
     setSubmitting(true);
     try {
+      const proveedorData: { proveedor_id?: number; proveedor: string } = {};
+      
+      if (proveedorId) {
+        proveedorData.proveedor_id = Number(proveedorId);
+        const prov = proveedores?.find((p: any) => p.id === Number(proveedorId));
+        proveedorData.proveedor = prov?.nombre || '';
+      } else if (proveedorOtro) {
+        proveedorData.proveedor = proveedorOtro;
+      }
+
       await createCotizacion({
         solicitud_id: Number(solicitudId),
-        proveedor,
+        ...proveedorData,
         items: solicitudItems.map(item => ({
           solicitud_item_id: item.id,
           precio_unitario: parseFloat(precios[item.id] || '0'),
@@ -67,7 +92,8 @@ export default function CotizacionesPage() {
       });
       setShowForm(false);
       setSolicitudId('');
-      setProveedor('');
+      setProveedorId('');
+      setProveedorOtro('');
       setPrecios({});
       refetch();
     } catch (err: any) {
@@ -246,16 +272,44 @@ export default function CotizacionesPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Proveedor</label>
-              <input
-                required
-                type="text"
-                value={proveedor}
-                onChange={e => setProveedor(e.target.value)}
-                placeholder="Nombre del proveedor"
-                title="Nombre o razón social del proveedor que cotiza los materiales"
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Proveedor</label>
+                <button
+                  type="button"
+                  onClick={() => setShowProveedorModal(true)}
+                  className="text-[10px] font-bold text-blue-600 hover:underline"
+                >
+                  + Registrar nuevo
+                </button>
+              </div>
+              <select
+                value={proveedorId}
+                onChange={e => {
+                  if (e.target.value === 'otro') {
+                    setProveedorId('');
+                    setProveedorOtro('');
+                  } else {
+                    setProveedorId(e.target.value);
+                    setProveedorOtro('');
+                  }
+                }}
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-              />
+              >
+                <option value="">Seleccionar proveedor...</option>
+                {proveedores?.map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.nombre} {p.rut ? `(${p.rut})` : ''}</option>
+                ))}
+                <option value="otro">+ Otro proveedor (escribir)</option>
+              </select>
+              {proveedorId === '' && (
+                <input
+                  type="text"
+                  value={proveedorOtro}
+                  onChange={e => setProveedorOtro(e.target.value)}
+                  placeholder="Nombre del proveedor (no está en catálogo)"
+                  className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                />
+              )}
             </div>
           </div>
 
@@ -375,6 +429,16 @@ export default function CotizacionesPage() {
           </div>
         )}
       </Modal>
+
+      <ProveedorModal
+        isOpen={showProveedorModal}
+        onClose={() => setShowProveedorModal(false)}
+        onSave={async (nuevoProveedor) => {
+          await refetchProveedores();
+          setProveedorId(nuevoProveedor.id);
+          setProveedorOtro('');
+        }}
+      />
     </div>
   );
 }

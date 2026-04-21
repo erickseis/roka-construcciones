@@ -53,11 +53,13 @@ router.get('/:id', async (req: Request, res: Response) => {
     const { rows: [orden] } = await pool.query(`
       SELECT oc.*, c.proveedor, c.solicitud_id, c.total AS cotizacion_total,
              sm.solicitante, sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
-             p.nombre AS proyecto_nombre
+             p.nombre AS proyecto_nombre,
+             CONCAT(u.nombre, ' ', u.apellido) AS autorizado_por_nombre
       FROM ordenes_compra oc
       JOIN cotizaciones c ON c.id = oc.cotizacion_id
       JOIN solicitudes_material sm ON sm.id = c.solicitud_id
       JOIN proyectos p ON p.id = sm.proyecto_id
+      LEFT JOIN usuarios u ON u.id = oc.created_by_usuario_id
       WHERE oc.id = $1
     `, [id]);
 
@@ -67,9 +69,11 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     // Obtener ítems de la cotización asociada
     const { rows: items } = await pool.query(`
-      SELECT ci.*, si.nombre_material, si.cantidad_requerida, si.unidad
+      SELECT ci.*, si.nombre_material, si.cantidad_requerida, si.unidad,
+             m.sku AS material_sku
       FROM cotizacion_items ci
       JOIN solicitud_items si ON si.id = ci.solicitud_item_id
+      LEFT JOIN materiales m ON m.id = si.material_id
       WHERE ci.cotizacion_id = $1
       ORDER BY ci.id
     `, [orden.cotizacion_id]);

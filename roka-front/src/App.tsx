@@ -10,6 +10,7 @@ import CotizacionesPage from './components/cotizaciones/CotizacionesPage';
 import OrdenesPage from './components/ordenes/OrdenesPage';
 import ConfigPage from './pages/config/ConfigPage';
 import MaterialesPage from './components/materiales/MaterialesPage';
+import ProveedoresPage from './components/proveedores/ProveedoresPage';
 import ProyectosPage from './components/proyectos/ProyectosPage';
 import PresupuestosPage from './components/presupuestos/PresupuestosPage';
 
@@ -28,6 +29,7 @@ export default function App() {
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/solicitudes" element={<SolicitudesPage />} />
                 <Route path="/materiales" element={<MaterialesPage />} />
+                <Route path="/proveedores" element={<ProveedoresPage />} />
                 <Route path="/cotizaciones" element={<CotizacionesPage />} />
                 <Route path="/ordenes" element={<OrdenesPage />} />
                 <Route path="/proyectos" element={<ProyectosPage />} />
