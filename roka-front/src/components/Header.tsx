@@ -97,14 +97,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 ml-64 flex w-[calc(100%-16rem)] items-center justify-between border-b border-slate-200/50 bg-slate-50/80 px-8 py-4 backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-900/80">
-      <div className="flex w-96 items-center rounded-lg bg-slate-100 px-4 py-2 dark:bg-slate-800">
-        <Search size={18} className="mr-2 text-slate-400 dark:text-slate-300" />
-        <input
-          type="text"
-          placeholder="Buscar proyectos, órdenes o planos..."
-          className="w-full bg-transparent text-sm text-slate-600 outline-none focus:ring-0 dark:text-slate-100 dark:placeholder:text-slate-300"
-        />
-      </div>
+      <div className="flex-1" />
 
       <div className="flex items-center gap-6">
         <div className="flex gap-4">

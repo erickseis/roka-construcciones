@@ -185,3 +185,49 @@ export const getDashboardResumen = () => fetchApi<any>('/dashboard/resumen');
 export const getKPISolicitudesMensual = () => fetchApi<any>('/dashboard/solicitudes-mensual');
 export const getKPIGastoPorProyecto = () => fetchApi<any[]>('/dashboard/gasto-por-proyecto');
 export const getKPITiempoConversion = () => fetchApi<any>('/dashboard/tiempo-conversion');
+// ---- Materiales y Unidades ----
+export const getMaterialesMaster = (params?: { q?: string; categoria?: string }) => {
+  const query = new URLSearchParams();
+  if (params?.q) query.set('q', params.q);
+  if (params?.categoria) query.set('categoria', params.categoria);
+  const qs = query.toString();
+  return fetchApi<any[]>(`/materiales${qs ? `?${qs}` : ''}`);
+};
+
+// ---- Unidades de Medida ----
+export const getUnidadesMedida = () => fetchApi<any[]>('/materiales/unidades');
+
+export const createUnidadMedida = (data: { nombre: string; abreviatura: string }) =>
+  fetchApi<any>('/materiales/unidades', { method: 'POST', body: JSON.stringify(data) });
+
+export const updateUnidadMedida = (id: number, data: { nombre: string; abreviatura: string }) =>
+  fetchApi<any>(`/materiales/unidades/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+
+export const deleteUnidadMedida = (id: number) =>
+  fetchApi<any>(`/materiales/unidades/${id}`, { method: 'DELETE' });
+
+export const createMaterialMaster = (data: any) =>
+  fetchApi<any>('/materiales', { method: 'POST', body: JSON.stringify(data) });
+
+export const updateMaterialMaster = (id: number, data: any) =>
+  fetchApi<any>(`/materiales/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+
+// ---- Categorías de Materiales ----
+export const getMaterialCategorias = () => fetchApi<any[]>('/materiales/categorias');
+
+export const getMaterialesSolicitados = (params?: { q?: string; proyecto_id?: number }) => {
+  const query = new URLSearchParams();
+  if (params?.q) query.set('q', params.q);
+  if (params?.proyecto_id) query.set('proyecto_id', String(params.proyecto_id));
+  const qs = query.toString();
+  return fetchApi<any[]>(`/materiales/solicitados${qs ? `?${qs}` : ''}`);
+};
+
+export const createMaterialCategoria = (data: { nombre: string; descripcion?: string }) =>
+  fetchApi<any>('/materiales/categorias', { method: 'POST', body: JSON.stringify(data) });
+
+export const updateMaterialCategoria = (id: number, data: { nombre: string; descripcion?: string }) =>
+  fetchApi<any>(`/materiales/categorias/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+
+export const deleteMaterialCategoria = (id: number) =>
+  fetchApi<any>(`/materiales/categorias/${id}`, { method: 'DELETE' });

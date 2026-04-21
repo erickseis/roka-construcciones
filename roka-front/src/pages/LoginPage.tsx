@@ -103,6 +103,7 @@ export default function LoginPage() {
                     value={correo}
                     onChange={(e) => setCorreo(e.target.value)}
                     placeholder="ejemplo@roka.cl"
+                    title="Correo corporativo institucional para acceder al sistema de gestión de compras"
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none transition-all focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
                   />
                 </div>
@@ -121,13 +122,14 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
+                    title="Contraseña de acceso al sistema, mínimo 6 caracteres"
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none transition-all focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
                   />
                 </div>
               </div>
 
               <div className="flex items-center gap-2 pt-2">
-                <input type="checkbox" id="remember" className="rounded-md border-slate-300 text-amber-500 focus:ring-amber-400" />
+                <input type="checkbox" id="remember" className="rounded-md border-slate-300 text-amber-500 focus:ring-amber-400" title="Mantener la sesión activa para no tener que ingresar credenciales en cada visita" />
                 <label htmlFor="remember" className="text-xs font-medium text-slate-500">Recordar mi sesión</label>
               </div>
 

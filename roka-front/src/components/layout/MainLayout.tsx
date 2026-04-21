@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from '../Sidebar';
 import { Header } from '../Header';
+import { CopilotButton } from '../copilot/CopilotButton';
 
 export function MainLayout() {
   return (
@@ -13,6 +14,7 @@ export function MainLayout() {
           <Outlet />
         </div>
       </main>
+      <CopilotButton />
     </div>
   );
 }

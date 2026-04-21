@@ -1,30 +1,49 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus, FileText, Eye, Trash2 } from 'lucide-react';
+import { Plus, FileText, Eye, Trash2, Upload } from 'lucide-react';
 import { DataTable } from '../ui/DataTable';
 import { StatusBadge } from '../ui/StatusBadge';
 import { Modal } from '../ui/Modal';
 import { useApi } from '@/hooks/useApi';
-import { getSolicitudes, createSolicitud, deleteSolicitud, getProyectos } from '@/lib/api';
+import { 
+  getSolicitudes, 
+  createSolicitud, 
+  deleteSolicitud, 
+  getProyectos,
+  getMaterialesMaster,
+  getUnidadesMedida,
+  createMaterialMaster
+} from '@/lib/api';
+import MaterialModal from '../materiales/MaterialModal';
+import BulkImportModal from './BulkImportModal';
+import { MaterialInput } from '@/types';
+
 
 export default function SolicitudesPage() {
   const [showForm, setShowForm] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
   const [showDetail, setShowDetail] = useState<any | null>(null);
+
   const { data: solicitudes, loading, refetch } = useApi(() => getSolicitudes(), []);
   const { data: proyectos } = useApi(() => getProyectos(), []);
+  const { data: masterMateriales, refetch: refetchMateriales } = useApi(() => getMaterialesMaster(), []);
+  const { data: masterUnidades } = useApi(() => getUnidadesMedida(), []);
+  
+  // Material Modal state
+  const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
 
   // Form state
   const [form, setForm] = useState({
     proyecto_id: '',
     solicitante: '',
-    items: [{ nombre_material: '', cantidad_requerida: '', unidad: 'Unidades' }],
+    items: [{ material_id: null as number | null, nombre_material: '', cantidad_requerida: '', unidad: 'Unidades' }],
   });
   const [submitting, setSubmitting] = useState(false);
 
   const addItem = () => {
     setForm(prev => ({
       ...prev,
-      items: [...prev.items, { nombre_material: '', cantidad_requerida: '', unidad: 'Unidades' }],
+      items: [...prev.items, { material_id: null, nombre_material: '', cantidad_requerida: '', unidad: 'Unidades' }],
     }));
   };
 
@@ -47,6 +66,7 @@ export default function SolicitudesPage() {
         proyecto_id: Number(form.proyecto_id),
         solicitante: form.solicitante,
         items: form.items.map(i => ({
+          material_id: i.material_id,
           nombre_material: i.nombre_material,
           cantidad_requerida: Number(i.cantidad_requerida),
           unidad: i.unidad,
@@ -56,7 +76,7 @@ export default function SolicitudesPage() {
       setForm({
         proyecto_id: '',
         solicitante: '',
-        items: [{ nombre_material: '', cantidad_requerida: '', unidad: 'Unidades' }],
+        items: [{ material_id: null, nombre_material: '', cantidad_requerida: '', unidad: 'Unidades' }],
       });
       refetch();
     } catch (err) {
@@ -131,7 +151,18 @@ export default function SolicitudesPage() {
     },
   ];
 
-  const unidades = ['Unidades', 'kg', 'm³', 'Toneladas', 'Sacos', 'Galones', 'Piezas', 'ml', 'Litros'];
+  const unidadesStatic = ['Unidades', 'kg', 'm³', 'Toneladas', 'Sacos', 'Galones', 'Piezas', 'ml', 'Litros'];
+
+  const onNewMaterialSaved = async (data: MaterialInput) => {
+    try {
+      const resp = await createMaterialMaster(data);
+      await refetchMateriales();
+      return resp;
+    } catch (error) {
+      console.error('Error al crear material maestro:', error);
+      throw error;
+    }
+  };
 
   return (
     <div>
@@ -147,13 +178,23 @@ export default function SolicitudesPage() {
               Gestiona las solicitudes de materiales para cada proyecto de obra.
             </p>
           </div>
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 hover:shadow-amber-500/30 active:scale-[0.98]"
-          >
-            <Plus size={18} />
-            Nueva Solicitud
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowBulkImport(true)}
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
+            >
+              <Upload size={18} />
+              Importar
+            </button>
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 hover:shadow-amber-500/30 active:scale-[0.98]"
+            >
+              <Plus size={18} />
+              Nueva Solicitud
+            </button>
+          </div>
+
         </div>
       </motion.div>
 
@@ -202,6 +243,7 @@ export default function SolicitudesPage() {
                 required
                 value={form.proyecto_id}
                 onChange={e => setForm({ ...form, proyecto_id: e.target.value })}
+                title="Proyecto para el cual se solicitan los materiales"
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
               >
                 <option value="">Seleccionar proyecto...</option>
@@ -218,6 +260,7 @@ export default function SolicitudesPage() {
                 value={form.solicitante}
                 onChange={e => setForm({ ...form, solicitante: e.target.value })}
                 placeholder="Nombre del solicitante"
+                title="Nombre de la persona que solicita los materiales en obra"
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
               />
             </div>
@@ -231,38 +274,93 @@ export default function SolicitudesPage() {
                 <Plus size={14} /> Agregar ítem
               </button>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-4">
               {form.items.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-2 rounded-lg bg-slate-50 p-2">
-                  <input
-                    required
-                    type="text"
-                    placeholder="Material"
-                    value={item.nombre_material}
-                    onChange={e => updateItem(idx, 'nombre_material', e.target.value)}
-                    className="flex-1 rounded-md border border-slate-200 bg-white px-2.5 py-2 text-sm outline-none focus:border-amber-400"
-                  />
-                  <input
-                    required
-                    type="number"
-                    placeholder="Cant."
-                    min="0.01"
-                    step="0.01"
-                    value={item.cantidad_requerida}
-                    onChange={e => updateItem(idx, 'cantidad_requerida', e.target.value)}
-                    className="w-24 rounded-md border border-slate-200 bg-white px-2.5 py-2 text-sm outline-none focus:border-amber-400"
-                  />
-                  <select
-                    value={item.unidad}
-                    onChange={e => updateItem(idx, 'unidad', e.target.value)}
-                    className="w-28 rounded-md border border-slate-200 bg-white px-2 py-2 text-sm outline-none focus:border-amber-400"
-                  >
-                    {unidades.map(u => <option key={u} value={u}>{u}</option>)}
-                  </select>
-                  {form.items.length > 1 && (
-                    <button type="button" onClick={() => removeItem(idx)} className="p-1 text-slate-400 hover:text-red-500">
-                      <Trash2 size={14} />
-                    </button>
+                <div key={idx} className="space-y-2 border-b border-slate-100 pb-4 last:border-0 last:pb-0">
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                         <label className="text-[10px] font-bold uppercase text-slate-400">Material / Insumo</label>
+                         <button 
+                          type="button" 
+                          onClick={() => setIsMaterialModalOpen(true)}
+                          className="text-[10px] font-bold text-amber-600 hover:underline"
+                          title="Registrar nuevo material en el catálogo"
+                         >
+                           + Nuevo en catálogo
+                         </button>
+                      </div>
+                      <select
+                        required
+                        value={item.material_id || ''}
+                        onChange={e => {
+                          const matId = Number(e.target.value);
+                          const mat = masterMateriales?.find((m: any) => m.id === matId);
+                          setForm(prev => ({
+                            ...prev,
+                            items: prev.items.map((it, i) => i === idx ? { 
+                              ...it, 
+                              material_id: matId,
+                              nombre_material: mat?.nombre || '',
+                              unidad: mat?.unidad_abreviatura || it.unidad
+                            } : it)
+                          }));
+                        }}
+                        className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-sm outline-none focus:border-amber-400"
+                      >
+                        <option value="">Buscar en catálogo...</option>
+                        {masterMateriales?.map((m: any) => (
+                          <option key={m.id} value={m.id}>
+                            {m.nombre} {m.sku ? `(${m.sku})` : ''} — {m.unidad_abreviatura}
+                          </option>
+                        ))}
+                        <option value="legacy" disabled>———— O especifica manual ————</option>
+                      </select>
+                    </div>
+                    
+                    <div className="w-24">
+                      <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Cant.</label>
+                      <input
+                        required
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={item.cantidad_requerida}
+                        onChange={e => updateItem(idx, 'cantidad_requerida', e.target.value)}
+                        className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-sm outline-none focus:border-amber-400"
+                      />
+                    </div>
+
+                    <div className="w-28">
+                       <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Unidad</label>
+                       <select
+                        value={item.unidad}
+                        onChange={e => updateItem(idx, 'unidad', e.target.value)}
+                        className="w-full rounded-md border border-slate-200 bg-white px-2 py-2 text-sm outline-none focus:border-amber-400"
+                      >
+                        {masterUnidades?.map((u: any) => (
+                          <option key={u.id} value={u.abreviatura}>{u.nombre} ({u.abreviatura})</option>
+                        )) || unidadesStatic.map(u => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </div>
+
+                    {form.items.length > 1 && (
+                      <button type="button" onClick={() => removeItem(idx)} className="mb-2 p-1 text-slate-400 hover:text-red-500">
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Fallback Manual Name (hidden if material selected, but kept for logic) */}
+                  {!item.material_id && (
+                    <input
+                      required
+                      type="text"
+                      placeholder="Nombre manual del material (Si no está en catálogo)"
+                      value={item.nombre_material}
+                      onChange={e => updateItem(idx, 'nombre_material', e.target.value)}
+                      className="w-full rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs italic outline-none focus:border-amber-400"
+                    />
                   )}
                 </div>
               ))}
@@ -324,9 +422,14 @@ export default function SolicitudesPage() {
                 <tbody>
                   {showDetail.items ? showDetail.items.map((item: any) => (
                     <tr key={item.id} className="border-t border-slate-100">
-                      <td className="px-3 py-2 font-medium text-slate-800">{item.nombre_material}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex flex-col">
+                           <span className="font-medium text-slate-800">{item.material_oficial_nombre || item.nombre_material}</span>
+                           {item.material_sku && <span className="text-[9px] font-mono text-slate-400">{item.material_sku}</span>}
+                        </div>
+                      </td>
                       <td className="px-3 py-2 text-right font-mono text-slate-600">{Number(item.cantidad_requerida).toLocaleString()}</td>
-                      <td className="px-3 py-2 text-slate-500">{item.unidad}</td>
+                      <td className="px-3 py-2 text-slate-500">{item.unidad_abreviatura || item.unidad}</td>
                     </tr>
                   )) : (
                     <tr><td colSpan={3} className="px-3 py-4 text-center text-xs text-slate-400">Cargando ítems...</td></tr>
@@ -337,6 +440,25 @@ export default function SolicitudesPage() {
           </div>
         )}
       </Modal>
+
+      <MaterialModal 
+        isOpen={isMaterialModalOpen}
+        onClose={() => setIsMaterialModalOpen(false)}
+        onSave={onNewMaterialSaved}
+        unidades={masterUnidades || []}
+      />
+
+      <BulkImportModal
+        isOpen={showBulkImport}
+        onClose={() => setShowBulkImport(false)}
+        proyectos={proyectos || []}
+        masterMateriales={masterMateriales || []}
+        onSuccess={() => {
+          refetch();
+          setShowBulkImport(false);
+        }}
+      />
     </div>
+
   );
 }

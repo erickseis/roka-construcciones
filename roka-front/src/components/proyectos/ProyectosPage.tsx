@@ -234,6 +234,7 @@ export default function ProyectosPage() {
               required
               value={form.nombre}
               onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+              title="Nombre identificatorio del proyecto de obra"
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
             />
           </div>
@@ -245,6 +246,7 @@ export default function ProyectosPage() {
                 type="text"
                 value={form.ubicacion}
                 onChange={(e) => setForm({ ...form, ubicacion: e.target.value })}
+                title="Dirección o ubicación física donde se desarrolla el proyecto"
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
               />
             </div>
@@ -253,6 +255,7 @@ export default function ProyectosPage() {
               <select
                 value={form.estado}
                 onChange={(e) => setForm({ ...form, estado: e.target.value })}
+                title="Estado actual del proyecto: Planificación, En Curso o Completado"
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
               >
                 <option value="Planificación">Planificación</option>
@@ -269,6 +272,7 @@ export default function ProyectosPage() {
                 type="date"
                 value={form.fecha_inicio}
                 onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })}
+                title="Fecha de inicio prevista para el proyecto"
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
               />
             </div>
@@ -278,6 +282,7 @@ export default function ProyectosPage() {
                 type="date"
                 value={form.fecha_fin}
                 onChange={(e) => setForm({ ...form, fecha_fin: e.target.value })}
+                title="Fecha de término prevista para el proyecto"
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
               />
             </div>
@@ -286,6 +291,7 @@ export default function ProyectosPage() {
               <select
                 value={form.responsable_usuario_id}
                 onChange={(e) => setForm({ ...form, responsable_usuario_id: e.target.value })}
+                title="Persona responsable de la gestión y supervisión del proyecto"
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
               >
                 <option value="">Sin responsable</option>

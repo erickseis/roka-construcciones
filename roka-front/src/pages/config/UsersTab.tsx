@@ -199,6 +199,7 @@ export default function UsersTab() {
                 type="text"
                 value={form.nombre}
                 onChange={e => setForm({...form, nombre: e.target.value})}
+                title="Nombre del usuario que se registrará en el sistema"
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
                 placeholder="Juan"
               />
@@ -210,6 +211,7 @@ export default function UsersTab() {
                 type="text"
                 value={form.apellido}
                 onChange={e => setForm({...form, apellido: e.target.value})}
+                title="Apellido paterno del usuario"
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
                 placeholder="Pérez"
               />
@@ -224,6 +226,7 @@ export default function UsersTab() {
                 type="text"
                 value={form.rut}
                 onChange={handleRutChange}
+                title="RUT del usuario en formato 12.345.678-9, identificador único nacional"
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
                 placeholder="12.345.678-9"
               />
@@ -235,6 +238,7 @@ export default function UsersTab() {
                 type="email"
                 value={form.correo}
                 onChange={e => setForm({...form, correo: e.target.value})}
+                title="Correo electrónico corporativo del usuario, será utilizado para iniciar sesión"
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
                 placeholder="juan@roka.cl"
               />
@@ -248,6 +252,7 @@ export default function UsersTab() {
                 type="tel"
                 value={form.telefono}
                 onChange={e => setForm({...form, telefono: e.target.value})}
+                title="Número de teléfono de contacto del usuario"
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
                 placeholder="+56 9 1234 5678"
               />
@@ -258,6 +263,7 @@ export default function UsersTab() {
                 required
                 value={form.rol_id}
                 onChange={e => setForm({...form, rol_id: e.target.value})}
+                title="Rol que determina los permisos y nivel de acceso del usuario en el sistema"
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
               >
                 <option value="">Seleccionar Rol...</option>
@@ -272,6 +278,7 @@ export default function UsersTab() {
               <select
                 value={form.departamento_id}
                 onChange={e => setForm({...form, departamento_id: e.target.value})}
+                title="Departamento de la organización al que pertenece el usuario"
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
               >
                 <option value="">Seleccionar...</option>
@@ -283,6 +290,7 @@ export default function UsersTab() {
               <select
                 value={form.cargo_id}
                 onChange={e => setForm({...form, cargo_id: e.target.value})}
+                title="Cargo o puesto que ocupa el usuario dentro de la empresa"
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
               >
                 <option value="">Seleccionar...</option>
@@ -300,6 +308,7 @@ export default function UsersTab() {
                 type="password"
                 value={form.password}
                 onChange={e => setForm({...form, password: e.target.value})}
+                title="Contraseña de acceso al sistema, debe tener al menos 6 caracteres"
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
                 placeholder="••••••••"
               />
@@ -311,6 +320,7 @@ export default function UsersTab() {
                 type="password"
                 value={form.confirmPassword}
                 onChange={e => setForm({...form, confirmPassword: e.target.value})}
+                title="Repetir la contraseña para confirmar que fue ingresada correctamente"
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
                 placeholder="••••••••"
               />

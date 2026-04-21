@@ -233,6 +233,7 @@ export default function CotizacionesPage() {
                 required
                 value={solicitudId}
                 onChange={e => setSolicitudId(e.target.value)}
+                title="Solicitud de materiales a la cual se le asignarán los precios del proveedor"
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
               >
                 <option value="">Seleccionar solicitud...</option>
@@ -251,6 +252,7 @@ export default function CotizacionesPage() {
                 value={proveedor}
                 onChange={e => setProveedor(e.target.value)}
                 placeholder="Nombre del proveedor"
+                title="Nombre o razón social del proveedor que cotiza los materiales"
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
               />
             </div>
@@ -292,6 +294,7 @@ export default function CotizacionesPage() {
                               onChange={e => setPrecios(prev => ({ ...prev, [item.id]: e.target.value }))}
                               className="w-28 ml-auto block rounded-md border border-slate-200 bg-white px-2 py-1 text-right text-sm outline-none focus:border-blue-400"
                               placeholder="$0.00"
+                              title="Precio unitario del material según la cotización del proveedor"
                             />
                           </td>
                           <td className="px-3 py-2 text-right font-mono font-bold text-slate-800">

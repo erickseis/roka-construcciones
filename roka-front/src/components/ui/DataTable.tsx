@@ -41,9 +41,13 @@ export function DataTable<T extends Record<string, any>>({
     if (search) {
       const lower = search.toLowerCase();
       result = result.filter(item =>
-        columns.some(col => {
-          const val = item[col.key];
-          return val && String(val).toLowerCase().includes(lower);
+        Object.entries(item).some(([key, val]) => {
+          // Si el campo no es escalable o es nulo, ignorar
+          if (val === null || val === undefined) return false;
+          // Solo buscar en campos que estén mapeados en las columnas para mayor precisión
+          if (!columns.some(col => col.key === key)) return false;
+          
+          return String(val).toLowerCase().includes(lower);
         })
       );
     }
@@ -73,7 +77,7 @@ export function DataTable<T extends Record<string, any>>({
     return (
       <div className="space-y-3">
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-12 animate-pulse rounded-lg bg-slate-100" />
+          <div key={i} className="h-12 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
         ))}
       </div>
     );
@@ -82,14 +86,14 @@ export function DataTable<T extends Record<string, any>>({
   return (
     <div>
       {searchable && (
-        <div className="mb-4 flex items-center rounded-lg bg-slate-50 px-3 py-2">
+        <div className="mb-4 flex items-center rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
           <Search size={16} className="mr-2 text-slate-400" />
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder={searchPlaceholder}
-            className="w-full bg-transparent text-sm text-slate-700 outline-none"
+            className="w-full bg-transparent text-sm text-slate-700 outline-none dark:text-slate-100"
           />
         </div>
       )}
@@ -97,14 +101,14 @@ export function DataTable<T extends Record<string, any>>({
       {filteredData.length === 0 ? (
         <EmptyState title={emptyTitle} message={emptyMessage} />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200/70">
-          <table className="min-w-full divide-y divide-slate-100">
-            <thead className="bg-slate-50/80">
+        <div className="overflow-hidden rounded-xl border border-slate-200/70 dark:border-slate-800">
+          <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800">
+            <thead className="bg-slate-50/80 dark:bg-slate-900/50">
               <tr>
                 {columns.map(col => (
                   <th
                     key={col.key}
-                    className={`px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500 ${col.sortable ? 'cursor-pointer select-none hover:text-slate-700' : ''} ${col.className || ''}`}
+                    className={`px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500 ${col.sortable ? 'cursor-pointer select-none hover:text-slate-700' : ''} ${col.className || ''} dark:text-slate-400`}
                     onClick={() => col.sortable && handleSort(col.key)}
                   >
                     <span className="flex items-center gap-1">
@@ -117,15 +121,15 @@ export function DataTable<T extends Record<string, any>>({
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50 bg-white">
+            <tbody className="divide-y divide-slate-50 bg-white dark:divide-slate-800 dark:bg-slate-900">
               {filteredData.map((item, idx) => (
                 <tr
                   key={item.id || idx}
-                  className={`transition-colors ${onRowClick ? 'cursor-pointer hover:bg-amber-50/40' : 'hover:bg-slate-50/50'}`}
+                  className={`transition-colors ${onRowClick ? 'cursor-pointer hover:bg-amber-50/40 dark:hover:bg-amber-900/10' : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/50'}`}
                   onClick={() => onRowClick?.(item)}
                 >
                   {columns.map(col => (
-                    <td key={col.key} className={`px-4 py-3 text-sm text-slate-700 ${col.className || ''}`}>
+                    <td key={col.key} className={`px-4 py-3 text-sm text-slate-700 dark:text-slate-300 ${col.className || ''}`}>
                       {col.render ? col.render(item) : item[col.key] ?? '—'}
                     </td>
                   ))}

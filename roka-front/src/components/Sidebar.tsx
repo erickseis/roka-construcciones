@@ -11,7 +11,8 @@ import {
   HardHat,
   Settings,
   LogOut,
-  User
+  User,
+  Package
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
@@ -21,6 +22,7 @@ import { useAuth } from '../context/AuthContext';
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', to: '/' },
   { icon: FileText, label: 'Solicitudes de Materiales', to: '/solicitudes' },
+  { icon: Package, label: 'Gestiona Materiales', to: '/materiales' },
   { icon: DollarSign, label: 'Cotizaciones', to: '/cotizaciones' },
   { icon: PackageCheck, label: 'Órdenes de Compra', to: '/ordenes' },
 ];
@@ -108,7 +110,7 @@ export function Sidebar() {
             <p className="truncate text-xs font-black text-slate-900 dark:text-slate-50">{user?.nombre} {user?.apellido}</p>
             <p className="truncate text-[10px] font-bold uppercase tracking-tighter text-slate-400 dark:text-slate-300">{user?.rol_nombre || 'Usuario'}</p>
           </div>
-          <button 
+          <button
             type="button"
             onClick={() => {
               console.log('Botón Logout clickeado');
