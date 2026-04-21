@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import pool from '../db';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { requirePermission } from '../middleware/permissions';
+import upload from '../lib/upload';
+import path from 'path';
 
 const router = Router();
 
@@ -34,6 +36,24 @@ router.get('/', authMiddleware, requirePermission('proyectos.view'), async (req:
   } catch (error) {
     console.error('Error al listar proyectos:', error);
     res.status(500).json({ error: 'Error al listar proyectos' });
+  }
+});
+
+// GET /api/proyectos/:id/licitacion-archivo
+router.get('/:id/licitacion-archivo', authMiddleware, requirePermission('proyectos.view'), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { rows: [proyecto] } = await pool.query('SELECT archivo_licitacion_path, archivo_licitacion_nombre FROM proyectos WHERE id = $1', [id]);
+
+    if (!proyecto || !proyecto.archivo_licitacion_path) {
+      return res.status(404).json({ error: 'Archivo de licitación no encontrado' });
+    }
+
+    const filePath = path.join(process.cwd(), proyecto.archivo_licitacion_path);
+    res.download(filePath, proyecto.archivo_licitacion_nombre);
+  } catch (error) {
+    console.error('Error al descargar archivo de licitación:', error);
+    res.status(500).json({ error: 'Error al descargar archivo' });
   }
 });
 
@@ -88,19 +108,22 @@ router.get('/:id', authMiddleware, requirePermission('proyectos.view'), async (r
 });
 
 // POST /api/proyectos
-router.post('/', authMiddleware, requirePermission('proyectos.manage'), async (req: Request, res: Response) => {
-  const { nombre, ubicacion, estado, fecha_inicio, fecha_fin, responsable_usuario_id } = req.body;
+router.post('/', authMiddleware, requirePermission('proyectos.manage'), upload.single('archivo_licitacion'), async (req: Request, res: Response) => {
+  const { nombre, ubicacion, estado, fecha_inicio, fecha_fin, responsable_usuario_id, numero_licitacion, descripcion_licitacion, fecha_apertura_licitacion, monto_referencial_licitacion } = req.body;
 
   if (!nombre) {
     return res.status(400).json({ error: 'El nombre del proyecto es requerido' });
   }
 
   try {
+    const archivo_licitacion_path = req.file ? `uploads/licitaciones/${req.file.filename}` : null;
+    const archivo_licitacion_nombre = req.file ? req.file.originalname : null;
+
     const { rows: [created] } = await pool.query(
-      `INSERT INTO proyectos (nombre, ubicacion, estado, fecha_inicio, fecha_fin, responsable_usuario_id)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO proyectos (nombre, ubicacion, estado, fecha_inicio, fecha_fin, responsable_usuario_id, numero_licitacion, descripcion_licitacion, fecha_apertura_licitacion, monto_referencial_licitacion, archivo_licitacion_path, archivo_licitacion_nombre)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
-      [nombre, ubicacion || null, estado || 'Planificación', fecha_inicio || null, fecha_fin || null, responsable_usuario_id || null]
+      [nombre, ubicacion || null, estado || 'Planificación', fecha_inicio || null, fecha_fin || null, responsable_usuario_id || null, numero_licitacion || null, descripcion_licitacion || null, fecha_apertura_licitacion || null, monto_referencial_licitacion || null, archivo_licitacion_path, archivo_licitacion_nombre]
     );
 
     res.status(201).json(created);
@@ -111,11 +134,19 @@ router.post('/', authMiddleware, requirePermission('proyectos.manage'), async (r
 });
 
 // PATCH /api/proyectos/:id
-router.patch('/:id', authMiddleware, requirePermission('proyectos.manage'), async (req: Request, res: Response) => {
+router.patch('/:id', authMiddleware, requirePermission('proyectos.manage'), upload.single('archivo_licitacion'), async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { nombre, ubicacion, estado, fecha_inicio, fecha_fin, responsable_usuario_id } = req.body;
+  const { nombre, ubicacion, estado, fecha_inicio, fecha_fin, responsable_usuario_id, numero_licitacion, descripcion_licitacion, fecha_apertura_licitacion, monto_referencial_licitacion } = req.body;
 
   try {
+    let archivo_licitacion_path = null;
+    let archivo_licitacion_nombre = null;
+
+    if (req.file) {
+      archivo_licitacion_path = `uploads/licitaciones/${req.file.filename}`;
+      archivo_licitacion_nombre = req.file.originalname;
+    }
+
     const { rows: [updated] } = await pool.query(
       `UPDATE proyectos
        SET
@@ -125,10 +156,16 @@ router.patch('/:id', authMiddleware, requirePermission('proyectos.manage'), asyn
          fecha_inicio = COALESCE($4, fecha_inicio),
          fecha_fin = COALESCE($5, fecha_fin),
          responsable_usuario_id = COALESCE($6, responsable_usuario_id),
+         numero_licitacion = COALESCE($7, numero_licitacion),
+         descripcion_licitacion = COALESCE($8, descripcion_licitacion),
+         fecha_apertura_licitacion = COALESCE($9, fecha_apertura_licitacion),
+         monto_referencial_licitacion = COALESCE($10, monto_referencial_licitacion),
+         archivo_licitacion_path = COALESCE($11, archivo_licitacion_path),
+         archivo_licitacion_nombre = COALESCE($12, archivo_licitacion_nombre),
          updated_at = NOW()
-       WHERE id = $7
+       WHERE id = $13
        RETURNING *`,
-      [nombre || null, ubicacion || null, estado || null, fecha_inicio || null, fecha_fin || null, responsable_usuario_id || null, id]
+      [nombre || null, ubicacion || null, estado || null, fecha_inicio || null, fecha_fin || null, responsable_usuario_id || null, numero_licitacion || null, descripcion_licitacion || null, fecha_apertura_licitacion || null, monto_referencial_licitacion || null, archivo_licitacion_path, archivo_licitacion_nombre, id]
     );
 
     if (!updated) {

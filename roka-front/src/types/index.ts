@@ -12,6 +12,12 @@ export interface Proyecto {
   fecha_fin?: string;
   responsable_usuario_id?: number;
   responsable_nombre?: string;
+  numero_licitacion?: string;
+  descripcion_licitacion?: string;
+  fecha_apertura_licitacion?: string;
+  monto_referencial_licitacion?: number;
+  archivo_licitacion_path?: string;
+  archivo_licitacion_nombre?: string;
   updated_at?: string;
   created_at: string;
 }
@@ -23,6 +29,10 @@ export interface ProyectoInput {
   fecha_inicio?: string;
   fecha_fin?: string;
   responsable_usuario_id?: number;
+  numero_licitacion?: string;
+  descripcion_licitacion?: string;
+  fecha_apertura_licitacion?: string;
+  monto_referencial_licitacion?: number;
 }
 
 // --- Organizacional ---

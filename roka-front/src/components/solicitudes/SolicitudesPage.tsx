@@ -4,15 +4,17 @@ import { Plus, FileText, Eye, Trash2, Upload } from 'lucide-react';
 import { DataTable } from '../ui/DataTable';
 import { StatusBadge } from '../ui/StatusBadge';
 import { Modal } from '../ui/Modal';
+import FlowStepper from '../ui/FlowStepper';
 import { useApi } from '@/hooks/useApi';
-import { 
-  getSolicitudes, 
-  createSolicitud, 
-  deleteSolicitud, 
+import {
+  getSolicitudes,
+  createSolicitud,
+  deleteSolicitud,
   getProyectos,
   getMaterialesMaster,
   getUnidadesMedida,
-  createMaterialMaster
+  createMaterialMaster,
+  getCotizaciones
 } from '@/lib/api';
 import MaterialModal from '../materiales/MaterialModal';
 import BulkImportModal from './BulkImportModal';
@@ -28,6 +30,7 @@ export default function SolicitudesPage() {
   const { data: proyectos } = useApi(() => getProyectos(), []);
   const { data: masterMateriales, refetch: refetchMateriales } = useApi(() => getMaterialesMaster(), []);
   const { data: masterUnidades } = useApi(() => getUnidadesMedida(), []);
+  const { data: cotizaciones } = useApi(() => getCotizaciones(), []);
   
   // Material Modal state
   const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
@@ -397,6 +400,8 @@ export default function SolicitudesPage() {
       >
         {showDetail && (
           <div className="space-y-4">
+            <FlowStepper currentStep={0} estado={showDetail.estado} tipo="solicitud" />
+
             <div className="grid grid-cols-3 gap-4">
               <div className="rounded-lg bg-slate-50 p-3">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Solicitante</p>
@@ -411,6 +416,7 @@ export default function SolicitudesPage() {
                 <StatusBadge status={showDetail.estado} size="md" />
               </div>
             </div>
+
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-2">Ítems de la solicitud</p>
             <div className="rounded-lg border border-slate-200 overflow-hidden">
               <table className="min-w-full text-sm">
@@ -418,25 +424,65 @@ export default function SolicitudesPage() {
                   <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Material</th>
                   <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Cantidad</th>
                   <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Unidad</th>
+                  <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Precio Ref.</th>
+                  <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Subtotal</th>
                 </tr></thead>
                 <tbody>
-                  {showDetail.items ? showDetail.items.map((item: any) => (
-                    <tr key={item.id} className="border-t border-slate-100">
-                      <td className="px-3 py-2">
-                        <div className="flex flex-col">
-                           <span className="font-medium text-slate-800">{item.material_oficial_nombre || item.nombre_material}</span>
-                           {item.material_sku && <span className="text-[9px] font-mono text-slate-400">{item.material_sku}</span>}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-right font-mono text-slate-600">{Number(item.cantidad_requerida).toLocaleString()}</td>
-                      <td className="px-3 py-2 text-slate-500">{item.unidad_abreviatura || item.unidad}</td>
-                    </tr>
-                  )) : (
-                    <tr><td colSpan={3} className="px-3 py-4 text-center text-xs text-slate-400">Cargando ítems...</td></tr>
+                  {showDetail.items ? showDetail.items.map((item: any) => {
+                    const subtotal = item.precio_referencial ? Number(item.precio_referencial) * Number(item.cantidad_requerida) : null;
+                    return (
+                      <tr key={item.id} className="border-t border-slate-100">
+                        <td className="px-3 py-2">
+                          <div className="flex flex-col">
+                             <span className="font-medium text-slate-800">{item.material_oficial_nombre || item.nombre_material}</span>
+                             {item.material_sku && <span className="text-[9px] font-mono text-slate-400">{item.material_sku}</span>}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono text-slate-600">{Number(item.cantidad_requerida).toLocaleString()}</td>
+                        <td className="px-3 py-2 text-slate-500">{item.unidad_abreviatura || item.unidad}</td>
+                        <td className="px-3 py-2 text-right font-mono text-slate-600">${item.precio_referencial ? Number(item.precio_referencial).toLocaleString('es-CL', { minimumFractionDigits: 2 }) : '—'}</td>
+                        <td className="px-3 py-2 text-right font-mono text-slate-600 font-bold">${subtotal ? subtotal.toLocaleString('es-CL', { minimumFractionDigits: 2 }) : '—'}</td>
+                      </tr>
+                    );
+                  }) : (
+                    <tr><td colSpan={5} className="px-3 py-4 text-center text-xs text-slate-400">Cargando ítems...</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
+
+            {showDetail.items && (
+              <div className="rounded-lg bg-blue-50 p-3 border border-blue-200">
+                <p className="text-[10px] font-bold uppercase text-blue-600 mb-2">Total Estimado</p>
+                <p className="text-2xl font-black text-blue-900">
+                  ${showDetail.items
+                    .reduce((sum: number, item: any) => {
+                      const subtotal = item.precio_referencial ? Number(item.precio_referencial) * Number(item.cantidad_requerida) : 0;
+                      return sum + subtotal;
+                    }, 0)
+                    .toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            )}
+
+            {cotizaciones && cotizaciones.filter((c: any) => c.solicitud_id === showDetail.id).length > 0 && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Cotizaciones relacionadas</p>
+                <div className="space-y-2">
+                  {cotizaciones
+                    .filter((c: any) => c.solicitud_id === showDetail.id)
+                    .map((cot: any) => (
+                      <div key={cot.id} className="flex items-center justify-between rounded-lg border border-slate-200 p-2 text-xs">
+                        <div>
+                          <span className="font-bold text-slate-800">{cot.proveedor}</span>
+                          <StatusBadge status={cot.estado} size="sm" />
+                        </div>
+                        <span className="font-mono text-slate-600">${Number(cot.total).toLocaleString('es-CL', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Modal>

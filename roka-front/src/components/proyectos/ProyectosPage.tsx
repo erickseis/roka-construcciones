@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus, FolderKanban, Pencil, Power } from 'lucide-react';
+import { Plus, FolderKanban, Pencil, Power, Download, FileText, ChevronDown } from 'lucide-react';
 import { DataTable } from '../ui/DataTable';
 import { Modal } from '../ui/Modal';
 import { StatusBadge } from '../ui/StatusBadge';
@@ -11,6 +11,7 @@ import {
   updateProyecto,
   updateProyectoActive,
   getUsers,
+  downloadLicitacionArchivo,
 } from '@/lib/api';
 
 export default function ProyectosPage() {
@@ -28,7 +29,14 @@ export default function ProyectosPage() {
     fecha_inicio: '',
     fecha_fin: '',
     responsable_usuario_id: '',
+    numero_licitacion: '',
+    descripcion_licitacion: '',
+    fecha_apertura_licitacion: '',
+    monto_referencial_licitacion: '',
   });
+
+  const [archivo_licitacion, setArchivo_licitacion] = useState<File | null>(null);
+  const [mostrarLicitacion, setMostrarLicitacion] = useState(false);
 
   const resetForm = () => {
     setForm({
@@ -38,7 +46,13 @@ export default function ProyectosPage() {
       fecha_inicio: '',
       fecha_fin: '',
       responsable_usuario_id: '',
+      numero_licitacion: '',
+      descripcion_licitacion: '',
+      fecha_apertura_licitacion: '',
+      monto_referencial_licitacion: '',
     });
+    setArchivo_licitacion(null);
+    setMostrarLicitacion(false);
     setEditing(null);
   };
 
@@ -65,7 +79,12 @@ export default function ProyectosPage() {
       fecha_inicio: proyecto.fecha_inicio ? String(proyecto.fecha_inicio).slice(0, 10) : '',
       fecha_fin: proyecto.fecha_fin ? String(proyecto.fecha_fin).slice(0, 10) : '',
       responsable_usuario_id: proyecto.responsable_usuario_id ? String(proyecto.responsable_usuario_id) : '',
+      numero_licitacion: proyecto.numero_licitacion || '',
+      descripcion_licitacion: proyecto.descripcion_licitacion || '',
+      fecha_apertura_licitacion: proyecto.fecha_apertura_licitacion ? String(proyecto.fecha_apertura_licitacion).slice(0, 10) : '',
+      monto_referencial_licitacion: proyecto.monto_referencial_licitacion ? String(proyecto.monto_referencial_licitacion) : '',
     });
+    setMostrarLicitacion(!!proyecto.numero_licitacion);
     setShowForm(true);
   };
 
@@ -74,19 +93,23 @@ export default function ProyectosPage() {
     setSubmitting(true);
 
     try {
-      const payload = {
-        nombre: form.nombre,
-        ubicacion: form.ubicacion || null,
-        estado: form.estado,
-        fecha_inicio: form.fecha_inicio || null,
-        fecha_fin: form.fecha_fin || null,
-        responsable_usuario_id: form.responsable_usuario_id ? Number(form.responsable_usuario_id) : null,
-      };
+      const formData = new FormData();
+      formData.append('nombre', form.nombre);
+      if (form.ubicacion) formData.append('ubicacion', form.ubicacion);
+      formData.append('estado', form.estado);
+      if (form.fecha_inicio) formData.append('fecha_inicio', form.fecha_inicio);
+      if (form.fecha_fin) formData.append('fecha_fin', form.fecha_fin);
+      if (form.responsable_usuario_id) formData.append('responsable_usuario_id', form.responsable_usuario_id);
+      if (form.numero_licitacion) formData.append('numero_licitacion', form.numero_licitacion);
+      if (form.descripcion_licitacion) formData.append('descripcion_licitacion', form.descripcion_licitacion);
+      if (form.fecha_apertura_licitacion) formData.append('fecha_apertura_licitacion', form.fecha_apertura_licitacion);
+      if (form.monto_referencial_licitacion) formData.append('monto_referencial_licitacion', form.monto_referencial_licitacion);
+      if (archivo_licitacion) formData.append('archivo_licitacion', archivo_licitacion);
 
       if (editing) {
-        await updateProyecto(editing.id, payload);
+        await updateProyecto(editing.id, formData);
       } else {
-        await createProyecto(payload);
+        await createProyecto(formData);
       }
 
       setShowForm(false);
@@ -139,6 +162,18 @@ export default function ProyectosPage() {
       ),
     },
     { key: 'responsable_nombre', header: 'Responsable', sortable: true },
+    {
+      key: 'numero_licitacion',
+      header: 'Licitación',
+      sortable: false,
+      render: (row: any) => row.numero_licitacion ? (
+        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700 uppercase">
+          {row.numero_licitacion}
+        </span>
+      ) : (
+        <span className="text-[10px] text-slate-400">—</span>
+      ),
+    },
     {
       key: 'actions',
       header: '',
@@ -300,6 +335,95 @@ export default function ProyectosPage() {
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="border-t border-slate-100 pt-4">
+            <button
+              type="button"
+              onClick={() => setMostrarLicitacion(!mostrarLicitacion)}
+              className="flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700"
+            >
+              <ChevronDown size={16} className={`transition-transform ${mostrarLicitacion ? 'rotate-180' : ''}`} />
+              Datos de Licitación
+            </button>
+
+            {mostrarLicitacion && (
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Número de Licitación</label>
+                  <input
+                    type="text"
+                    value={form.numero_licitacion}
+                    onChange={(e) => setForm({ ...form, numero_licitacion: e.target.value })}
+                    placeholder="Ej: LIC-2024-001"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Descripción</label>
+                  <textarea
+                    value={form.descripcion_licitacion}
+                    onChange={(e) => setForm({ ...form, descripcion_licitacion: e.target.value })}
+                    placeholder="Detalles de la licitación..."
+                    rows={2}
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Fecha de Apertura</label>
+                    <input
+                      type="date"
+                      value={form.fecha_apertura_licitacion}
+                      onChange={(e) => setForm({ ...form, fecha_apertura_licitacion: e.target.value })}
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Monto Referencial</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={form.monto_referencial_licitacion}
+                      onChange={(e) => setForm({ ...form, monto_referencial_licitacion: e.target.value })}
+                      placeholder="0.00"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Archivo de Licitación</label>
+                  <div className="rounded-lg border-2 border-dashed border-slate-300 p-4">
+                    <input
+                      type="file"
+                      accept=".pdf,.xlsx,.xls,.csv"
+                      onChange={(e) => setArchivo_licitacion(e.target.files?.[0] || null)}
+                      className="w-full text-xs"
+                    />
+                    <p className="mt-2 text-[10px] text-slate-500">Archivos permitidos: PDF, Excel, CSV (máx. 20MB)</p>
+                    {archivo_licitacion && (
+                      <p className="mt-2 text-xs text-green-600 font-medium">✓ {archivo_licitacion.name}</p>
+                    )}
+                    {editing?.archivo_licitacion_nombre && !archivo_licitacion && (
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className="text-xs text-slate-600">Archivo actual: {editing.archivo_licitacion_nombre}</span>
+                        <button
+                          type="button"
+                          onClick={() => downloadLicitacionArchivo(editing.id, editing.archivo_licitacion_nombre)}
+                          className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+                        >
+                          <Download size={12} />
+                          Descargar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">

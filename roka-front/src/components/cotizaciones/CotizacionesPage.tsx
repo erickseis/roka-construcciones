@@ -4,6 +4,7 @@ import { Plus, Eye, Check, X, DollarSign } from 'lucide-react';
 import { DataTable } from '../ui/DataTable';
 import { StatusBadge } from '../ui/StatusBadge';
 import { Modal } from '../ui/Modal';
+import FlowStepper from '../ui/FlowStepper';
 import { useApi } from '@/hooks/useApi';
 import {
   getCotizaciones, createCotizacion, aprobarCotizacion, rechazarCotizacion,
@@ -351,6 +352,8 @@ export default function CotizacionesPage() {
       >
         {showDetail && (
           <div className="space-y-4">
+            <FlowStepper currentStep={1} estado={showDetail.estado} tipo="cotizacion" />
+
             <div className="grid grid-cols-3 gap-4">
               <div className="rounded-lg bg-slate-50 p-3">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Solicitud</p>
