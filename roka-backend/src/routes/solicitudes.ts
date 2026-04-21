@@ -53,6 +53,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     const { rows: items } = await pool.query(`
       SELECT si.*, m.nombre AS material_oficial_nombre, m.sku AS material_sku,
+             m.precio_referencial,
              u.abreviatura AS unidad_abreviatura
       FROM solicitud_items si
       LEFT JOIN materiales m ON m.id = si.material_id
@@ -88,10 +89,26 @@ router.post('/', async (req: Request, res: Response) => {
     );
 
     for (const item of items) {
+      let nombre_material = item.nombre_material;
+      let unidad = item.unidad;
+
+      if (item.material_id) {
+        const { rows: [material] } = await client.query(
+          `SELECT m.nombre, u.abreviatura FROM materiales m
+           LEFT JOIN unidades_medida u ON u.id = m.unidad_medida_id
+           WHERE m.id = $1`,
+          [item.material_id]
+        );
+        if (material) {
+          nombre_material = material.nombre;
+          unidad = material.abreviatura;
+        }
+      }
+
       await client.query(
         `INSERT INTO solicitud_items (solicitud_id, material_id, nombre_material, cantidad_requerida, unidad)
          VALUES ($1, $2, $3, $4, $5)`,
-        [solicitud.id, item.material_id || null, item.nombre_material, item.cantidad_requerida, item.unidad]
+        [solicitud.id, item.material_id || null, nombre_material, item.cantidad_requerida, unidad]
       );
     }
 

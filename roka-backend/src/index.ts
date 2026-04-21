@@ -26,6 +26,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+app.use(express.static('uploads'));
 
 // Run migrations on startup
 runMigrations().then(() => {

@@ -22,7 +22,6 @@ import { useAuth } from '../context/AuthContext';
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', to: '/' },
   { icon: FileText, label: 'Solicitudes de Materiales', to: '/solicitudes' },
-  { icon: Package, label: 'Gestiona Materiales', to: '/materiales' },
   { icon: DollarSign, label: 'Cotizaciones', to: '/cotizaciones' },
   { icon: PackageCheck, label: 'Órdenes de Compra', to: '/ordenes' },
 ];
@@ -30,6 +29,7 @@ const navItems = [
 const secondaryItems = [
   { icon: Construction, label: 'Proyectos', to: '/proyectos' },
   { icon: CreditCard, label: 'Presupuesto', to: '/presupuestos' },
+  { icon: Package, label: 'Catálogo de Materiales', to: '/materiales' },
   { icon: Settings, label: 'Configuración', to: '/config' },
 ];
 

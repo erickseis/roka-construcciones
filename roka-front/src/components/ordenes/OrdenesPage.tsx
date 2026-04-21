@@ -4,6 +4,7 @@ import { Plus, Eye, Truck, PackageCheck } from 'lucide-react';
 import { DataTable } from '../ui/DataTable';
 import { StatusBadge } from '../ui/StatusBadge';
 import { Modal } from '../ui/Modal';
+import FlowStepper from '../ui/FlowStepper';
 import { useApi } from '@/hooks/useApi';
 import {
   getOrdenes, generarOrden, updateEstadoEntrega,
@@ -275,6 +276,8 @@ export default function OrdenesPage() {
       >
         {showDetail && (
           <div className="space-y-4">
+            <FlowStepper currentStep={3} estado={showDetail.estado_entrega} tipo="orden" />
+
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-lg bg-slate-50 p-3">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Cotización</p>

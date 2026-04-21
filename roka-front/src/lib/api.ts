@@ -6,10 +6,14 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem('roka_token');
-  
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
+
+  const headers: HeadersInit = options?.headers as HeadersInit || {};
+
+  if (!headers['Content-Type'] || headers['Content-Type'] !== 'multipart/form-data') {
+    headers['Content-Type'] = 'application/json';
+  } else {
+    delete headers['Content-Type'];
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -17,15 +21,11 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
   const res = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
-    headers: {
-      ...headers,
-      ...options?.headers,
-    },
+    headers,
   });
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ error: res.statusText }));
-    // Si el token es inválido o expiró, podríamos limpiar la sesión
     if (res.status === 401 && token) {
       localStorage.removeItem('roka_token');
       window.location.href = '/login';
@@ -69,15 +69,71 @@ export const getProyectosAdmin = (params?: { estado?: string; is_active?: boolea
   return fetchApi<any[]>(`/proyectos${qs ? `?${qs}` : ''}`);
 };
 export const getProyecto = (id: number) => fetchApi<any>(`/proyectos/${id}`);
-export const createProyecto = (data: any) =>
-  fetchApi<any>('/proyectos', { method: 'POST', body: JSON.stringify(data) });
-export const updateProyecto = (id: number, data: any) =>
-  fetchApi<any>(`/proyectos/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+
+export const createProyecto = (data: any) => {
+  if (data instanceof FormData) {
+    const token = localStorage.getItem('roka_token');
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(`${API_BASE}/proyectos`, {
+      method: 'POST',
+      body: data,
+      headers,
+    }).then(res => {
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      return res.json();
+    });
+  }
+  return fetchApi<any>('/proyectos', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export const updateProyecto = (id: number, data: any) => {
+  if (data instanceof FormData) {
+    const token = localStorage.getItem('roka_token');
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(`${API_BASE}/proyectos/${id}`, {
+      method: 'PATCH',
+      body: data,
+      headers,
+    }).then(res => {
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      return res.json();
+    });
+  }
+  return fetchApi<any>(`/proyectos/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+};
+
 export const updateProyectoActive = (id: number, is_active: boolean) =>
   fetchApi<any>(`/proyectos/${id}/active`, {
     method: 'PATCH',
     body: JSON.stringify({ is_active }),
   });
+
+export const downloadLicitacionArchivo = (id: number, nombreArchivo: string) => {
+  const token = localStorage.getItem('roka_token');
+  const headers: HeadersInit = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return fetch(`${API_BASE}/proyectos/${id}/licitacion-archivo`, { headers })
+    .then(res => {
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      return res.blob();
+    })
+    .then(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = nombreArchivo;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    });
+};
 
 // ---- Presupuestos ----
 export const getPresupuestos = () => fetchApi<any[]>('/presupuestos');
