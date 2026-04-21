@@ -177,8 +177,8 @@ export default function OrdenesPage() {
             loading={loading}
             searchable
             searchPlaceholder="Buscar por proveedor, proyecto..."
-            emptyTitle="Sin órdenes de compra"
-            emptyMessage="Genera una OC a partir de una cotización aprobada"
+            emptyTitle="Sin órdenes"
+            emptyMessage="Genera una orden a partir de una cotización aprobada"
           />
         </div>
       </motion.div>
@@ -200,6 +200,7 @@ export default function OrdenesPage() {
               required
               value={cotizacionId}
               onChange={e => setCotizacionId(e.target.value)}
+              title="Cotización aprobada previamente de la cual se generará la orden de compra, compromete el presupuesto del proyecto"
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
             >
               <option value="">Seleccionar cotización...</option>
@@ -218,6 +219,7 @@ export default function OrdenesPage() {
             <select
               value={condicionesPago}
               onChange={e => setCondicionesPago(e.target.value)}
+              title="Términos de pago acordados con el proveedor para la orden de compra"
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
             >
               {condicionesOpciones.map(c => <option key={c} value={c}>{c}</option>)}

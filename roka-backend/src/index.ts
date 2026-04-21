@@ -12,6 +12,7 @@ import configRouter from './routes/config';
 import proyectosRouter from './routes/proyectos';
 import presupuestosRouter from './routes/presupuestos';
 import notificacionesRouter from './routes/notificaciones';
+import materialesRouter from './routes/materiales';
 import { runMigrations } from './lib/migrations';
 
 dotenv.config();
@@ -39,6 +40,7 @@ runMigrations().then(() => {
   app.use('/api/proyectos', proyectosRouter);
   app.use('/api/presupuestos', presupuestosRouter);
   app.use('/api/notificaciones', notificacionesRouter);
+  app.use('/api/materiales', materialesRouter);
 
   // Health check
   app.get('/api/health', (_req, res) => {

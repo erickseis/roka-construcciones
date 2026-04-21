@@ -83,16 +83,16 @@ export default function StructureTab() {
       {/* Modals */}
       <Modal isOpen={showDeptModal} onClose={() => setShowDeptModal(false)} title="Nuevo Departamento">
         <form onSubmit={handleCreateDept} className="space-y-4">
-          <input required type="text" placeholder="Nombre" value={deptForm.nombre} onChange={e => setDeptForm({...deptForm, nombre: e.target.value})} className="w-full rounded-lg border border-slate-200 p-2.5 text-sm" />
-          <textarea placeholder="Descripción" value={deptForm.descripcion} onChange={e => setDeptForm({...deptForm, descripcion: e.target.value})} className="w-full rounded-lg border border-slate-200 p-2.5 text-sm" />
+          <input required type="text" placeholder="Nombre" value={deptForm.nombre} onChange={e => setDeptForm({...deptForm, nombre: e.target.value})} title="Nombre del departamento o área dentro de la empresa" className="w-full rounded-lg border border-slate-200 p-2.5 text-sm" />
+          <textarea placeholder="Descripción" value={deptForm.descripcion} onChange={e => setDeptForm({...deptForm, descripcion: e.target.value})} title="Descripción breve de las funciones y responsabilidades del departamento" className="w-full rounded-lg border border-slate-200 p-2.5 text-sm" />
           <button type="submit" className="w-full rounded-lg bg-amber-500 py-2.5 text-sm font-bold text-white">Crear</button>
         </form>
       </Modal>
 
       <Modal isOpen={showCargoModal} onClose={() => setShowCargoModal(false)} title="Nuevo Cargo">
         <form onSubmit={handleCreateCargo} className="space-y-4">
-          <input required type="text" placeholder="Nombre del Cargo" value={cargoForm.nombre} onChange={e => setCargoForm({...cargoForm, nombre: e.target.value})} className="w-full rounded-lg border border-slate-200 p-2.5 text-sm" />
-          <select required value={cargoForm.departamento_id} onChange={e => setCargoForm({...cargoForm, departamento_id: e.target.value})} className="w-full rounded-lg border border-slate-200 p-2.5 text-sm">
+          <input required type="text" placeholder="Nombre del Cargo" value={cargoForm.nombre} onChange={e => setCargoForm({...cargoForm, nombre: e.target.value})} title="Nombre del cargo o puesto de trabajo dentro de la empresa" className="w-full rounded-lg border border-slate-200 p-2.5 text-sm" />
+          <select required value={cargoForm.departamento_id} onChange={e => setCargoForm({...cargoForm, departamento_id: e.target.value})} title="Departamento al cual pertenece este cargo" className="w-full rounded-lg border border-slate-200 p-2.5 text-sm">
             <option value="">Seleccionar Departamento...</option>
             {departamentos?.map((d: any) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
           </select>

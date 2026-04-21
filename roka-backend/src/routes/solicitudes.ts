@@ -51,10 +51,15 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Solicitud no encontrada' });
     }
 
-    const { rows: items } = await pool.query(
-      'SELECT * FROM solicitud_items WHERE solicitud_id = $1 ORDER BY id',
-      [id]
-    );
+    const { rows: items } = await pool.query(`
+      SELECT si.*, m.nombre AS material_oficial_nombre, m.sku AS material_sku,
+             u.abreviatura AS unidad_abreviatura
+      FROM solicitud_items si
+      LEFT JOIN materiales m ON m.id = si.material_id
+      LEFT JOIN unidades_medida u ON u.id = m.unidad_medida_id
+      WHERE si.solicitud_id = $1
+      ORDER BY si.id
+    `, [id]);
 
     res.json({ ...solicitud, items });
   } catch (error) {
@@ -84,9 +89,9 @@ router.post('/', async (req: Request, res: Response) => {
 
     for (const item of items) {
       await client.query(
-        `INSERT INTO solicitud_items (solicitud_id, nombre_material, cantidad_requerida, unidad)
-         VALUES ($1, $2, $3, $4)`,
-        [solicitud.id, item.nombre_material, item.cantidad_requerida, item.unidad]
+        `INSERT INTO solicitud_items (solicitud_id, material_id, nombre_material, cantidad_requerida, unidad)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [solicitud.id, item.material_id || null, item.nombre_material, item.cantidad_requerida, item.unidad]
       );
     }
 

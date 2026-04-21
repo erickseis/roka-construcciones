@@ -11,12 +11,14 @@ import {
   getPresupuestoProyecto,
   getPresupuestos,
   getProyectosAdmin,
+  getMaterialCategorias,
 } from '@/lib/api';
 
 export default function PresupuestosPage() {
   const { data: presupuestos, loading, refetch } = useApi(() => getPresupuestos(), []);
   const { data: proyectos } = useApi(() => getProyectosAdmin({ is_active: true }), []);
   const { data: alertas } = useApi(() => getAlertasPresupuesto(), []);
+  const { data: masterCategorias } = useApi(() => getMaterialCategorias(), []);
 
   const [showCreate, setShowCreate] = useState(false);
   const [showDetail, setShowDetail] = useState<any | null>(null);
@@ -78,7 +80,11 @@ export default function PresupuestosPage() {
       });
       refetch();
     } catch (error: any) {
-      alert(error.message || 'Error al crear presupuesto');
+      if (error.status === 409) {
+        alert('Este proyecto ya cuenta con un presupuesto asignado.');
+      } else {
+        alert(error.message || 'Error al crear presupuesto');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -224,10 +230,16 @@ export default function PresupuestosPage() {
                 required
                 value={form.proyecto_id}
                 onChange={(e) => setForm({ ...form, proyecto_id: e.target.value })}
+                title="Proyecto al cual se asigna el presupuesto. Solo se permite un presupuesto por proyecto"
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
               >
                 <option value="">Seleccionar proyecto...</option>
-                {proyectos?.map((p: any) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                {proyectos
+                  ?.filter((p: any) => !rows.some((b: any) => b.proyecto_id === p.id))
+                  .map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.nombre}</option>
+                  ))
+                }
               </select>
             </div>
             <div>
@@ -238,6 +250,7 @@ export default function PresupuestosPage() {
                 min="1"
                 value={form.monto_total}
                 onChange={(e) => setForm({ ...form, monto_total: e.target.value })}
+                title="Monto total del presupuesto asignado al proyecto en pesos"
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
               />
             </div>
@@ -250,6 +263,7 @@ export default function PresupuestosPage() {
                 max="100"
                 value={form.umbral_alerta}
                 onChange={(e) => setForm({ ...form, umbral_alerta: e.target.value })}
+                title="Porcentaje de uso del presupuesto a partir del cual se generarán alertas de notificación (por defecto 80%)"
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
               />
             </div>
@@ -263,19 +277,25 @@ export default function PresupuestosPage() {
             <div className="space-y-2">
               {form.categorias.map((c, idx) => (
                 <div key={idx} className="grid grid-cols-12 gap-2">
-                  <input
-                    type="text"
-                    placeholder="Nombre categoría"
+                  <select
+                    required
                     value={c.nombre}
                     onChange={(e) => updateCategoria(idx, 'nombre', e.target.value)}
+                    title="Selecciona una de las categorías definidas en el maestro de materiales"
                     className="col-span-7 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-amber-400"
-                  />
+                  >
+                    <option value="">Seleccionar categoría...</option>
+                    {masterCategorias?.map((cat: any) => (
+                      <option key={cat.id} value={cat.nombre}>{cat.nombre}</option>
+                    ))}
+                  </select>
                   <input
                     type="number"
                     placeholder="Monto"
                     min="1"
                     value={c.monto_asignado}
                     onChange={(e) => updateCategoria(idx, 'monto_asignado', e.target.value)}
+                    title="Monto asignado a esta categoría de gasto dentro del presupuesto total"
                     className="col-span-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-amber-400"
                   />
                   <button
@@ -352,14 +372,18 @@ export default function PresupuestosPage() {
               </div>
 
               <form onSubmit={handleAddCategoria} className="mt-4 grid grid-cols-12 gap-2 border-t border-slate-100 pt-4">
-                <input
-                  type="text"
+                <select
                   required
-                  placeholder="Nueva categoría"
                   value={newCategoria.nombre}
                   onChange={(e) => setNewCategoria({ ...newCategoria, nombre: e.target.value })}
+                  title="Selecciona la categoría a agregar al presupuesto"
                   className="col-span-7 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-amber-400"
-                />
+                >
+                  <option value="">Seleccionar categoría...</option>
+                  {masterCategorias?.map((cat: any) => (
+                    <option key={cat.id} value={cat.nombre}>{cat.nombre}</option>
+                  ))}
+                </select>
                 <input
                   type="number"
                   required
@@ -367,6 +391,7 @@ export default function PresupuestosPage() {
                   placeholder="Monto"
                   value={newCategoria.monto_asignado}
                   onChange={(e) => setNewCategoria({ ...newCategoria, monto_asignado: e.target.value })}
+                  title="Monto presupuestado para la nueva categoría de gasto"
                   className="col-span-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-amber-400"
                 />
                 <button

@@ -47,8 +47,8 @@ export default function DashboardPage() {
           Dashboard de Estadísticas
         </h2>
         <div className="mt-1 flex items-center gap-2">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-amber-500" />
-          <span className="text-[10px] font-medium uppercase tracking-tighter text-slate-500">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-amber-500" title="Los datos se actualizan automáticamente desde el servidor" />
+          <span className="text-[10px] font-medium uppercase tracking-tighter text-slate-500" title="Los datos se actualizan automáticamente desde el servidor">
             Datos en tiempo real • Actualizado ahora
           </span>
         </div>
@@ -64,6 +64,7 @@ export default function DashboardPage() {
             color: 'text-amber-600',
             bg: 'bg-amber-50',
             iconBg: 'bg-amber-100',
+            title: 'Cantidad de solicitudes de materiales que aún están pendientes de cotización este mes',
           },
           {
             label: 'Solicitudes Atendidas',
@@ -72,6 +73,7 @@ export default function DashboardPage() {
             color: 'text-emerald-600',
             bg: 'bg-emerald-50',
             iconBg: 'bg-emerald-100',
+            title: 'Cantidad de solicitudes que ya tienen al menos una cotización aprobada u orden de compra generada este mes',
           },
           {
             label: 'Promedio Conversión',
@@ -81,6 +83,7 @@ export default function DashboardPage() {
             bg: 'bg-blue-50',
             iconBg: 'bg-blue-100',
             subtitle: `Min: ${stats?.tiempo_conversion?.min_dias ?? 0}d — Max: ${stats?.tiempo_conversion?.max_dias ?? 0}d`,
+            title: 'Tiempo promedio en días que toma desde crear una solicitud hasta generar una orden de compra',
           },
           {
             label: 'Gasto Total en OCs',
@@ -89,6 +92,7 @@ export default function DashboardPage() {
             color: 'text-violet-600',
             bg: 'bg-violet-50',
             iconBg: 'bg-violet-100',
+            title: 'Suma total en pesos del monto de todas las órdenes de compra generadas en los proyectos activos',
           },
         ].map((kpi, idx) => (
           <motion.div
@@ -96,6 +100,7 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.05 }}
+            title={kpi.title}
             className="rounded-xl bg-white p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start justify-between">
@@ -119,6 +124,7 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
+          title="Distribución mensual del estado de las solicitudes de materiales: cuántas están pendientes vs. atendidas"
           className="col-span-5 rounded-xl bg-white p-6 shadow-sm border border-slate-100"
         >
           <h3 className="mb-1 text-lg font-bold text-slate-900">Solicitudes del Mes</h3>
@@ -148,7 +154,7 @@ export default function DashboardPage() {
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-black text-slate-900">
+                <span className="text-3xl font-black text-slate-900" title="Total de solicitudes de materiales registradas en el mes actual">
                   {stats?.solicitudes_mensual?.total ?? 0}
                 </span>
                 <span className="text-[10px] font-bold uppercase text-slate-400">Total</span>
@@ -159,11 +165,11 @@ export default function DashboardPage() {
           <div className="mt-4 flex justify-center gap-6">
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-sm bg-amber-500" />
-              <span className="text-[10px] font-bold uppercase text-slate-500">Pendientes</span>
+              <span className="text-[10px] font-bold uppercase text-slate-500" title="Solicitudes que aún no han sido cotizadas ni aprobadas">Pendientes</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-sm bg-blue-500" />
-              <span className="text-[10px] font-bold uppercase text-slate-500">Atendidas</span>
+              <span className="text-[10px] font-bold uppercase text-slate-500" title="Solicitudes que ya tienen cotización aprobada u orden de compra">Atendidas</span>
             </div>
           </div>
         </motion.div>
@@ -173,6 +179,7 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
+          title="Comparación del gasto total comprometido en órdenes de compra por cada proyecto activo"
           className="col-span-7 rounded-xl bg-white p-6 shadow-sm border border-slate-100"
         >
           <h3 className="mb-1 text-lg font-bold text-slate-900">Gasto por Proyecto</h3>
@@ -210,6 +217,7 @@ export default function DashboardPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
+        title="Métricas de eficiencia del proceso de compras: tiempo que demora cada solicitud en convertirse en orden de compra"
         className="rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-white shadow-lg"
       >
         <div className="flex items-center justify-between">
@@ -223,21 +231,21 @@ export default function DashboardPage() {
         </div>
 
         <div className="mt-6 grid grid-cols-3 gap-6">
-          <div className="text-center">
+          <div className="text-center" title="Tiempo mínimo en días que tomó completar el ciclo solicitud → orden de compra">
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Mínimo</p>
             <p className="mt-1 text-3xl font-black text-blue-400">
               {stats?.tiempo_conversion?.min_dias ?? 0}
               <span className="text-sm font-medium text-slate-500"> días</span>
             </p>
           </div>
-          <div className="text-center border-x border-slate-700">
+          <div className="text-center border-x border-slate-700" title="Tiempo promedio en días del ciclo completo solicitud → orden de compra">
             <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">Promedio</p>
             <p className="mt-1 text-3xl font-black text-amber-400">
               {stats?.tiempo_conversion?.promedio_dias ?? 0}
               <span className="text-sm font-medium text-slate-500"> días</span>
             </p>
           </div>
-          <div className="text-center">
+          <div className="text-center" title="Tiempo máximo en días que tomó completar el ciclo solicitud → orden de compra">
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Máximo</p>
             <p className="mt-1 text-3xl font-black text-red-400">
               {stats?.tiempo_conversion?.max_dias ?? 0}

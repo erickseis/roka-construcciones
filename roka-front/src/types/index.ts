@@ -71,12 +71,17 @@ export type SolicitudEstado = 'Pendiente' | 'Cotizando' | 'Aprobado';
 export interface SolicitudItem {
   id: number;
   solicitud_id: number;
+  material_id?: number | null;
+  material_oficial_nombre?: string;
+  material_sku?: string;
   nombre_material: string;
   cantidad_requerida: number;
   unidad: string;
+  unidad_abreviatura?: string;
 }
 
 export interface SolicitudItemInput {
+  material_id?: number | null;
   nombre_material: string;
   cantidad_requerida: number;
   unidad: string;
@@ -262,4 +267,47 @@ export interface Notificacion {
   leida: boolean;
   leida_at?: string;
   created_at: string;
+}
+// --- Materiales (Maestro) ---
+
+export interface UnidadMedida {
+  id: number;
+  nombre: string;
+  abreviatura: string;
+  created_at: string;
+}
+
+export interface MaterialCategoria {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+  created_at: string;
+}
+
+export interface Material {
+  id: number;
+  sku: string;
+  nombre: string;
+  descripcion?: string;
+  unidad_medida_id: number;
+  unidad_nombre?: string;
+  unidad_abreviatura?: string;
+  categoria_id?: number;
+  categoria_nombre?: string;
+  categoria?: string;
+  precio_referencial?: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MaterialInput {
+  sku?: string;
+  nombre: string;
+  descripcion?: string;
+  unidad_medida_id: number;
+  categoria_id?: number | null;
+  categoria?: string;
+  precio_referencial?: number;
+  is_active?: boolean;
 }
