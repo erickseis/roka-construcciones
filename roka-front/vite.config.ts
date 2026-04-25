@@ -15,11 +15,14 @@ export default defineConfig(({mode}) => {
         '@': path.resolve(__dirname, 'src'),
       },
     },
-    server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modify—file watching is disabled to prevent flickering during agent edits.
+server: {
       hmr: process.env.DISABLE_HMR !== 'true',
       proxy: {
+        '/api/roka': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/roka/, ''),
+        },
         '/api': {
           target: 'http://localhost:3001',
           changeOrigin: true,
