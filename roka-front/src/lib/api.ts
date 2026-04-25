@@ -36,25 +36,25 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 }
 
 // ---- Auth ----
-export const login = (credentials: any) => 
+export const login = (credentials: any) =>
   fetchApi<any>('/auth/login', { method: 'POST', body: JSON.stringify(credentials) });
 
 export const getMe = () => fetchApi<any>('/auth/me');
 
 // ---- Usuarios ----
 export const getUsers = () => fetchApi<any[]>('/users');
-export const createUser = (data: any) => 
+export const createUser = (data: any) =>
   fetchApi<any>('/users', { method: 'POST', body: JSON.stringify(data) });
-export const deleteUser = (id: number) => 
+export const deleteUser = (id: number) =>
   fetchApi<any>(`/users/${id}`, { method: 'DELETE' });
 
 // ---- Configuración Estructural ----
 export const getDepartamentos = () => fetchApi<any[]>('/config/departamentos');
-export const createDepartamento = (data: any) => 
+export const createDepartamento = (data: any) =>
   fetchApi<any>('/config/departamentos', { method: 'POST', body: JSON.stringify(data) });
 
 export const getCargos = () => fetchApi<any[]>('/config/cargos');
-export const createCargo = (data: any) => 
+export const createCargo = (data: any) =>
   fetchApi<any>('/config/cargos', { method: 'POST', body: JSON.stringify(data) });
 
 export const getRoles = () => fetchApi<any[]>('/config/roles');
@@ -205,7 +205,17 @@ export const getOrdenes = (params?: { estado_entrega?: string; proyecto_id?: num
 
 export const getOrden = (id: number) => fetchApi<any>(`/ordenes/${id}`);
 
-export const generarOrden = (data: { cotizacion_id: number; condiciones_pago?: string }) =>
+export const generarOrden = (data: {
+  cotizacion_id: number;
+  condiciones_pago?: string;
+  folio?: string;
+  descuento_tipo?: 'none' | 'porcentaje' | 'monto';
+  descuento_valor?: number;
+  plazo_entrega?: string;
+  condiciones_entrega?: string;
+  atencion_a?: string;
+  observaciones?: string;
+}) =>
   fetchApi<any>('/ordenes', { method: 'POST', body: JSON.stringify(data) });
 
 export const updateEstadoEntrega = (id: number, estado_entrega: string) =>

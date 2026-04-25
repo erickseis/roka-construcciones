@@ -22,10 +22,27 @@ export default function OrdenesPage() {
   // Form state
   const [cotizacionId, setCotizacionId] = useState('');
   const [condicionesPago, setCondicionesPago] = useState('Neto 30 días');
+  const [folio, setFolio] = useState('');
+  const [descuentoTipo, setDescuentoTipo] = useState<'none' | 'porcentaje' | 'monto'>('none');
+  const [descuentoValor, setDescuentoValor] = useState('0');
+  const [plazoEntrega, setPlazoEntrega] = useState('Inmediata');
+  const [condicionesEntrega, setCondicionesEntrega] = useState('Puesto en obra');
+  const [atencionA, setAtencionA] = useState('');
+  const [observaciones, setObservaciones] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   // Approved cotizaciones available for OC
   const { data: cotizaciones } = useApi(() => getCotizaciones({ estado: 'Aprobada' }), []);
+
+  const selectedCotizacion = cotizaciones?.find((c: any) => c.id === Number(cotizacionId));
+  const subtotalBase = Number(selectedCotizacion?.total || 0);
+  const descuentoValorNum = Number(descuentoValor || 0);
+  const descuentoMonto = descuentoTipo === 'porcentaje'
+    ? (subtotalBase * descuentoValorNum) / 100
+    : descuentoTipo === 'monto'
+      ? descuentoValorNum
+      : 0;
+  const subtotalNetoEstimado = Math.max(0, subtotalBase - descuentoMonto);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,10 +51,24 @@ export default function OrdenesPage() {
       await generarOrden({
         cotizacion_id: Number(cotizacionId),
         condiciones_pago: condicionesPago,
+        folio: folio.trim() || undefined,
+        descuento_tipo: descuentoTipo,
+        descuento_valor: descuentoTipo === 'none' ? 0 : descuentoValorNum,
+        plazo_entrega: plazoEntrega.trim() || undefined,
+        condiciones_entrega: condicionesEntrega.trim() || undefined,
+        atencion_a: atencionA.trim() || undefined,
+        observaciones: observaciones.trim() || undefined,
       });
       setShowForm(false);
       setCotizacionId('');
       setCondicionesPago('Neto 30 días');
+      setFolio('');
+      setDescuentoTipo('none');
+      setDescuentoValor('0');
+      setPlazoEntrega('Inmediata');
+      setCondicionesEntrega('Puesto en obra');
+      setAtencionA('');
+      setObservaciones('');
       refetch();
     } catch (err: any) {
       alert(err.message || 'Error al generar orden de compra');
@@ -73,7 +104,7 @@ export default function OrdenesPage() {
       header: 'ID',
       sortable: true,
       render: (row: any) => (
-        <span className="font-mono text-xs font-bold text-emerald-600">OC-{String(row.id).padStart(3, '0')}</span>
+        <span className="font-mono text-xs font-bold text-emerald-600">{row.folio || `OC-${String(row.id).padStart(3, '0')}`}</span>
       ),
     },
     {
@@ -97,7 +128,7 @@ export default function OrdenesPage() {
       sortable: true,
       render: (row: any) => (
         <span className="font-mono text-sm font-bold text-slate-800">
-          ${Number(row.total).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+          ${Number(row.total_final ?? row.total).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
         </span>
       ),
     },
@@ -249,18 +280,110 @@ export default function OrdenesPage() {
             </select>
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
+                Folio (opcional)
+              </label>
+              <input
+                value={folio}
+                onChange={e => setFolio(e.target.value)}
+                placeholder="Si queda vacío se autogenera"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
+                Plazo de Entrega
+              </label>
+              <input
+                value={plazoEntrega}
+                onChange={e => setPlazoEntrega(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
+              Condiciones de Entrega
+            </label>
+            <input
+              value={condicionesEntrega}
+              onChange={e => setCondicionesEntrega(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
+                Tipo de Descuento
+              </label>
+              <select
+                value={descuentoTipo}
+                onChange={e => setDescuentoTipo(e.target.value as 'none' | 'porcentaje' | 'monto')}
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+              >
+                <option value="none">Sin descuento</option>
+                <option value="porcentaje">Porcentaje (%)</option>
+                <option value="monto">Monto fijo ($)</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
+                Valor de Descuento
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                disabled={descuentoTipo === 'none'}
+                value={descuentoValor}
+                onChange={e => setDescuentoValor(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
+              A la atención de
+            </label>
+            <input
+              value={atencionA}
+              onChange={e => setAtencionA(e.target.value)}
+              placeholder="Contacto del proveedor"
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
+              Observaciones
+            </label>
+            <textarea
+              value={observaciones}
+              onChange={e => setObservaciones(e.target.value)}
+              rows={2}
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+            />
+          </div>
+
           {cotizacionId && cotizaciones && (
             <div className="rounded-lg bg-emerald-50 p-4 border border-emerald-100">
               <p className="text-xs font-bold text-emerald-700 mb-1">Resumen</p>
               {(() => {
-                const cot = cotizaciones.find((c: any) => c.id === Number(cotizacionId));
+                const cot = selectedCotizacion;
                 if (!cot) return null;
                 return (
                   <div className="space-y-1 text-sm text-emerald-800">
                     <p><span className="font-medium">Proveedor:</span> {cot.proveedor}</p>
                     <p><span className="font-medium">Proyecto:</span> {cot.proyecto_nombre}</p>
+                    <p><span className="font-medium">Subtotal base:</span> ${Number(subtotalBase).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</p>
+                    <p><span className="font-medium">Descuento:</span> ${Math.max(0, descuentoMonto).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</p>
                     <p className="text-lg font-black mt-2">
-                      Total: ${Number(cot.total).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                      Neto comprometido: ${Number(subtotalNetoEstimado).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                 );
@@ -292,7 +415,7 @@ export default function OrdenesPage() {
       <Modal
         isOpen={!!showDetail}
         onClose={() => setShowDetail(null)}
-        title={showDetail ? `Orden de Compra OC-${String(showDetail.id).padStart(3, '0')}` : ''}
+        title={showDetail ? `Orden de Compra ${showDetail.folio || `OC-${String(showDetail.id).padStart(3, '0')}`}` : ''}
         subtitle={showDetail ? `Proveedor: ${showDetail.proveedor}` : ''}
         size="lg"
       >
@@ -321,7 +444,7 @@ export default function OrdenesPage() {
             <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-4 text-center">
               <p className="text-[10px] font-bold uppercase text-emerald-600 mb-1">Total Orden de Compra</p>
               <p className="text-3xl font-black text-emerald-700">
-                ${Number(showDetail.total).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                ${Number(showDetail.total_final ?? showDetail.total).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
               </p>
             </div>
             <div className="rounded-lg bg-slate-50 p-3">
