@@ -16,7 +16,7 @@ const QUICK_ACTIONS = [
   { label: '⏱ Tiempo conversión', query: '¿Cuál es el tiempo de conversión promedio?' },
 ];
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_URL = import.meta.env.VITE_API_URL;
 
 export function RokaChatbot() {
   const { user } = useAuth();

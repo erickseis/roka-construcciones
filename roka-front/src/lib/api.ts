@@ -2,7 +2,7 @@
 // API Client — Funciones centralizadas de fetch
 // ================================================
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const API_BASE = import.meta.env.VITE_API_URL;
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem('roka_token');
@@ -19,7 +19,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${endpoint}`, {
+  const res = await fetch(`${API_BASE}/api${endpoint}`, {
     ...options,
     headers,
   });

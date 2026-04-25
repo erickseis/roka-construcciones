@@ -23,7 +23,7 @@ import {
   getProyectos
 } from '../../lib/api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api/roka';
 
 export default function MaterialesPage() {
   const [materiales, setMateriales] = useState<Material[]>([]);

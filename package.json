@@ -1,0 +1,15 @@
+{
+  "name": "roka-unified",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node index.cjs",
+    "start": "node index.js",
+    "build:roka": "cd roka-backend && npm run build"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2"
+  }
+}
