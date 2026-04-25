@@ -49,10 +49,27 @@ const rowValueStyle: React.CSSProperties = {
   borderBottom: '1px dotted #d1d5db',
 };
 
+const headerLabelStyle: React.CSSProperties = {
+  fontSize: '8px',
+  fontWeight: 800,
+  textTransform: 'uppercase',
+  letterSpacing: '0.06em',
+  color: '#475569',
+};
+
+const headerValueStyle: React.CSSProperties = {
+  fontSize: '10px',
+  fontWeight: 700,
+  color: '#0f172a',
+};
+
 const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
   const items: any[] = orden?.items || [];
   const atencion = atencionManual.trim() || orden?.atencion_a || orden?.proveedor_contacto_nombre || '-';
   const folio = orden?.folio || `OC-${String(orden?.id || 0).padStart(6, '0')}`;
+  const numeroSolicitud = orden?.solicitud_id ? `SM-${String(orden.solicitud_id).padStart(3, '0')}` : '-';
+  const numeroCotizacion = orden?.cotizacion_id ? `COT-${String(orden.cotizacion_id).padStart(3, '0')}` : '-';
+  const moneda = 'PESO CHILENO';
   const subtotalNeto = Number(orden?.subtotal_neto ?? orden?.total ?? 0);
   const descuentoMonto = Number(orden?.descuento_monto ?? 0);
   const descuentoTipo = String(orden?.descuento_tipo || 'none');
@@ -98,9 +115,14 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <img src={logoRoka} alt="Roka" style={{ width: '95px', objectFit: 'contain', filter: 'brightness(120%)' }} />
-            <div>
+            <div style={{ lineHeight: 1.2 }}>
               <div style={{ fontSize: '11px', opacity: 0.9 }}>Sistema de Compras y Abastecimiento</div>
-              <div style={{ fontSize: '15px', fontWeight: 800, letterSpacing: '0.03em' }}>ORDEN DE COMPRA</div>
+              <div style={{ fontSize: '15px', fontWeight: 800, letterSpacing: '0.03em', marginBottom: '3px' }}>ORDEN DE COMPRA</div>
+              <div style={{ fontSize: '10px', fontWeight: 700 }}>{EMPRESA.nombre}</div>
+              <div style={{ fontSize: '9px', opacity: 0.95 }}>General Arteaga N°30</div>
+              <div style={{ fontSize: '9px', opacity: 0.95 }}>Rut {EMPRESA.rut}</div>
+              <div style={{ fontSize: '9px', opacity: 0.95 }}>Tel. +56 582 295842</div>
+              <div style={{ fontSize: '9px', opacity: 0.95 }}>Cel. +56 9 31234288</div>
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -111,28 +133,90 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
         </div>
 
         <div style={{ padding: '8px 10px 10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <div>
-            <div style={{ fontSize: '10px', fontWeight: 800, marginBottom: '5px', color: '#0f172a' }}>PROVEEDOR</div>
+          <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 800, marginBottom: '6px', color: '#0f172a' }}>DATOS DEL PROVEEDOR</div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <tbody>
-                <tr><td style={rowLabelStyle}>Nombre</td><td style={rowValueStyle}>{orden?.proveedor || '-'}</td></tr>
-                <tr><td style={rowLabelStyle}>RUT</td><td style={rowValueStyle}>{orden?.proveedor_rut || '-'}</td></tr>
-                <tr><td style={rowLabelStyle}>Razon social</td><td style={rowValueStyle}>{orden?.proveedor_razon_social || '-'}</td></tr>
-                <tr><td style={rowLabelStyle}>Direccion</td><td style={rowValueStyle}>{orden?.proveedor_direccion || '-'}</td></tr>
-                <tr><td style={rowLabelStyle}>Atencion</td><td style={rowValueStyle}>{atencion}</td></tr>
+                <tr>
+                  <td style={headerLabelStyle}>Señor(es)</td>
+                  <td style={headerValueStyle}>{orden?.proveedor || '-'}</td>
+                </tr>
+                <tr>
+                  <td style={headerLabelStyle}>Atención</td>
+                  <td style={headerValueStyle}>{atencion}</td>
+                </tr>
+                <tr>
+                  <td style={headerLabelStyle}>Dirección</td>
+                  <td style={headerValueStyle}>{orden?.proveedor_direccion || '-'}</td>
+                </tr>
+                <tr>
+                  <td style={headerLabelStyle}>Rut</td>
+                  <td style={headerValueStyle}>{orden?.proveedor_rut || '-'}</td>
+                </tr>
+                <tr>
+                  <td style={headerLabelStyle}>Teléfono</td>
+                  <td style={headerValueStyle}>{orden?.proveedor_telefono || '-'}</td>
+                </tr>
+                <tr>
+                  <td style={headerLabelStyle}>Email</td>
+                  <td style={headerValueStyle}>{orden?.proveedor_correo || '-'}</td>
+                </tr>
               </tbody>
             </table>
           </div>
 
-          <div>
-            <div style={{ fontSize: '10px', fontWeight: 800, marginBottom: '5px', color: '#0f172a' }}>OBRA Y REMITENTE</div>
+          <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 800, marginBottom: '6px', color: '#0f172a' }}>DATOS DE OBRA</div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <tbody>
-                <tr><td style={rowLabelStyle}>Obra</td><td style={rowValueStyle}>{orden?.proyecto_nombre || '-'}</td></tr>
-                <tr><td style={rowLabelStyle}>Ubicacion</td><td style={rowValueStyle}>{orden?.proyecto_ubicacion || '-'}</td></tr>
-                <tr><td style={rowLabelStyle}>Licitacion</td><td style={rowValueStyle}>{orden?.proyecto_numero_licitacion || '-'}</td></tr>
-                <tr><td style={rowLabelStyle}>Remitente</td><td style={rowValueStyle}>{EMPRESA.nombre}</td></tr>
-                <tr><td style={rowLabelStyle}>Contacto</td><td style={rowValueStyle}>{EMPRESA.telefono} | {EMPRESA.correo}</td></tr>
+                <tr>
+                  <td style={headerLabelStyle}>Despachar a</td>
+                  <td style={headerValueStyle}>{orden?.condiciones_entrega || 'Despachar a Obra'}</td>
+                </tr>
+                <tr>
+                  <td style={headerLabelStyle}>Plazo de Entrega</td>
+                  <td style={headerValueStyle}>{orden?.plazo_entrega || '-'}</td>
+                </tr>
+                <tr>
+                  <td style={headerLabelStyle}>Obra</td>
+                  <td style={headerValueStyle}>{orden?.proyecto_nombre || '-'}</td>
+                </tr>
+                <tr>
+                  <td style={headerLabelStyle}>Autorizado por</td>
+                  <td style={headerValueStyle}>{orden?.autorizado_por_nombre || '-'}</td>
+                </tr>
+                <tr>
+                  <td style={headerLabelStyle}>Nro. Cotización</td>
+                  <td style={headerValueStyle}>{numeroCotizacion}</td>
+                </tr>
+                <tr>
+                  <td style={headerLabelStyle}>Encargado</td>
+                  <td style={headerValueStyle}>{atencion}</td>
+                </tr>
+                <tr>
+                  <td style={headerLabelStyle}>Forma de Pago</td>
+                  <td style={headerValueStyle}>{orden?.condiciones_pago || 'Crédito 45 días'}</td>
+                </tr>
+                <tr>
+                  <td style={headerLabelStyle}>Emitida por</td>
+                  <td style={headerValueStyle}>{orden?.autorizado_por_nombre || '-'}</td>
+                </tr>
+                <tr>
+                  <td style={headerLabelStyle}>Cód. Obra</td>
+                  <td style={headerValueStyle}>{orden?.proyecto_numero_licitacion || '-'}</td>
+                </tr>
+                <tr>
+                  <td style={headerLabelStyle}>Fecha Autorización</td>
+                  <td style={headerValueStyle}>{fmtDate(orden?.updated_at || orden?.fecha_emision)}</td>
+                </tr>
+                <tr>
+                  <td style={headerLabelStyle}>Moneda</td>
+                  <td style={headerValueStyle}>{moneda}</td>
+                </tr>
+                <tr>
+                  <td style={headerLabelStyle}>Nro. Solic. Mat.</td>
+                  <td style={headerValueStyle}>{numeroSolicitud}</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -316,7 +400,7 @@ const OCPreviewModal: React.FC<OCPreviewModalProps> = ({ isOpen, onClose, orden 
           </div>
         </div>
 
-        <div className="w-[980px] max-w-[96vw] bg-slate-200 rounded-b-xl px-6 py-6 flex justify-center min-h-[500px]">
+        <div className="w-[980px] max-w-[96vw] bg-slate-200 rounded-b-xl px-6 py-6 flex justify-center ">
           <div className="bg-white shadow-xl" style={{ width: '210mm' }}>
             <OCDoc orden={orden} atencionManual={atencion} />
           </div>
