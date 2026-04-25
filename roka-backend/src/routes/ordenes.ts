@@ -10,6 +10,7 @@ import {
 } from '../lib/notifications';
 
 const router = Router();
+const IVA_RATE = 0.19;
 
 // GET /api/ordenes — Listar órdenes de compra
 router.get('/', async (req: Request, res: Response) => {
@@ -51,14 +52,25 @@ router.get('/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
 
     const { rows: [orden] } = await pool.query(`
-      SELECT oc.*, c.proveedor, c.solicitud_id, c.total AS cotizacion_total,
+      SELECT oc.*, c.proveedor, c.proveedor_id, c.solicitud_id, c.total AS cotizacion_total,
              sm.solicitante, sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
-             p.nombre AS proyecto_nombre,
+             p.nombre AS proyecto_nombre, p.ubicacion AS proyecto_ubicacion,
+             p.numero_licitacion AS proyecto_numero_licitacion,
+             p.descripcion_licitacion AS proyecto_descripcion_licitacion,
+             pr.rut AS proveedor_rut,
+             pr.razon_social AS proveedor_razon_social,
+             pr.direccion AS proveedor_direccion,
+             pr.telefono AS proveedor_telefono,
+             pr.correo AS proveedor_correo,
+             pr.contacto_nombre AS proveedor_contacto_nombre,
+             pr.contacto_telefono AS proveedor_contacto_telefono,
+             pr.contacto_correo AS proveedor_contacto_correo,
              CONCAT(u.nombre, ' ', u.apellido) AS autorizado_por_nombre
       FROM ordenes_compra oc
       JOIN cotizaciones c ON c.id = oc.cotizacion_id
       JOIN solicitudes_material sm ON sm.id = c.solicitud_id
       JOIN proyectos p ON p.id = sm.proyecto_id
+      LEFT JOIN proveedores pr ON pr.id = c.proveedor_id
       LEFT JOIN usuarios u ON u.id = oc.created_by_usuario_id
       WHERE oc.id = $1
     `, [id]);
@@ -87,7 +99,17 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 // POST /api/ordenes — Generar OC desde cotización aprobada
 router.post('/', authMiddleware, requirePermission('ordenes.create'), async (req: AuthRequest, res: Response) => {
-  const { cotizacion_id, condiciones_pago } = req.body;
+  const {
+    cotizacion_id,
+    condiciones_pago,
+    folio,
+    descuento_tipo,
+    descuento_valor,
+    plazo_entrega,
+    condiciones_entrega,
+    atencion_a,
+    observaciones,
+  } = req.body;
 
   if (!cotizacion_id) {
     return res.status(400).json({ error: 'Se requiere cotizacion_id' });
@@ -147,21 +169,60 @@ router.post('/', authMiddleware, requirePermission('ordenes.create'), async (req
       });
     }
 
-    const montoCotizacion = Number(cotizacion.total);
+    const subtotalBase = Number(cotizacion.total);
+    if (!Number.isFinite(subtotalBase) || subtotalBase <= 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'La cotización tiene un total inválido para generar la OC' });
+    }
+
+    const descuentoTipoNormalizado = String(descuento_tipo || 'none').toLowerCase();
+    const descuentoTipo = ['none', 'porcentaje', 'monto'].includes(descuentoTipoNormalizado)
+      ? descuentoTipoNormalizado
+      : 'none';
+    const descuentoValorNumerico = Number(descuento_valor ?? 0);
+
+    if (!Number.isFinite(descuentoValorNumerico) || descuentoValorNumerico < 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'El descuento es inválido' });
+    }
+
+    if (descuentoTipo === 'porcentaje' && descuentoValorNumerico > 100) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'El descuento porcentual no puede ser mayor a 100' });
+    }
+
+    let descuentoMonto = 0;
+    if (descuentoTipo === 'porcentaje') {
+      descuentoMonto = (subtotalBase * descuentoValorNumerico) / 100;
+    } else if (descuentoTipo === 'monto') {
+      descuentoMonto = descuentoValorNumerico;
+    }
+
+    if (descuentoMonto > subtotalBase) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'El descuento no puede superar el subtotal de la cotización' });
+    }
+
+    const descuentoMontoFinal = Number(descuentoMonto.toFixed(2));
+    const subtotalNeto = Number((subtotalBase - descuentoMontoFinal).toFixed(2));
+    const impuestoMonto = Number((subtotalNeto * IVA_RATE).toFixed(2));
+    const totalFinal = Number((subtotalNeto + impuestoMonto).toFixed(2));
+    const montoCompromiso = subtotalNeto;
+
     const disponiblePresupuesto = Number(presupuesto.monto_total) - Number(presupuesto.monto_comprometido);
     const presupuestoTotal = Number(presupuesto.monto_total);
     const previoComprometido = Number(presupuesto.monto_comprometido);
-    const nuevoComprometido = previoComprometido + montoCotizacion;
+    const nuevoComprometido = previoComprometido + montoCompromiso;
     const porcentajePrevio = presupuestoTotal > 0 ? (previoComprometido / presupuestoTotal) * 100 : 0;
     const porcentajeNuevo = presupuestoTotal > 0 ? (nuevoComprometido / presupuestoTotal) * 100 : 0;
     const umbral = Number(presupuesto.umbral_alerta);
 
-    if (montoCotizacion > disponiblePresupuesto) {
+    if (montoCompromiso > disponiblePresupuesto) {
       await client.query('ROLLBACK');
       return res.status(409).json({
         error: 'La orden supera el presupuesto disponible del proyecto',
         disponible: Number(disponiblePresupuesto.toFixed(2)),
-        solicitado: montoCotizacion
+        solicitado: montoCompromiso
       });
     }
 
@@ -181,12 +242,12 @@ router.post('/', authMiddleware, requirePermission('ordenes.create'), async (req
       }
 
       const disponibleCategoria = Number(categoria.monto_asignado) - Number(categoria.monto_comprometido);
-      if (montoCotizacion > disponibleCategoria) {
+      if (montoCompromiso > disponibleCategoria) {
         await client.query('ROLLBACK');
         return res.status(409).json({
           error: 'La orden supera el presupuesto disponible de la categoría asignada',
           disponible: Number(disponibleCategoria.toFixed(2)),
-          solicitado: montoCotizacion
+          solicitado: montoCompromiso
         });
       }
 
@@ -194,12 +255,48 @@ router.post('/', authMiddleware, requirePermission('ordenes.create'), async (req
     }
 
     // 4. Crear la Orden de Compra
-    const { rows: [orden] } = await client.query(
-      `INSERT INTO ordenes_compra (cotizacion_id, condiciones_pago, total, created_by_usuario_id)
-       VALUES ($1, $2, $3, $4)
+    const folioLimpio = typeof folio === 'string' ? folio.trim() : '';
+    let orden: any;
+    const { rows: [ordenCreada] } = await client.query(
+      `INSERT INTO ordenes_compra (
+          cotizacion_id, condiciones_pago, total, created_by_usuario_id,
+          folio, descuento_tipo, descuento_valor, descuento_monto,
+          subtotal_neto, impuesto_monto, total_final,
+          plazo_entrega, condiciones_entrega, atencion_a, observaciones
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING *`,
-      [cotizacion_id, condiciones_pago || 'Neto 30 días', cotizacion.total, req.user?.id || null]
+      [
+        cotizacion_id,
+        condiciones_pago || 'Neto 30 días',
+        montoCompromiso,
+        req.user?.id || null,
+        folioLimpio || null,
+        descuentoTipo,
+        descuentoTipo === 'none' ? 0 : Number(descuentoValorNumerico.toFixed(2)),
+        descuentoMontoFinal,
+        subtotalNeto,
+        impuestoMonto,
+        totalFinal,
+        typeof plazo_entrega === 'string' ? plazo_entrega.trim() || null : null,
+        typeof condiciones_entrega === 'string' ? condiciones_entrega.trim() || null : null,
+        typeof atencion_a === 'string' ? atencion_a.trim() || null : null,
+        typeof observaciones === 'string' ? observaciones.trim() || null : null,
+      ]
     );
+    orden = ordenCreada;
+
+    if (!folioLimpio) {
+      const folioGenerado = `OC-${String(orden.id).padStart(6, '0')}`;
+      const { rows: [ordenConFolio] } = await client.query(
+        `UPDATE ordenes_compra
+         SET folio = $1, updated_at = NOW()
+         WHERE id = $2
+         RETURNING *`,
+        [folioGenerado, orden.id]
+      );
+      orden = ordenConFolio;
+    }
 
     // 5. Comprometer monto en presupuesto del proyecto y categoria
     await client.query(
@@ -207,7 +304,7 @@ router.post('/', authMiddleware, requirePermission('ordenes.create'), async (req
        SET monto_comprometido = monto_comprometido + $1,
            updated_at = NOW()
        WHERE id = $2`,
-      [montoCotizacion, presupuesto.id]
+      [montoCompromiso, presupuesto.id]
     );
 
     if (categoriaComprometidaId) {
@@ -216,7 +313,7 @@ router.post('/', authMiddleware, requirePermission('ordenes.create'), async (req
          SET monto_comprometido = monto_comprometido + $1,
              updated_at = NOW()
          WHERE id = $2`,
-        [montoCotizacion, categoriaComprometidaId]
+        [montoCompromiso, categoriaComprometidaId]
       );
     }
 
@@ -228,7 +325,7 @@ router.post('/', authMiddleware, requirePermission('ordenes.create'), async (req
         presupuesto.id,
         categoriaComprometidaId,
         orden.id,
-        montoCotizacion,
+        montoCompromiso,
         `Compromiso por creación de OC #${orden.id}`,
         req.user?.id || null,
       ]
@@ -249,10 +346,10 @@ router.post('/', authMiddleware, requirePermission('ordenes.create'), async (req
       usuario_destino_id: uid,
       tipo: 'orden.generada',
       titulo: 'Orden de compra generada',
-      mensaje: `${actorName} generó la orden OC-${String(orden.id).padStart(3, '0')} desde COT-${String(cotizacion.id).padStart(3, '0')} por $${montoCotizacion.toLocaleString('es-CL')}.`,
+      mensaje: `${actorName} generó la orden ${orden.folio} desde COT-${String(cotizacion.id).padStart(3, '0')} por $${montoCompromiso.toLocaleString('es-CL')}.`,
       entidad_tipo: 'orden',
       entidad_id: orden.id,
-      payload: { cotizacion_id: cotizacion.id, total: montoCotizacion },
+      payload: { cotizacion_id: cotizacion.id, total: montoCompromiso, folio: orden.folio },
       enviado_por_usuario_id: actorId,
     }));
 
@@ -309,9 +406,12 @@ router.post('/', authMiddleware, requirePermission('ordenes.create'), async (req
       message: 'Orden de compra generada exitosamente',
       orden_compra: orden
     });
-  } catch (error) {
+  } catch (error: any) {
     await client.query('ROLLBACK');
     console.error('Error al generar orden de compra:', error);
+    if (error?.code === '23505' && String(error?.constraint || '').includes('folio')) {
+      return res.status(409).json({ error: 'El folio ya existe. Usa otro valor.' });
+    }
     res.status(500).json({ error: 'Error al generar la orden de compra' });
   } finally {
     client.release();

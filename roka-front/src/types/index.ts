@@ -157,17 +157,40 @@ export interface CotizacionInput {
 // --- Órdenes de Compra ---
 
 export type EstadoEntrega = 'Pendiente' | 'Recibido parcial' | 'Completado';
+export type DescuentoTipo = 'none' | 'porcentaje' | 'monto';
 
 export interface OrdenCompra {
   id: number;
   cotizacion_id: number;
   fecha_emision: string;
+  folio: string;
   condiciones_pago: string;
+  plazo_entrega?: string;
+  condiciones_entrega?: string;
+  atencion_a?: string;
+  observaciones?: string;
+  descuento_tipo: DescuentoTipo;
+  descuento_valor: number;
+  descuento_monto: number;
+  subtotal_neto: number;
+  impuesto_monto: number;
+  total_final: number;
   estado_entrega: EstadoEntrega;
   total: number;
   cotizacion?: Cotizacion;
   proveedor?: string;
+  proveedor_rut?: string;
+  proveedor_razon_social?: string;
+  proveedor_direccion?: string;
+  proveedor_telefono?: string;
+  proveedor_correo?: string;
+  proveedor_contacto_nombre?: string;
+  proveedor_contacto_telefono?: string;
+  proveedor_contacto_correo?: string;
   proyecto_nombre?: string;
+  proyecto_ubicacion?: string;
+  proyecto_numero_licitacion?: string;
+  proyecto_descripcion_licitacion?: string;
   created_at: string;
   updated_at: string;
 }
@@ -175,6 +198,13 @@ export interface OrdenCompra {
 export interface OrdenCompraInput {
   cotizacion_id: number;
   condiciones_pago?: string;
+  folio?: string;
+  descuento_tipo?: DescuentoTipo;
+  descuento_valor?: number;
+  plazo_entrega?: string;
+  condiciones_entrega?: string;
+  atencion_a?: string;
+  observaciones?: string;
 }
 
 // --- Dashboard KPIs ---
