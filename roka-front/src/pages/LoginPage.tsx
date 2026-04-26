@@ -104,7 +104,7 @@ export default function LoginPage() {
                     onChange={(e) => setCorreo(e.target.value)}
                     placeholder="ejemplo@roka.cl"
                     title="Correo corporativo institucional para acceder al sistema de gestión de compras"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none transition-all focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-black outline-none transition-all placeholder:text-black focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
                   />
                 </div>
               </div>
@@ -123,7 +123,7 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     title="Contraseña de acceso al sistema, mínimo 6 caracteres"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none transition-all focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-black outline-none transition-all placeholder:text-black focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
                   />
                 </div>
               </div>
