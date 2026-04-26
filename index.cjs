@@ -14,7 +14,13 @@ app.use(cors({
   origin: [
     'http://localhost:3000',
     'http://localhost:5173',
-    'https://localhost:5173'
+    'https://localhost:5173',
+    'https://localhost:5174',
+    'https://localhost:4173',
+    'http://localhost:4173',
+    'https://miramar-encuestas.netlify.app',
+    'https://roka-construcciones.netlify.app',
+    'http://miramar-encuestas.netlify.app'
   ],
   credentials: true,
 }));

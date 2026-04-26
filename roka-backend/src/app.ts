@@ -1,5 +1,5 @@
 import express from 'express';
-import cors from 'cors';
+// import cors from 'cors';
 
 import solicitudesRouter from './routes/solicitudes';
 import cotizacionesRouter from './routes/cotizaciones';
@@ -15,12 +15,13 @@ import materialesRouter from './routes/materiales';
 import proveedoresRouter from './routes/proveedores';
 import chatRouter from './routes/chat';
 
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
+// const CORS_ORIGIN =
+// process.env.CORS_ORIGIN || 'http://localhost:3000' || 'http://localhost:4173';
 
 export function createRokaApp(): express.Application {
   const app = express();
 
-  app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
+  // app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
   app.use(express.json());
   app.use('/uploads', express.static('uploads'));
 
