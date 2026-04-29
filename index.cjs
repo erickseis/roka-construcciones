@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+
 const { createRokaApp } = require('./roka-backend/dist/app.js');
 const { runMigrations } = require('./roka-backend/dist/lib/migrations.js');
 
@@ -59,7 +60,7 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-// Start server - skip ROKA migrations for now
+// Start server
 async function startServer() {
   await setupEncuestas();
   app.listen(PORT, () => {
