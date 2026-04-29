@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "start:unified": "cd ../.. && cd \"roka sistema finanzas\" && cross-env NODE_ENV=production node index.cjs",
+    "dev:unified": "cd ../.. && cd \"roka sistema finanzas\" && cross-env NODE_ENV=development nodemon index.cjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
