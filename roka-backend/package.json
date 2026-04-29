@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "node build.mjs",
     "start": "node dist/index.js",
     "start:unified": "cd ../.. && cd \"roka sistema finanzas\" && cross-env NODE_ENV=production node index.cjs",
     "dev:unified": "cd ../.. && cd \"roka sistema finanzas\" && cross-env NODE_ENV=development nodemon index.cjs"
@@ -27,6 +27,7 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^22.14.0",
     "@types/pg": "^8.20.0",
+    "esbuild": "^0.28.0",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2"
   }

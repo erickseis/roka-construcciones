@@ -18,11 +18,40 @@ El backend esta implementado en Node.js + TypeScript + Express + PostgreSQL, con
 ## 2) Arquitectura Tecnica
 
 - **Servicio principal**: `roka-backend`
+- **Servidor MCP** (agentes IA): `roka-mcp`
 - **Entrada del servidor**: `roka-backend/src/index.ts`
+- **Entrada del MCP**: `roka-mcp/src/index.ts`
 - **Base de datos**: PostgreSQL via `pg` (`roka-backend/src/db.ts`)
 - **Migraciones**: SQL versionado en `roka-backend/migrations/*.sql`, ejecutadas automaticamente al iniciar (`roka-backend/src/lib/migrations.ts`)
 - **Autenticacion**: JWT Bearer token (`roka-backend/src/middleware/authMiddleware.ts`)
 - **Autorizacion**: permisos por codigo (`roka-backend/src/middleware/permissions.ts`)
+
+### 2.1 MCP Server (roka-mcp)
+
+El proyecto incluye un servidor MCP (`roka-mcp/`) que expone todas las operaciones del backend como herramientas para agentes IA (Claude Desktop, Cursor, etc.).
+
+- **Transporte**: stdio (JSON-RPC)
+- **Cliente HTTP interno**: autentica con JWT contra `roka-backend`
+- **Tools**: ~45 herramientas organizadas por modulo en `roka-mcp/src/tools/*.ts`
+- **Build**: esbuild → `roka-mcp/dist/index.js`
+- **Guia de conexion**: `roka-mcp/GUIA_CONEXION.md`
+
+**IMPORTANTE — Regla de sincronizacion**: Cada vez que se modifique un endpoint del backend (nueva ruta, cambio de parametros, cambio de metodo HTTP, eliminacion de endpoint), se DEBE actualizar la tool MCP correspondiente en `roka-mcp/src/tools/`. La correspondencia es 1:1 por modulo:
+
+| Archivo backend | Archivo MCP |
+|-----------------|-------------|
+| `roka-backend/src/routes/auth.ts` | `roka-mcp/src/tools/auth.ts` |
+| `roka-backend/src/routes/proyectos.ts` | `roka-mcp/src/tools/proyectos.ts` |
+| `roka-backend/src/routes/presupuestos.ts` | `roka-mcp/src/tools/presupuestos.ts` |
+| `roka-backend/src/routes/solicitudes.ts` | `roka-mcp/src/tools/solicitudes.ts` |
+| `roka-backend/src/routes/cotizaciones.ts` | `roka-mcp/src/tools/cotizaciones.ts` |
+| `roka-backend/src/routes/ordenes.ts` | `roka-mcp/src/tools/ordenes.ts` |
+| `roka-backend/src/routes/materiales.ts` | `roka-mcp/src/tools/materiales.ts` |
+| `roka-backend/src/routes/proveedores.ts` | `roka-mcp/src/tools/proveedores.ts` |
+| `roka-backend/src/routes/notificaciones.ts` | `roka-mcp/src/tools/notificaciones.ts` |
+| `roka-backend/src/routes/dashboard.ts` | `roka-mcp/src/tools/dashboard.ts` |
+
+Verificar build despues de cambios: `cd roka-mcp && npm run build`
 
 ### Scripts de ejecucion
 
@@ -378,6 +407,7 @@ Hay endpoints sin proteccion estricta que un agente debe considerar riesgo y pri
 2. Revisar migraciones en orden para entender modelo y evolucion.
 3. Revisar middlewares de auth/permisos.
 4. Revisar rutas de compras (`solicitudes`, `cotizaciones`, `ordenes`) y presupuesto (`presupuestos`).
+5. Revisar `roka-mcp/src/tools/` para entender que herramientas expone el servidor MCP.
 
 ## 9.2 Antes de modificar logica critica
 
@@ -387,6 +417,7 @@ Hay endpoints sin proteccion estricta que un agente debe considerar riesgo y pri
 - Preferir transacciones para cambios multi-tabla.
 - Mantener compatibilidad con permisos por rol.
 - Cuando se modifique material_id en solicitud_items, recordar que el backend ahora auto-vincula nombre y unidad: esto garantiza consistencia pero requiere cuidado si se modifica el comportamiento.
+- **NUEVO**: Si el cambio en una ruta modifica parametros, metodo HTTP, o agrega/quita endpoints, actualizar la tool MCP correspondiente en `roka-mcp/src/tools/` (ver tabla en seccion 2.1). Luego correr `cd roka-mcp && npm run build`.
 
 ## 9.3 Invariantes que no deben romperse
 
