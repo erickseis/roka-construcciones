@@ -31,9 +31,25 @@ ROKA MCP es un servidor que implementa el **Model Context Protocol (MCP)** para 
 
 ### Arquitectura
 
+El MCP server puede ejecutarse en dos modos:
+
+**Modo 1: Integrado (StreamableHTTP) — recomendado**
+```
+Claude Desktop ── HTTP/SSE ──► index.cjs (:3001/api/mcp)
+                                        │
+                          ┌─────────────┼─────────────┐
+                          │             │             │
+                    roka-mcp     roka-backend    encuestas
+```
+
+El MCP server se monta automáticamente en el servidor unificado (`index.cjs`) al iniciar. Usa transporte StreamableHTTP sobre el mismo puerto Express. No requiere proceso separado.
+
+**Modo 2: Standalone (stdio) — alternativa**
 ```
 Claude Desktop ── stdio (JSON-RPC) ──► roka-mcp ── HTTP + JWT ──► roka-backend ──► PostgreSQL
 ```
+
+El MCP server corre como proceso independiente. El cliente MCP lo lanza como subproceso.
 
 El MCP server es un **cliente HTTP** del backend. No modifica ni accede directamente a la base de datos. Toda validación de negocio sigue residiendo en el backend.
 
@@ -58,7 +74,7 @@ curl http://localhost:3001/api/health
 ```bash
 curl -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"correo":"admin@roka.com","password":"tu_password"}'
+  -d '{"correo":"admin@roka.cl","password":"tu_password"}'
 # Debe devolver: {"message":"Login exitoso","token":"...","user":{...}}
 ```
 
@@ -86,7 +102,7 @@ Edita `.env`:
 
 ```env
 ROKA_BACKEND_URL=http://localhost:3001
-ROKA_EMAIL=admin@roka.com
+ROKA_EMAIL=admin@roka.cl
 ROKA_PASSWORD=tu_contraseña
 ```
 
@@ -121,7 +137,7 @@ Agrega el bloque `roka` dentro de `mcpServers`:
       ],
       "env": {
         "ROKA_BACKEND_URL": "http://localhost:3001",
-        "ROKA_EMAIL": "admin@roka.com",
+        "ROKA_EMAIL": "admin@roka.cl",
         "ROKA_PASSWORD": "tu_contraseña"
       }
     }
@@ -143,7 +159,7 @@ Agrega el bloque `roka` dentro de `mcpServers`:
       "env": {
         "ROKA_BACKEND_URL": "http://localhost:3001",
         "ROKA_API_PREFIX": "/api/roka/api/",
-        "ROKA_EMAIL": "admin@roka.com",
+        "ROKA_EMAIL": "admin@roka.cl",
         "ROKA_PASSWORD": "admin123"
       }
     }
@@ -153,7 +169,26 @@ Agrega el bloque `roka` dentro de `mcpServers`:
 
 > **Importante**: La ruta en `args` debe ser **absoluta**. No uses `~`, usa la ruta completa.
 
-### 4.3 Reiniciar Claude Desktop
+### 4.3 Conexión vía StreamableHTTP (integrado — recomendado)
+
+Si inicias el servidor unificado con `node index.cjs`, el MCP server se monta automáticamente en `http://localhost:3001/api/mcp`. No requiere proceso separado.
+
+Configura tu cliente MCP con URL tipo SSE:
+
+```json
+{
+  "mcpServers": {
+    "roka": {
+      "type": "sse",
+      "url": "http://localhost:3001/api/mcp"
+    }
+  }
+}
+```
+
+No necesita `command`, `args`, `env` — el servidor unificado maneja autenticación y registro de herramientas.
+
+### 4.4 Reiniciar Claude Desktop
 
 Cierra completamente Claude Desktop y vuelve a abrirlo.
 
@@ -182,7 +217,7 @@ Con variables de entorno:
 
 ```bash
 ROKA_BACKEND_URL=http://localhost:3001 \
-ROKA_EMAIL=admin@roka.com \
+ROKA_EMAIL=admin@roka.cl \
 ROKA_PASSWORD=... \
 npx tsx ruta/absoluta/a/roka-mcp/src/index.ts
 ```
@@ -383,7 +418,7 @@ El MCP server muestra este mensaje si:
 
 **Solución**: Usa la herramienta `login` manualmente después de conectarte:
 ```
-Usuario: "Inicia sesión en ROKA con admin@roka.com y contraseña XXXX"
+Usuario: "Inicia sesión en ROKA con admin@roka.cl y contraseña XXXX"
 ```
 
 ### Error 401 en las herramientas

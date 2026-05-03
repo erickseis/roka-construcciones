@@ -30,10 +30,13 @@ El backend esta implementado en Node.js + TypeScript + Express + PostgreSQL, con
 
 El proyecto incluye un servidor MCP (`roka-mcp/`) que expone todas las operaciones del backend como herramientas para agentes IA (Claude Desktop, Cursor, etc.).
 
-- **Transporte**: stdio (JSON-RPC)
-- **Cliente HTTP interno**: autentica con JWT contra `roka-backend`
+- **Transportes**: Soporta **StreamableHTTP** (integrado en el servidor unificado) y **stdio** (standalone)
+- **Integración**: El MCP server se monta automáticamente en `index.cjs` vía `mountMcpServer(app, '/api/mcp')` usando `StreamableHTTPServerTransport`
+- **Inicio**: `node index.cjs` arranca Express + ROKA + Encuestas + MCP en un solo proceso
+- **Cliente HTTP interno**: autentica con JWT contra `roka-backend` usando `ROKA_EMAIL`/`ROKA_PASSWORD` de `roka-mcp/.env`
 - **Tools**: ~45 herramientas organizadas por modulo en `roka-mcp/src/tools/*.ts`
 - **Build**: esbuild → `roka-mcp/dist/index.js`
+- **Modo standalone**: `cd roka-mcp && npm run dev` (stdio) sigue disponible
 - **Guia de conexion**: `roka-mcp/GUIA_CONEXION.md`
 
 **IMPORTANTE — Regla de sincronizacion**: Cada vez que se modifique un endpoint del backend (nueva ruta, cambio de parametros, cambio de metodo HTTP, eliminacion de endpoint), se DEBE actualizar la tool MCP correspondiente en `roka-mcp/src/tools/`. La correspondencia es 1:1 por modulo:
@@ -55,20 +58,36 @@ Verificar build despues de cambios: `cd roka-mcp && npm run build`
 
 ### Scripts de ejecucion
 
-Definidos en `roka-backend/package.json`:
+**Servidor unificado** (`index.cjs` — Express + ROKA + Encuestas + MCP):
 
+- `npm run dev:root`: desarrollo con nodemon
+- `npm run start:root`: produccion con node
+
+**ROKA backend standalone** (en `roka-backend/`):
 - `npm run dev`: desarrollo con `tsx watch src/index.ts`
 - `npm run build`: compila TypeScript
 - `npm run start`: ejecuta `dist/index.js`
 
+**MCP server standalone** (en `roka-mcp/`):
+- `npm run dev`: desarrollo con `tsx src/index.ts` (stdio)
+- `npm run build`: esbuild → `dist/index.js`
+- `npm run start`: `node dist/index.js` (stdio)
+
 ### Variables de entorno relevantes
 
-Referencia: `roka-backend/.env.example`
+**ROKA backend** (`roka-backend/.env`):
 
 - `DATABASE_URL`: cadena de conexion PostgreSQL
 - `JWT_SECRET`: secreto para firma/verificacion JWT
 - `PORT`: puerto del backend
 - `CORS_ORIGIN`: origen permitido para frontend
+
+**MCP server** (`roka-mcp/.env`):
+
+- `ROKA_BACKEND_URL`: URL del backend (default: `http://localhost:3001`)
+- `ROKA_API_PREFIX`: prefijo de API (default: `/api/roka/api/`)
+- `ROKA_EMAIL`: email para autenticacion automatica
+- `ROKA_PASSWORD`: contraseña para autenticacion automatica
 
 ## 3) Dominios Funcionales
 

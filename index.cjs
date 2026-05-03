@@ -35,6 +35,10 @@ app.use('/api/roka', rokaApp);
 const encuestasDotenv = require('dotenv');
 encuestasDotenv.config({ path: path.join(__dirname, 'encuesta_backend', '.env') });
 
+// MCP server env vars (ROKA_EMAIL, ROKA_PASSWORD)
+const mcpDotenv = require('dotenv');
+mcpDotenv.config({ path: path.join(__dirname, 'roka-mcp', '.env') });
+
 async function setupEncuestas() {
   try {
     const encuestasModule = await import('./encuesta_backend/index.js');
@@ -56,9 +60,24 @@ app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    services: { roka: 'ok', encuestas: 'ok' }
+    services: { roka: 'ok', encuestas: 'ok', mcp: 'ok' }
   });
 });
+
+// MCP server setup
+async function setupMcp() {
+  try {
+    const mcpModule = await import('./roka-mcp/dist/index.js');
+    if (mcpModule.mountMcpServer && typeof mcpModule.mountMcpServer === 'function') {
+      await mcpModule.mountMcpServer(app, '/api/mcp');
+      console.log('✅ MCP server montado en /api/mcp');
+    } else {
+      console.warn('⚠️ mountMcpServer no encontrada en roka-mcp');
+    }
+  } catch (err) {
+    console.warn('⚠️ MCP server no disponible:', err.message);
+  }
+}
 
 // Start server
 async function startServer() {
@@ -67,6 +86,9 @@ async function startServer() {
     console.log(`🚀 Servidor unificado corriendo en http://localhost:${PORT}`);
     console.log(`   ROKA:      http://localhost:${PORT}/api/roka`);
     console.log(`   Encuestas: http://localhost:${PORT}/api/encuestas`);
+    console.log(`   MCP:       http://localhost:${PORT}/api/mcp`);
+    // Start MCP after listen so it can authenticate against itself
+    setupMcp();
   });
 }
 
