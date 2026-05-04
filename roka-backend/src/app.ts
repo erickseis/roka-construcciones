@@ -1,19 +1,19 @@
 import express from 'express';
 // import cors from 'cors';
 
-import solicitudesRouter from './routes/solicitudes';
-import cotizacionesRouter from './routes/cotizaciones';
-import ordenesRouter from './routes/ordenes';
-import dashboardRouter from './routes/dashboard';
-import authRouter from './routes/auth';
-import usersRouter from './routes/users';
-import configRouter from './routes/config';
-import proyectosRouter from './routes/proyectos';
-import presupuestosRouter from './routes/presupuestos';
-import notificacionesRouter from './routes/notificaciones';
-import materialesRouter from './routes/materiales';
-import proveedoresRouter from './routes/proveedores';
-import chatRouter from './routes/chat';
+import solicitudesRouter from './routes/solicitudes.routes';
+import cotizacionesRouter from './routes/cotizaciones.routes';
+import ordenesRouter from './routes/ordenes.routes';
+import dashboardRouter from './routes/dashboard.routes';
+import authRouter from './routes/auth.routes';
+import usersRouter from './routes/users.routes';
+import configRouter from './routes/config.routes';
+import proyectosRouter from './routes/proyectos.routes';
+import presupuestosRouter from './routes/presupuestos.routes';
+import notificacionesRouter from './routes/notificaciones.routes';
+import materialesRouter from './routes/materiales.routes';
+import proveedoresRouter from './routes/proveedores.routes';
+import chatRouter from './routes/chat.routes';
 
 // const CORS_ORIGIN =
 // process.env.CORS_ORIGIN || 'http://localhost:3000' || 'http://localhost:4173';
