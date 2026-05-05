@@ -90,7 +90,7 @@ export function registerOrdenesTools(server: McpServer, auth: AuthManager, clien
       ).replace(/\/+$/, "");
       const apiPrefix = (process.env.ROKA_API_PREFIX || "/api/roka/api/").replace(/\/+$/, "");
 
-      const pdfUrl = `${publicBase}${apiPrefix}/ordenes/${id}/pdf`;
+      const pdfUrl = `${publicBase}${apiPrefix}/ordenes/${id}/descargar`;
       const htmlRes = await client.get<string>(`ordenes/${id}/exportar?pdfUrl=${encodeURIComponent(pdfUrl)}`);
       const html = typeof htmlRes.data === "string" ? htmlRes.data : JSON.stringify(htmlRes.data);
 
