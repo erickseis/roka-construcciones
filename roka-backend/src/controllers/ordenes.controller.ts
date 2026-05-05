@@ -25,19 +25,43 @@ function detectChromePath(): string | undefined {
 
 const CHROME_EXECUTABLE = detectChromePath();
 
-async function htmlToPdf(html: string): Promise<Buffer> {
-  if (!CHROME_EXECUTABLE) {
-    throw new Error('Chrome executable not found. Set CHROME_PATH env var.');
+// Singleton browser — una instancia para toda la vida del proceso.
+// Chrome en Windows usa mutex global: no permite múltiples procesos simultáneos.
+let browserPromise: Promise<puppeteer.Browser> | null = null;
+let browserInstance: puppeteer.Browser | null = null;
+
+function getBrowser(): Promise<puppeteer.Browser> {
+  if (browserInstance?.isConnected()) {
+    return Promise.resolve(browserInstance);
   }
-  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_'));
-  const browser = await puppeteer.launch({
-    executablePath: CHROME_EXECUTABLE,
-    userDataDir,
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-  });
+  if (!browserPromise) {
+    if (!CHROME_EXECUTABLE) {
+      return Promise.reject(new Error('Chrome executable not found. Set CHROME_PATH env var.'));
+    }
+    const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_'));
+    browserPromise = puppeteer
+      .launch({
+        executablePath: CHROME_EXECUTABLE,
+        userDataDir,
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+      })
+      .then((browser) => {
+        browserInstance = browser;
+        browser.on('disconnected', () => {
+          browserInstance = null;
+          browserPromise = null;
+        });
+        return browser;
+      });
+  }
+  return browserPromise;
+}
+
+async function htmlToPdf(html: string): Promise<Buffer> {
+  const browser = await getBrowser();
+  const page = await browser.newPage();
   try {
-    const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
     const pdf = await page.pdf({
       format: 'A4',
@@ -46,8 +70,7 @@ async function htmlToPdf(html: string): Promise<Buffer> {
     });
     return Buffer.from(pdf);
   } finally {
-    await browser.close();
-    fs.rmSync(userDataDir, { recursive: true, force: true });
+    await page.close();
   }
 }
 
