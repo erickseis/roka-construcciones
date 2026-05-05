@@ -53,6 +53,10 @@ function getBrowser(): Promise<puppeteer.Browser> {
           browserPromise = null;
         });
         return browser;
+      })
+      .catch((err) => {
+        browserPromise = null;
+        throw err;
       });
   }
   return browserPromise;
