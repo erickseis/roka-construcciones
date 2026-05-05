@@ -8,6 +8,7 @@ import {
   updateEntrega,
   exportarHtml,
   exportarPdf,
+  generarPdfLink,
 } from '../controllers/ordenes.controller';
 
 const router = Router();
@@ -29,5 +30,8 @@ router.get('/:id/exportar', exportarHtml);
 
 // GET /api/ordenes/:id/descargar — Exportar OC como PDF (server-side via puppeteer)
 router.get('/:id/descargar', exportarPdf);
+
+// GET /api/ordenes/:id/pdf-link — Genera PDF y devuelve URL descargable
+router.get('/:id/pdf-link', generarPdfLink);
 
 export default router;
