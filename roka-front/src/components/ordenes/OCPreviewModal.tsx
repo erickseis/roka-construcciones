@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { X, Printer } from 'lucide-react';
-import logoRoka from '@/assets/image.png';
 
 const EMPRESA = {
   nombre: 'Constructora Roka SpA',
@@ -10,6 +9,14 @@ const EMPRESA = {
   telefono: '+56 9 3123 4288',
   correo: 'contacto@constructoraroka.cl',
 };
+
+const ROKA_LOGO_SVG = (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1079 1079" width="62" height="62" style={{ flexShrink: 0, borderRadius: 10 }}>
+    <rect width="1079" height="1079" fill="#ea9a00" />
+    <path d="M 656,606 L 646,591 L 635,591 L 356,678 L 318,777 L 343,776 L 374,702 L 656,615 Z M 989,597 L 968,585 L 815,818 L 282,818 L 293,843 L 834,843 Z M 885,539 L 868,522 L 858,522 L 691,574 L 691,583 L 701,598 L 711,598 L 873,547 L 885,547 Z" fill="#c58200" opacity="0.9" />
+    <path d="M 972,572 L 664,252 L 327,348 L 116,565 L 273,816 L 815,816 Z M 764,770 L 763,779 L 315,778 L 355,676 L 637,588 L 649,591 Z M 370,522 L 370,535 L 283,748 L 275,748 L 173,589 L 173,579 Z M 868,519 L 922,575 L 922,583 L 811,753 L 800,756 L 690,586 L 688,573 Z M 831,480 L 828,490 L 377,626 L 426,503 L 760,407 Z M 722,367 L 720,377 L 219,522 L 219,514 L 350,380 L 653,296 Z" fill="white" fillRule="evenodd" />
+  </svg>
+);
 
 const fmtMoney = (value: number) =>
   `$ ${Number(value || 0).toLocaleString('es-CL', { minimumFractionDigits: 2 })}`;
@@ -55,12 +62,15 @@ const headerLabelStyle: React.CSSProperties = {
   textTransform: 'uppercase',
   letterSpacing: '0.06em',
   color: '#475569',
+  padding: '2px 4px',
+  width: '36%',
 };
 
 const headerValueStyle: React.CSSProperties = {
   fontSize: '10px',
   fontWeight: 700,
   color: '#0f172a',
+  padding: '2px 4px',
 };
 
 const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
@@ -114,7 +124,7 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img src={logoRoka} alt="Roka" style={{ width: '95px', objectFit: 'contain', filter: 'brightness(120%)' }} />
+            {ROKA_LOGO_SVG}
             <div style={{ lineHeight: 1.2 }}>
               <div style={{ fontSize: '11px', opacity: 0.9 }}>Sistema de Compras y Abastecimiento</div>
               <div style={{ fontSize: '15px', fontWeight: 800, letterSpacing: '0.03em', marginBottom: '3px' }}>ORDEN DE COMPRA</div>
