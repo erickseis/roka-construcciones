@@ -81,10 +81,16 @@ export function registerOrdenesTools(server: McpServer, auth: AuthManager, clien
       id: z.number().describe("ID de la orden de compra a descargar"),
     },
     async ({ id }) => {
-      const baseUrl = (process.env.ROKA_BACKEND_URL || "http://localhost:3001").replace(/\/+$/, "");
+      // ROKA_PUBLIC_URL: URL que el browser del usuario puede acceder (producción)
+      // Si no está configurada, usa ROKA_BACKEND_URL (funciona para localhost)
+      const publicBase = (
+        process.env.ROKA_PUBLIC_URL ||
+        process.env.ROKA_BACKEND_URL ||
+        "http://localhost:3001"
+      ).replace(/\/+$/, "");
       const apiPrefix = (process.env.ROKA_API_PREFIX || "/api/roka/api/").replace(/\/+$/, "");
 
-      const pdfUrl = `${baseUrl}${apiPrefix}/ordenes/${id}/pdf`;
+      const pdfUrl = `${publicBase}${apiPrefix}/ordenes/${id}/pdf`;
       const htmlRes = await client.get<string>(`ordenes/${id}/exportar?pdfUrl=${encodeURIComponent(pdfUrl)}`);
       const html = typeof htmlRes.data === "string" ? htmlRes.data : JSON.stringify(htmlRes.data);
 
