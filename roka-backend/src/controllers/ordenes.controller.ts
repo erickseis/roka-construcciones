@@ -193,12 +193,12 @@ ${pdfUrl ? `<div class="download-bar" style="position:sticky;top:0;z-index:999;b
       <div style="border:1px solid #cbd5e1;border-radius:8px;padding:8px">
         <div style="font-size:10px;font-weight:800;margin-bottom:6px;color:#0f172a">DATOS DEL PROVEEDOR</div>
         <table style="width:100%;border-collapse:collapse">
-          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px;width:36%">Señor(es)</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proveedor)}</td></tr>
+          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px;width:36%">Señor(es)</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proveedor) || '-'}</td></tr>
           <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Atención</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(atencion)}</td></tr>
-          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Dirección</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proveedor_direccion)}</td></tr>
-          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Rut</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proveedor_rut)}</td></tr>
-          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Teléfono</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proveedor_telefono)}</td></tr>
-          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Email</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proveedor_correo)}</td></tr>
+          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Dirección</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proveedor_direccion) || '-'}</td></tr>
+          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Rut</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proveedor_rut) || '-'}</td></tr>
+          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Teléfono</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proveedor_telefono) || '-'}</td></tr>
+          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Email</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proveedor_correo) || '-'}</td></tr>
         </table>
       </div>
 
@@ -206,14 +206,14 @@ ${pdfUrl ? `<div class="download-bar" style="position:sticky;top:0;z-index:999;b
         <div style="font-size:10px;font-weight:800;margin-bottom:6px;color:#0f172a">DATOS DE OBRA</div>
         <table style="width:100%;border-collapse:collapse">
           <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px;width:36%">Despachar a</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.condiciones_entrega || 'Despachar a Obra')}</td></tr>
-          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Plazo de Entrega</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.plazo_entrega)}</td></tr>
-          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Obra</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proyecto_nombre)}</td></tr>
-          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Autorizado por</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.autorizado_por_nombre)}</td></tr>
+          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Plazo de Entrega</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.plazo_entrega) || '-'}</td></tr>
+          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Obra</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proyecto_nombre) || '-'}</td></tr>
+          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Autorizado por</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.autorizado_por_nombre) || '-'}</td></tr>
           <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Nro. Cotización</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${numeroCotizacion}</td></tr>
           <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Encargado</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(atencion)}</td></tr>
           <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Forma de Pago</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.condiciones_pago || 'Crédito 45 días')}</td></tr>
-          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Emitida por</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.autorizado_por_nombre)}</td></tr>
-          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Cód. Obra</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proyecto_numero_licitacion)}</td></tr>
+          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Emitida por</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.autorizado_por_nombre) || '-'}</td></tr>
+          <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Cód. Obra</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proyecto_numero_licitacion) || '-'}</td></tr>
           <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Fecha Autorización</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${fmtDate(orden.updated_at || orden.fecha_emision)}</td></tr>
           <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Moneda</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">PESO CHILENO</td></tr>
           <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Nro. Solic. Mat.</td><td style="font-size:10px;font-weight:700;color:#0f172a;padding:2px 4px">${numeroSolicitud}</td></tr>
@@ -242,11 +242,11 @@ ${pdfUrl ? `<div class="download-bar" style="position:sticky;top:0;z-index:999;b
     <div style="border:1px solid #cbd5e1;border-radius:8px;padding:8px">
       <div style="font-size:10px;font-weight:800;color:#0f172a;margin-bottom:4px">CONDICIONES COMERCIALES</div>
       <table style="width:100%;border-collapse:collapse">
-        <tr><td style="padding:4px 6px;font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em;width:36%">Cond. de pago</td><td style="padding:4px 6px;font-size:10px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.condiciones_pago)}</td></tr>
-        <tr><td style="padding:4px 6px;font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em">Plazo entrega</td><td style="padding:4px 6px;font-size:10px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.plazo_entrega)}</td></tr>
-        <tr><td style="padding:4px 6px;font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em">Cond. entrega</td><td style="padding:4px 6px;font-size:10px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.condiciones_entrega)}</td></tr>
-        <tr><td style="padding:4px 6px;font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em">Observaciones</td><td style="padding:4px 6px;font-size:10px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.observaciones)}</td></tr>
-        <tr><td style="padding:4px 6px;font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em">Autorizado por</td><td style="padding:4px 6px;font-size:10px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.autorizado_por_nombre)}</td></tr>
+        <tr><td style="padding:4px 6px;font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em;width:36%">Cond. de pago</td><td style="padding:4px 6px;font-size:10px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.condiciones_pago) || '-'}</td></tr>
+        <tr><td style="padding:4px 6px;font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em">Plazo entrega</td><td style="padding:4px 6px;font-size:10px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.plazo_entrega) || '-'}</td></tr>
+        <tr><td style="padding:4px 6px;font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em">Cond. entrega</td><td style="padding:4px 6px;font-size:10px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.condiciones_entrega) || '-'}</td></tr>
+        <tr><td style="padding:4px 6px;font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em">Observaciones</td><td style="padding:4px 6px;font-size:10px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.observaciones) || '-'}</td></tr>
+        <tr><td style="padding:4px 6px;font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em">Autorizado por</td><td style="padding:4px 6px;font-size:10px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.autorizado_por_nombre) || '-'}</td></tr>
       </table>
     </div>
 
@@ -278,14 +278,14 @@ ${pdfUrl ? `<div class="download-bar" style="position:sticky;top:0;z-index:999;b
       <div style="height:34px"></div>
       <div style="border-top:1px solid #94a3b8;padding-top:5px">
         <div style="font-size:10px;font-weight:700">Solicitado por</div>
-        <div style="font-size:9px;color:#475569">${scape(orden.solicitante)}</div>
+        <div style="font-size:9px;color:#475569">${scape(orden.solicitante) || '-'}</div>
       </div>
     </div>
     <div style="text-align:center">
       <div style="height:34px"></div>
       <div style="border-top:1px solid #94a3b8;padding-top:5px">
         <div style="font-size:10px;font-weight:700">Revisado por</div>
-        <div style="font-size:9px;color:#475569">${scape(orden.autorizado_por_nombre)}</div>
+        <div style="font-size:9px;color:#475569">${scape(orden.autorizado_por_nombre) || '-'}</div>
       </div>
     </div>
     <div style="text-align:center">
