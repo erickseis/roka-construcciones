@@ -1,8 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { ApiClient } from "../client.js";
+import type { AuthManager } from "../auth.js";
 
-export function registerOrdenesTools(server: McpServer, client: ApiClient) {
+export function registerOrdenesTools(server: McpServer, auth: AuthManager, client: ApiClient) {
   server.tool(
     "listar_ordenes",
     "Lista todas las órdenes de compra con filtros opcionales",
@@ -75,13 +76,18 @@ export function registerOrdenesTools(server: McpServer, client: ApiClient) {
 
   server.tool(
     "descargar_orden_compra",
-    "Descarga una Orden de Compra como archivo HTML listo para imprimir o guardar como PDF. Devuelve el HTML completo con el formato oficial (A4, logo, items, firmas).",
+    "Genera link de descarga de Orden de Compra como PDF con logo, items y firmas. El usuario hace click en el link para descargar el PDF.",
     {
       id: z.number().describe("ID de la orden de compra a descargar"),
     },
     async ({ id }) => {
-      const res = await client.get(`ordenes/${id}/exportar`);
-      const html = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
+      const baseUrl = (process.env.ROKA_BACKEND_URL || "http://localhost:3001").replace(/\/+$/, "");
+      const apiPrefix = (process.env.ROKA_API_PREFIX || "/api/roka/api/").replace(/\/+$/, "");
+
+      const pdfUrl = `${baseUrl}${apiPrefix}/ordenes/${id}/pdf`;
+      const htmlRes = await client.get<string>(`ordenes/${id}/exportar?pdfUrl=${encodeURIComponent(pdfUrl)}`);
+      const html = typeof htmlRes.data === "string" ? htmlRes.data : JSON.stringify(htmlRes.data);
+
       return {
         content: [{ type: "text", text: html }],
       };

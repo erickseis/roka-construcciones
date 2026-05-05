@@ -78,7 +78,7 @@ function registerAllTools(server: McpServer, auth: AuthManager, api: ResilientCl
   registerPresupuestosTools(server, api);
   registerSolicitudesTools(server, api);
   registerCotizacionesTools(server, api);
-  registerOrdenesTools(server, api);
+  registerOrdenesTools(server, auth, api);
   registerMaterialesTools(server, api);
   registerProveedoresTools(server, api);
   registerNotificacionesTools(server, api);
