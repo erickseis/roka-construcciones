@@ -122,7 +122,7 @@ export function registerOrdenesTools(server: McpServer, auth: AuthManager, clien
           content: [
             {
               type: "text",
-              text: `⚠️ No se pudo generar el PDF. Mostrando reporte HTML:\n\n${html}`,
+              text: `⚠️ No se pudo generar PDF. Reporte HTML con logo y datos:\n\n\`\`\`html\n${html}\n\`\`\`\n\nCopiar el contenido HTML y abrirlo en navegador para ver reporte completo.`,
             },
           ],
         };
