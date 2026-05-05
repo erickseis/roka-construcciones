@@ -81,35 +81,52 @@ export function registerOrdenesTools(server: McpServer, auth: AuthManager, clien
       id: z.number().describe("ID de la orden de compra a descargar"),
     },
     async ({ id }) => {
-      const res = await client.get<{
-        url: string;
-        filename: string;
-        size: number;
-        base64?: string;
-      }>(`ordenes/${id}/pdf-link?inline=true`);
+      // Intentar PDF primero
+      try {
+        const res = await client.get<{
+          url: string;
+          filename: string;
+          size: number;
+          base64?: string;
+        }>(`ordenes/${id}/pdf-link?inline=true`);
 
-      const publicBase = (
-        process.env.ROKA_PUBLIC_URL ||
-        process.env.ROKA_BACKEND_URL ||
-        "http://localhost:3001"
-      ).replace(/\/+$/, "");
-      const apiPrefix = (process.env.ROKA_API_PREFIX || "/api/roka/api/").replace(/\/+$/, "");
-      const backendRoot = apiPrefix.replace(/\/api$/, "");
-      const absoluteUrl = `${publicBase}${backendRoot}${res.data.url}`;
+        const publicBase = (
+          process.env.ROKA_PUBLIC_URL ||
+          process.env.ROKA_BACKEND_URL ||
+          "http://localhost:3001"
+        ).replace(/\/+$/, "");
+        const apiPrefix = (process.env.ROKA_API_PREFIX || "/api/roka/api/").replace(/\/+$/, "");
+        const backendRoot = apiPrefix.replace(/\/api$/, "");
+        const absoluteUrl = `${publicBase}${backendRoot}${res.data.url}`;
 
-      const parts: string[] = [];
-      if (res.data.base64) {
-        const ext = res.data.filename.endsWith('.pdf') ? 'pdf' : 'bin';
-        parts.push(
-          `PDF inline (base64): data:application/${ext};base64,${res.data.base64}`
-        );
+        const parts: string[] = [];
+        if (res.data.base64) {
+          const ext = res.data.filename.endsWith('.pdf') ? 'pdf' : 'bin';
+          parts.push(
+            `PDF inline (base64): data:application/${ext};base64,${res.data.base64}`
+          );
+        }
+        parts.push(`Archivo: ${res.data.filename} (${res.data.size} bytes)`);
+        parts.push(`URL descarga: ${absoluteUrl}`);
+
+        return {
+          content: [{ type: "text", text: parts.join('\n') }],
+        };
+      } catch (pdfError) {
+        // Fallback: devolver HTML con logo y CSS
+        console.error('PDF falló, usando fallback HTML:', pdfError);
+        const htmlRes = await client.get<string>(`ordenes/${id}/exportar`);
+        const html = typeof htmlRes.data === 'string' ? htmlRes.data : JSON.stringify(htmlRes.data);
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `⚠️ No se pudo generar el PDF. Mostrando reporte HTML:\n\n${html}`,
+            },
+          ],
+        };
       }
-      parts.push(`Archivo: ${res.data.filename} (${res.data.size} bytes)`);
-      parts.push(`URL descarga: ${absoluteUrl}`);
-
-      return {
-        content: [{ type: "text", text: parts.join('\n') }],
-      };
     }
   );
 }
