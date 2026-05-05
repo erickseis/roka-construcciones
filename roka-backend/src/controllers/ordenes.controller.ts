@@ -2,7 +2,33 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/authMiddleware';
 import * as ordenesModel from '../models/ordenes.model';
 import { generarOrdenCompra } from '../services/ordenes.service';
-import { getLogoBase64 } from '../lib/logo';
+import puppeteer from 'puppeteer-core';
+
+const CHROME_EXECUTABLE =
+  process.env.CHROME_PATH ||
+  '/usr/bin/google-chrome-stable' ||
+  '/usr/bin/google-chrome' ||
+  '/usr/bin/chromium-browser';
+
+async function htmlToPdf(html: string): Promise<Buffer> {
+  const browser = await puppeteer.launch({
+    executablePath: CHROME_EXECUTABLE,
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+  });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const pdf = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '0', right: '0', bottom: '0', left: '0' },
+    });
+    return Buffer.from(pdf);
+  } finally {
+    await browser.close();
+  }
+}
 
 const IVA_RATE = 0.19;
 
@@ -27,8 +53,13 @@ function scape(s: unknown): string {
     .replace(/"/g, '&quot;');
 }
 
-function buildOCHtml(orden: any, items: any[]): string {
-  const logoB64 = getLogoBase64();
+const ROKA_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1079 1079" width="62" height="62" style="flex-shrink:0;border-radius:10px">
+  <rect width="1079" height="1079" fill="#ea9a00"/>
+  <path d="M 656,606 L 646,591 L 635,591 L 356,678 L 318,777 L 343,776 L 374,702 L 656,615 Z M 989,597 L 968,585 L 815,818 L 282,818 L 293,843 L 834,843 Z M 885,539 L 868,522 L 858,522 L 691,574 L 691,583 L 701,598 L 711,598 L 873,547 L 885,547 Z" fill="#c58200" opacity="0.9"/>
+  <path d="M 972,572 L 664,252 L 327,348 L 116,565 L 273,816 L 815,816 Z M 764,770 L 763,779 L 315,778 L 355,676 L 637,588 L 649,591 Z M 370,522 L 370,535 L 283,748 L 275,748 L 173,589 L 173,579 Z M 868,519 L 922,575 L 922,583 L 811,753 L 800,756 L 690,586 L 688,573 Z M 831,480 L 828,490 L 377,626 L 426,503 L 760,407 Z M 722,367 L 720,377 L 219,522 L 219,514 L 350,380 L 653,296 Z" fill="white" fill-rule="evenodd"/>
+</svg>`;
+
+function buildOCHtml(orden: any, items: any[], pdfUrl?: string): string {
   const folio = orden.folio || 'OC-' + String(orden.id).padStart(6, '0');
   const numeroSolicitud = orden.solicitud_id ? 'SM-' + String(orden.solicitud_id).padStart(3, '0') : '-';
   const numeroCotizacion = orden.cotizacion_id ? 'COT-' + String(orden.cotizacion_id).padStart(3, '0') : '-';
@@ -47,10 +78,10 @@ function buildOCHtml(orden: any, items: any[]): string {
   const itemsRows = items.length === 0
     ? '<tr><td colspan="6" style="border:1px solid #e2e8f0;padding:10px;text-align:center;font-size:10px;color:#64748b">Esta orden no tiene items cargados.</td></tr>'
     : items.map((it: any, i: number) => {
-        const cant = Number(it.cantidad_requerida || 0);
-        const punit = Number(it.precio_unitario || 0);
-        const sub = Number(it.subtotal ?? cant * punit);
-        return `<tr>
+      const cant = Number(it.cantidad_requerida || 0);
+      const punit = Number(it.precio_unitario || 0);
+      const sub = Number(it.subtotal ?? cant * punit);
+      return `<tr>
           <td style="border:1px solid #e2e8f0;padding:5px;font-size:9px;text-align:center">${i + 1}</td>
           <td style="border:1px solid #e2e8f0;padding:5px;font-size:9px;text-align:right">${cant.toLocaleString('es-CL')}</td>
           <td style="border:1px solid #e2e8f0;padding:5px;font-size:9px;text-align:center">${scape(it.material_sku)}</td>
@@ -61,11 +92,9 @@ function buildOCHtml(orden: any, items: any[]): string {
           <td style="border:1px solid #e2e8f0;padding:5px;font-size:9px;text-align:right">${fmtMoney(punit)}</td>
           <td style="border:1px solid #e2e8f0;padding:5px;font-size:9px;text-align:right">${fmtMoney(sub)}</td>
         </tr>`;
-      }).join('');
+    }).join('');
 
-  const logoTag = logoB64
-    ? `<img src="data:image/png;base64,${logoB64}" alt="ROKA" style="width:95px;object-fit:contain;filter:brightness(120%)" />`
-    : '<div style="width:95px;height:50px;background:#334155;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#f8fafc;font-weight:800;font-size:18px">ROKA</div>';
+  const logoTag = ROKA_LOGO_SVG;
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -78,10 +107,17 @@ function buildOCHtml(orden: any, items: any[]): string {
   @media print {
     body { background:#fff; padding:0; }
     @page { margin:0; size:A4 portrait; }
+    .download-bar { display:none !important; }
   }
 </style>
 </head>
 <body>
+${pdfUrl ? `<div class="download-bar" style="position:sticky;top:0;z-index:999;background:#0f172a;padding:8px 20px;display:flex;align-items:center;justify-content:space-between;font-family:'Trebuchet MS',sans-serif">
+  <span style="color:#94a3b8;font-size:12px">Orden de Compra — Vista previa</span>
+  <a href="${pdfUrl}" style="background:#f59e0b;color:#0f172a;padding:7px 20px;border-radius:6px;font-weight:800;font-size:13px;text-decoration:none;letter-spacing:0.03em">
+    📥 Descargar PDF
+  </a>
+</div>` : ''}
 <div style="width:210mm;min-height:297mm;box-sizing:border-box;padding:10mm 11mm;color:#111827;background:#fff;font-family:'Trebuchet MS','Gill Sans',sans-serif">
 
   <div style="border:2px solid #0f172a;border-radius:10px;overflow:hidden;margin-bottom:8px">
@@ -217,6 +253,7 @@ function buildOCHtml(orden: any, items: any[]): string {
     Documento generado por ROKA | ${fmtDate(new Date().toISOString())}
   </div>
 
+
 </div>
 </body>
 </html>`;
@@ -292,6 +329,34 @@ export async function updateEntrega(req: AuthRequest, res: Response) {
 export async function exportarHtml(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
+    const pdfUrl = req.query.pdfUrl ? String(req.query.pdfUrl) : undefined;
+    const orden = await ordenesModel.getOrdenById(Number(id));
+
+    if (!orden) {
+      return res.status(404).json({ error: 'Orden de compra no encontrada' });
+    }
+
+    const items = await ordenesModel.getOrdenItems(orden.cotizacion_id);
+    const html = buildOCHtml(orden, items, pdfUrl);
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    if (!pdfUrl) {
+      // Solo attachment cuando se descarga directo (sin botón PDF)
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${(orden.folio || 'OC-' + String(orden.id).padStart(6, '0')).replace(/[^a-zA-Z0-9\-_]/g, '_')}.html"`
+      );
+    }
+    res.send(html);
+  } catch (error) {
+    console.error('Error al exportar orden:', error);
+    res.status(500).json({ error: 'Error al exportar orden de compra' });
+  }
+}
+
+export async function exportarPdf(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
     const orden = await ordenesModel.getOrdenById(Number(id));
 
     if (!orden) {
@@ -300,15 +365,17 @@ export async function exportarHtml(req: AuthRequest, res: Response) {
 
     const items = await ordenesModel.getOrdenItems(orden.cotizacion_id);
     const html = buildOCHtml(orden, items);
+    const pdfBuffer = await htmlToPdf(html);
 
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${(orden.folio || 'OC-' + String(orden.id).padStart(6, '0')).replace(/[^a-zA-Z0-9\-_]/g, '_')}.html"`
-    );
-    res.send(html);
+    const folio = (orden.folio || 'OC-' + String(orden.id).padStart(6, '0'))
+      .replace(/[^a-zA-Z0-9\-_]/g, '_');
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${folio}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
   } catch (error) {
-    console.error('Error al exportar orden:', error);
-    res.status(500).json({ error: 'Error al exportar orden de compra' });
+    console.error('Error al exportar PDF:', error);
+    res.status(500).json({ error: 'Error al generar PDF de orden de compra' });
   }
 }
