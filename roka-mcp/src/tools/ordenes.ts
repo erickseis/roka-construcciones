@@ -81,9 +81,12 @@ export function registerOrdenesTools(server: McpServer, auth: AuthManager, clien
       id: z.number().describe("ID de la orden de compra a descargar"),
     },
     async ({ id }) => {
-      const res = await client.get<{ url: string; filename: string; size: number }>(
-        `ordenes/${id}/pdf-link`
-      );
+      const res = await client.get<{
+        url: string;
+        filename: string;
+        size: number;
+        base64?: string;
+      }>(`ordenes/${id}/pdf-link?inline=true`);
 
       const publicBase = (
         process.env.ROKA_PUBLIC_URL ||
@@ -91,18 +94,21 @@ export function registerOrdenesTools(server: McpServer, auth: AuthManager, clien
         "http://localhost:3001"
       ).replace(/\/+$/, "");
       const apiPrefix = (process.env.ROKA_API_PREFIX || "/api/roka/api/").replace(/\/+$/, "");
-      // /uploads se sirve desde la raíz del backend (no bajo /api)
-      // apiPrefix típico = "/api/roka/api" → backendRoot = "/api/roka"
       const backendRoot = apiPrefix.replace(/\/api$/, "");
       const absoluteUrl = `${publicBase}${backendRoot}${res.data.url}`;
 
+      const parts: string[] = [];
+      if (res.data.base64) {
+        const ext = res.data.filename.endsWith('.pdf') ? 'pdf' : 'bin';
+        parts.push(
+          `PDF inline (base64): data:application/${ext};base64,${res.data.base64}`
+        );
+      }
+      parts.push(`Archivo: ${res.data.filename} (${res.data.size} bytes)`);
+      parts.push(`URL descarga: ${absoluteUrl}`);
+
       return {
-        content: [
-          {
-            type: "text",
-            text: `PDF generado: [${res.data.filename}](${absoluteUrl})\n\nURL directa: ${absoluteUrl}`,
-          },
-        ],
+        content: [{ type: "text", text: parts.join('\n') }],
       };
     }
   );
