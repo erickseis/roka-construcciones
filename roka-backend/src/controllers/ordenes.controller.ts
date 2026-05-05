@@ -1,18 +1,38 @@
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/authMiddleware';
 import * as ordenesModel from '../models/ordenes.model';
 import { generarOrdenCompra } from '../services/ordenes.service';
 import puppeteer from 'puppeteer-core';
 
-const CHROME_EXECUTABLE =
-  process.env.CHROME_PATH ||
-  '/usr/bin/google-chrome-stable' ||
-  '/usr/bin/google-chrome' ||
-  '/usr/bin/chromium-browser';
+function detectChromePath(): string | undefined {
+  if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
+  const candidates =
+    process.platform === 'win32'
+      ? [
+          'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+          'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+        ]
+      : [
+          '/usr/bin/google-chrome-stable',
+          '/usr/bin/google-chrome',
+          '/usr/bin/chromium-browser',
+        ];
+  return candidates.find((p) => fs.existsSync(p));
+}
+
+const CHROME_EXECUTABLE = detectChromePath();
 
 async function htmlToPdf(html: string): Promise<Buffer> {
+  if (!CHROME_EXECUTABLE) {
+    throw new Error('Chrome executable not found. Set CHROME_PATH env var.');
+  }
+  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_'));
   const browser = await puppeteer.launch({
     executablePath: CHROME_EXECUTABLE,
+    userDataDir,
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
   });
@@ -27,6 +47,7 @@ async function htmlToPdf(html: string): Promise<Buffer> {
     return Buffer.from(pdf);
   } finally {
     await browser.close();
+    fs.rmSync(userDataDir, { recursive: true, force: true });
   }
 }
 
@@ -376,6 +397,42 @@ export async function exportarPdf(req: AuthRequest, res: Response) {
     res.send(pdfBuffer);
   } catch (error) {
     console.error('Error al exportar PDF:', error);
+    res.status(500).json({ error: 'Error al generar PDF de orden de compra' });
+  }
+}
+
+const PDF_OUTPUT_DIR = path.join(process.cwd(), 'uploads', 'ordenes-pdf');
+
+export async function generarPdfLink(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const orden = await ordenesModel.getOrdenById(Number(id));
+    if (!orden) {
+      return res.status(404).json({ error: 'Orden de compra no encontrada' });
+    }
+
+    if (!fs.existsSync(PDF_OUTPUT_DIR)) {
+      fs.mkdirSync(PDF_OUTPUT_DIR, { recursive: true });
+    }
+
+    const items = await ordenesModel.getOrdenItems(orden.cotizacion_id);
+    const html = buildOCHtml(orden, items);
+    const pdfBuffer = await htmlToPdf(html);
+
+    const folio = (orden.folio || 'OC-' + String(orden.id).padStart(6, '0'))
+      .replace(/[^a-zA-Z0-9\-_]/g, '_');
+    const filename = `${folio}.pdf`;
+    const filePath = path.join(PDF_OUTPUT_DIR, filename);
+    fs.writeFileSync(filePath, pdfBuffer);
+
+    res.json({
+      url: `/uploads/ordenes-pdf/${filename}`,
+      filename,
+      size: pdfBuffer.length,
+      generated_at: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Error al generar link de PDF:', error);
     res.status(500).json({ error: 'Error al generar PDF de orden de compra' });
   }
 }

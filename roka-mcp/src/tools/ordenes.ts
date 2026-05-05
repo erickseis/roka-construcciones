@@ -76,26 +76,33 @@ export function registerOrdenesTools(server: McpServer, auth: AuthManager, clien
 
   server.tool(
     "descargar_orden_compra",
-    "Genera link de descarga de Orden de Compra como PDF con logo, items y firmas. El usuario hace click en el link para descargar el PDF.",
+    "Genera el PDF de una Orden de Compra y devuelve URL directa al archivo descargable. El usuario hace click para descargar.",
     {
       id: z.number().describe("ID de la orden de compra a descargar"),
     },
     async ({ id }) => {
-      // ROKA_PUBLIC_URL: URL que el browser del usuario puede acceder (producción)
-      // Si no está configurada, usa ROKA_BACKEND_URL (funciona para localhost)
+      const res = await client.get<{ url: string; filename: string; size: number }>(
+        `ordenes/${id}/pdf-link`
+      );
+
       const publicBase = (
         process.env.ROKA_PUBLIC_URL ||
         process.env.ROKA_BACKEND_URL ||
         "http://localhost:3001"
       ).replace(/\/+$/, "");
       const apiPrefix = (process.env.ROKA_API_PREFIX || "/api/roka/api/").replace(/\/+$/, "");
-
-      const pdfUrl = `${publicBase}${apiPrefix}/ordenes/${id}/descargar`;
-      const htmlRes = await client.get<string>(`ordenes/${id}/exportar?pdfUrl=${encodeURIComponent(pdfUrl)}`);
-      const html = typeof htmlRes.data === "string" ? htmlRes.data : JSON.stringify(htmlRes.data);
+      // /uploads se sirve desde la raíz del backend (no bajo /api)
+      // apiPrefix típico = "/api/roka/api" → backendRoot = "/api/roka"
+      const backendRoot = apiPrefix.replace(/\/api$/, "");
+      const absoluteUrl = `${publicBase}${backendRoot}${res.data.url}`;
 
       return {
-        content: [{ type: "text", text: html }],
+        content: [
+          {
+            type: "text",
+            text: `PDF generado: [${res.data.filename}](${absoluteUrl})\n\nURL directa: ${absoluteUrl}`,
+          },
+        ],
       };
     }
   );

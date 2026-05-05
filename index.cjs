@@ -27,6 +27,9 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Serve static files (PDFs, uploads)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // ROKA app
 const rokaApp = createRokaApp();
 app.use('/api/roka', rokaApp);
