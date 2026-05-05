@@ -27,7 +27,7 @@ router.patch('/:id/entrega', updateEntrega);
 // GET /api/ordenes/:id/exportar — Exportar OC como HTML
 router.get('/:id/exportar', exportarHtml);
 
-// GET /api/ordenes/:id/pdf — Exportar OC como PDF (server-side via puppeteer)
-router.get('/:id/pdf', exportarPdf);
+// GET /api/ordenes/:id/descargar — Exportar OC como PDF (server-side via puppeteer)
+router.get('/:id/descargar', exportarPdf);
 
 export default router;
