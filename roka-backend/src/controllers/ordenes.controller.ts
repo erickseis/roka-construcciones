@@ -425,11 +425,13 @@ export async function generarPdfLink(req: AuthRequest, res: Response) {
     const filePath = path.join(PDF_OUTPUT_DIR, filename);
     fs.writeFileSync(filePath, pdfBuffer);
 
+    const inline = req.query.inline === 'true';
     res.json({
       url: `/uploads/ordenes-pdf/${filename}`,
       filename,
       size: pdfBuffer.length,
       generated_at: new Date().toISOString(),
+      ...(inline ? { base64: pdfBuffer.toString('base64') } : {}),
     });
   } catch (error) {
     console.error('Error al generar link de PDF:', error);
