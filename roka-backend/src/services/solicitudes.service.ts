@@ -10,6 +10,7 @@ export interface CreateSolicitudInput {
     nombre_material?: string;
     cantidad_requerida: number;
     unidad?: string;
+    codigo?: string;
   }>;
 }
 
@@ -65,6 +66,7 @@ export async function crearSolicitudConItems(input: CreateSolicitudInput): Promi
       nombre_material: string;
       cantidad_requerida: number;
       unidad: string;
+      codigo: string | null;
     }> = [];
     for (const item of input.items) {
       let nombre_material = item.nombre_material || '';
@@ -79,17 +81,18 @@ export async function crearSolicitudConItems(input: CreateSolicitudInput): Promi
         nombre_material,
         cantidad_requerida: item.cantidad_requerida,
         unidad,
+        codigo: item.codigo || null,
       });
     }
 
-    // Multi-row INSERT with chunking (500 per chunk to avoid PG param limit)
-    const CHUNK_SIZE = 500;
+    // Multi-row INSERT with chunking (333 per chunk to stay under PG 32767 param limit with 6 params/row)
+    const CHUNK_SIZE = 333;
     const allInsertedIds: number[] = [];
     for (let i = 0; i < itemData.length; i += CHUNK_SIZE) {
       const chunk = itemData.slice(i, i + CHUNK_SIZE);
       const placeholders = chunk.map((_, j) => {
-        const base = j * 5;
-        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`;
+        const base = j * 6;
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`;
       });
       const values = chunk.flatMap(d => [
         solicitud.id,
@@ -97,9 +100,10 @@ export async function crearSolicitudConItems(input: CreateSolicitudInput): Promi
         d.nombre_material,
         d.cantidad_requerida,
         d.unidad,
+        d.codigo,
       ]);
       const { rows } = await client.query(
-        `INSERT INTO solicitud_items (solicitud_id, material_id, nombre_material, cantidad_requerida, unidad)
+        `INSERT INTO solicitud_items (solicitud_id, material_id, nombre_material, cantidad_requerida, unidad, codigo)
          VALUES ${placeholders.join(', ')} RETURNING id`,
         values
       );

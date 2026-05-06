@@ -20,6 +20,7 @@ export interface SolicitudItemRow {
   nombre_material: string;
   cantidad_requerida: number;
   unidad: string;
+  codigo?: string;
   material_oficial_nombre?: string;
   material_sku?: string;
   precio_referencial?: number;
@@ -38,6 +39,7 @@ export interface CreateSolicitudItemData {
   nombre_material: string;
   cantidad_requerida: number;
   unidad: string;
+  codigo?: string;
 }
 
 export async function getAllSolicitudes(
@@ -85,7 +87,8 @@ export async function getSolicitudById(id: number, db?: Queryable): Promise<Soli
 export async function getSolicitudItems(solicitudId: number, db?: Queryable): Promise<SolicitudItemRow[]> {
   const conn = getDb(db);
   const { rows } = await conn.query(
-    `SELECT si.*, m.nombre AS material_oficial_nombre, m.sku AS material_sku,
+    `SELECT si.*, COALESCE(m.sku, si.codigo) AS material_sku,
+            m.nombre AS material_oficial_nombre,
             m.precio_referencial,
             u.abreviatura AS unidad_abreviatura
      FROM solicitud_items si
@@ -112,10 +115,10 @@ export async function createSolicitud(data: CreateSolicitudData, db?: Queryable)
 export async function createSolicitudItem(data: CreateSolicitudItemData, db?: Queryable): Promise<SolicitudItemRow> {
   const conn = getDb(db);
   const { rows } = await conn.query(
-    `INSERT INTO solicitud_items (solicitud_id, material_id, nombre_material, cantidad_requerida, unidad)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO solicitud_items (solicitud_id, material_id, nombre_material, cantidad_requerida, unidad, codigo)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
-    [data.solicitud_id, data.material_id || null, data.nombre_material, data.cantidad_requerida, data.unidad]
+    [data.solicitud_id, data.material_id || null, data.nombre_material, data.cantidad_requerida, data.unidad, data.codigo || null]
   );
   return rows[0];
 }
