@@ -25,12 +25,12 @@ export default function DashboardPage() {
     return (
       <div className="space-y-6">
         <div className="h-10 w-64 animate-pulse rounded-lg bg-slate-200" />
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="h-28 animate-pulse rounded-xl bg-slate-200" />
           ))}
         </div>
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="h-72 animate-pulse rounded-xl bg-slate-200" />
           <div className="h-72 animate-pulse rounded-xl bg-slate-200" />
         </div>
@@ -55,7 +55,7 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* KPI Cards */}
-      <div className="mb-8 grid grid-cols-4 gap-4">
+      <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           {
             label: 'Solicitudes Pendientes',
@@ -118,14 +118,14 @@ export default function DashboardPage() {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-12 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
         {/* Solicitudes Pie Chart */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           title="Distribución mensual del estado de las solicitudes de materiales: cuántas están pendientes vs. atendidas"
-          className="col-span-5 rounded-xl bg-white p-6 shadow-sm border border-slate-100"
+          className="col-span-1 lg:col-span-5 rounded-xl bg-white p-6 shadow-sm border border-slate-100"
         >
           <h3 className="mb-1 text-lg font-bold text-slate-900">Solicitudes del Mes</h3>
           <p className="mb-6 text-xs text-slate-400">Pendientes vs. Atendidas</p>
@@ -180,7 +180,7 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
           title="Comparación del gasto total comprometido en órdenes de compra por cada proyecto activo"
-          className="col-span-7 rounded-xl bg-white p-6 shadow-sm border border-slate-100"
+          className="col-span-1 lg:col-span-7 rounded-xl bg-white p-6 shadow-sm border border-slate-100"
         >
           <h3 className="mb-1 text-lg font-bold text-slate-900">Gasto por Proyecto</h3>
           <p className="mb-6 text-xs text-slate-400">Total aprobado en Órdenes de Compra</p>
@@ -230,7 +230,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-3 gap-6">
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="text-center" title="Tiempo mínimo en días que tomó completar el ciclo solicitud → orden de compra">
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Mínimo</p>
             <p className="mt-1 text-3xl font-black text-blue-400">

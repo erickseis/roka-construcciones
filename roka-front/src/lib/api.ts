@@ -194,6 +194,44 @@ export const aprobarCotizacion = (id: number) =>
 export const rechazarCotizacion = (id: number) =>
   fetchApi<any>(`/cotizaciones/${id}/rechazar`, { method: 'PATCH' });
 
+export const subirArchivoCotizacion = (id: number, file: File) => {
+  const formData = new FormData();
+  formData.append('archivo_cotizacion', file);
+  return fetchApi<any>(`/cotizaciones/${id}/archivo`, {
+    method: 'PATCH',
+    body: formData,
+    headers: {},
+  });
+};
+
+// ---- Solicitudes de Cotización (envío a proveedor, sin precios) ----
+export const getSolicitudesCotizacion = (params?: { solicitud_id?: number; estado?: string; proveedor?: string; proyecto_id?: number }) => {
+  const query = new URLSearchParams();
+  if (params?.solicitud_id) query.set('solicitud_id', String(params.solicitud_id));
+  if (params?.estado) query.set('estado', params.estado);
+  if (params?.proveedor) query.set('proveedor', params.proveedor);
+  if (params?.proyecto_id) query.set('proyecto_id', String(params.proyecto_id));
+  const qs = query.toString();
+  return fetchApi<any[]>(`/solicitud-cotizacion${qs ? `?${qs}` : ''}`);
+};
+
+export const getSolicitudCotizacion = (id: number) => fetchApi<any>(`/solicitud-cotizacion/${id}`);
+
+export const createSolicitudCotizacion = (data: any) =>
+  fetchApi<any>('/solicitud-cotizacion', { method: 'POST', body: JSON.stringify(data) });
+
+export const createBatchSolicitudesCotizacion = (data: any) =>
+  fetchApi<any>('/solicitud-cotizacion/batch', { method: 'POST', body: JSON.stringify(data) });
+
+export const changeSolicitudCotizacionEstado = (id: number, estado: string) =>
+  fetchApi<any>(`/solicitud-cotizacion/${id}/estado`, {
+    method: 'PATCH',
+    body: JSON.stringify({ estado }),
+  });
+
+export const deleteSolicitudCotizacion = (id: number) =>
+  fetchApi<any>(`/solicitud-cotizacion/${id}`, { method: 'DELETE' });
+
 // ---- Órdenes de Compra ----
 export const getOrdenes = (params?: { estado_entrega?: string; proyecto_id?: number }) => {
   const query = new URLSearchParams();
@@ -217,6 +255,25 @@ export const generarOrden = (data: {
   observaciones?: string;
 }) =>
   fetchApi<any>('/ordenes', { method: 'POST', body: JSON.stringify(data) });
+
+export const createOrdenManual = (data: {
+  proyecto_id: number;
+  proveedor: string;
+  proveedor_rut?: string;
+  proveedor_direccion?: string;
+  proveedor_telefono?: string;
+  proveedor_correo?: string;
+  items: { nombre_material: string; cantidad: number; unidad: string; precio_unitario: number; codigo?: string }[];
+  condiciones_pago?: string;
+  plazo_entrega?: string;
+  condiciones_entrega?: string;
+  atencion_a?: string;
+  observaciones?: string;
+  descuento_tipo?: 'none' | 'porcentaje' | 'monto';
+  descuento_valor?: number;
+  folio?: string;
+}) =>
+  fetchApi<any>('/ordenes/manual', { method: 'POST', body: JSON.stringify(data) });
 
 export const updateEstadoEntrega = (id: number, estado_entrega: string) =>
   fetchApi<any>(`/ordenes/${id}/entrega`, {

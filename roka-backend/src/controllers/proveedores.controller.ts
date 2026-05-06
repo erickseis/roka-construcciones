@@ -32,6 +32,7 @@ export async function create(req: Request, res: Response) {
   const {
     rut, nombre, razon_social, direccion, telefono, correo,
     contacto_nombre, contacto_telefono, contacto_correo,
+    condiciones_pago, condicion_despacho, plazo_entrega, moneda,
   } = req.body;
 
   if (!nombre) {
@@ -42,6 +43,7 @@ export async function create(req: Request, res: Response) {
     const created = await proveedorModel.createProveedor({
       rut, nombre, razon_social, direccion, telefono, correo,
       contacto_nombre, contacto_telefono, contacto_correo,
+      condiciones_pago, condicion_despacho, plazo_entrega, moneda,
     });
     res.status(201).json(created);
   } catch (error: any) {
@@ -62,12 +64,14 @@ export async function update(req: Request, res: Response) {
   const {
     rut, nombre, razon_social, direccion, telefono, correo,
     contacto_nombre, contacto_telefono, contacto_correo, is_active,
+    condiciones_pago, condicion_despacho, plazo_entrega, moneda,
   } = req.body;
 
   try {
     const updated = await proveedorModel.updateProveedor(id, {
       rut, nombre, razon_social, direccion, telefono, correo,
       contacto_nombre, contacto_telefono, contacto_correo, is_active,
+      condiciones_pago, condicion_despacho, plazo_entrega, moneda,
     });
 
     if (!updated) {

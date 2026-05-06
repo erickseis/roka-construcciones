@@ -101,7 +101,7 @@ export function DataTable<T extends Record<string, any>>({
       {filteredData.length === 0 ? (
         <EmptyState title={emptyTitle} message={emptyMessage} />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200/70 dark:border-slate-800">
+        <div className="overflow-x-auto rounded-xl border border-slate-200/70 dark:border-slate-800">
           <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800">
             <thead className="bg-slate-50/80 dark:bg-slate-900/50">
               <tr>

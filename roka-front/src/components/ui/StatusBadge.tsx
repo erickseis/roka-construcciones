@@ -23,6 +23,9 @@ const statusConfig: Record<string, { bg: string; text: string; dot: string }> = 
   // Materiales (Catalogo)
   'Activo':            { bg: 'bg-emerald-50 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
   'Inactivo':          { bg: 'bg-slate-50 dark:bg-slate-800/60', text: 'text-slate-500 dark:text-slate-400', dot: 'bg-slate-400' },
+  // Solicitudes de Cotización
+  'ENVIADA':           { bg: 'bg-blue-50 dark:bg-blue-900/40',   text: 'text-blue-700 dark:text-blue-400',   dot: 'bg-blue-500' },
+  'RESPONDIDA':        { bg: 'bg-emerald-50 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
 };
 
 export function StatusBadge({ status, size = 'sm' }: StatusBadgeProps) {

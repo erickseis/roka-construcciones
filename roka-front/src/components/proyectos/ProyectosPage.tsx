@@ -33,9 +33,14 @@ export default function ProyectosPage() {
     descripcion_licitacion: '',
     fecha_apertura_licitacion: '',
     monto_referencial_licitacion: '',
+    mandante: '',
+    moneda: 'CLP',
+    solicitante: '',
   });
 
   const [archivo_licitacion, setArchivo_licitacion] = useState<File | null>(null);
+  const [archivo_materiales, setArchivo_materiales] = useState<File | null>(null);
+  const [procesarMateriales, setProcesarMateriales] = useState(false);
   const [mostrarLicitacion, setMostrarLicitacion] = useState(false);
 
   const resetForm = () => {
@@ -50,8 +55,13 @@ export default function ProyectosPage() {
       descripcion_licitacion: '',
       fecha_apertura_licitacion: '',
       monto_referencial_licitacion: '',
+      mandante: '',
+      moneda: 'CLP',
+      solicitante: '',
     });
     setArchivo_licitacion(null);
+    setArchivo_materiales(null);
+    setProcesarMateriales(false);
     setMostrarLicitacion(false);
     setEditing(null);
   };
@@ -83,6 +93,8 @@ export default function ProyectosPage() {
       descripcion_licitacion: proyecto.descripcion_licitacion || '',
       fecha_apertura_licitacion: proyecto.fecha_apertura_licitacion ? String(proyecto.fecha_apertura_licitacion).slice(0, 10) : '',
       monto_referencial_licitacion: proyecto.monto_referencial_licitacion ? String(proyecto.monto_referencial_licitacion) : '',
+      mandante: proyecto.mandante || '',
+      moneda: proyecto.moneda || 'CLP',
     });
     setMostrarLicitacion(!!proyecto.numero_licitacion);
     setShowForm(true);
@@ -104,7 +116,16 @@ export default function ProyectosPage() {
       if (form.descripcion_licitacion) formData.append('descripcion_licitacion', form.descripcion_licitacion);
       if (form.fecha_apertura_licitacion) formData.append('fecha_apertura_licitacion', form.fecha_apertura_licitacion);
       if (form.monto_referencial_licitacion) formData.append('monto_referencial_licitacion', form.monto_referencial_licitacion);
+      if (form.mandante) formData.append('mandante', form.mandante);
+      if (form.moneda) formData.append('moneda', form.moneda);
       if (archivo_licitacion) formData.append('archivo_licitacion', archivo_licitacion);
+      if (archivo_materiales) {
+        formData.append('archivo_materiales', archivo_materiales);
+        if (procesarMateriales) {
+          formData.append('procesar_materiales', 'true');
+          formData.append('solicitante', form.solicitante || 'Importación automática');
+        }
+      }
 
       if (editing) {
         await updateProyecto(editing.id, formData);
@@ -224,7 +245,7 @@ export default function ProyectosPage() {
         </div>
       </motion.div>
 
-      <div className="mb-6 grid grid-cols-3 gap-4">
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Activos</p>
           <p className="text-2xl font-black text-emerald-600">{estadoCounts.activos}</p>
@@ -274,7 +295,7 @@ export default function ProyectosPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Ubicación</label>
               <input
@@ -300,7 +321,7 @@ export default function ProyectosPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Inicio</label>
               <input
@@ -371,7 +392,7 @@ export default function ProyectosPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Fecha de Apertura</label>
                     <input
@@ -382,13 +403,36 @@ export default function ProyectosPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Monto Referencial</label>
+                    <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Monto de Adjudicación (obra)</label>
                     <input
                       type="number"
                       step="0.01"
                       value={form.monto_referencial_licitacion}
                       onChange={(e) => setForm({ ...form, monto_referencial_licitacion: e.target.value })}
                       placeholder="0.00"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div title="Persona o entidad que financia el proyecto">
+                    <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Mandante</label>
+                    <input
+                      type="text"
+                      value={form.mandante}
+                      onChange={(e) => setForm({ ...form, mandante: e.target.value })}
+                      placeholder="Nombre del mandante o entidad financiadora"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Moneda</label>
+                    <input
+                      type="text"
+                      value={form.moneda}
+                      onChange={(e) => setForm({ ...form, moneda: e.target.value })}
+                      placeholder="CLP, USD, UF, UTM"
                       className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
                     />
                   </div>
@@ -418,6 +462,47 @@ export default function ProyectosPage() {
                           <Download size={12} />
                           Descargar
                         </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Archivo de Materiales (Excel)</label>
+                  <div className="rounded-lg border-2 border-dashed border-slate-300 p-4">
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls,.csv"
+                      onChange={(e) => setArchivo_materiales(e.target.files?.[0] || null)}
+                      className="w-full text-xs"
+                    />
+                    <p className="mt-2 text-[10px] text-slate-500">Sube el listado de materiales en Excel para importar</p>
+                    {archivo_materiales && (
+                      <p className="mt-2 text-xs text-green-600 font-medium">✓ {archivo_materiales.name}</p>
+                    )}
+                    <label className="mt-3 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={procesarMateriales}
+                        onChange={(e) => setProcesarMateriales(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-500 focus:ring-amber-400"
+                      />
+                      <span className="text-xs font-medium text-slate-700">
+                        Procesar como solicitud de materiales
+                      </span>
+                    </label>
+                    {procesarMateriales && (
+                      <div className="mt-2">
+                        <input
+                          type="text"
+                          placeholder="Nombre del solicitante"
+                          value={form.solicitante || ''}
+                          onChange={(e) => setForm({ ...form, solicitante: e.target.value })}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                        />
+                        <p className="mt-1 text-[10px] text-amber-600">
+                          Se importarán los materiales como una solicitud nueva
+                        </p>
                       </div>
                     )}
                   </div>

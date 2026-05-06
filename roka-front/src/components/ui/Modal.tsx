@@ -67,7 +67,7 @@ export function Modal({ isOpen, onClose, title, subtitle, children, size = 'md' 
               </button>
             </div>
             {/* Body */}
-            <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
+            <div className="max-h-[85vh] overflow-y-auto px-6 py-5">
               {children}
             </div>
           </motion.div>

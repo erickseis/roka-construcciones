@@ -9,6 +9,10 @@ export interface Proveedor {
   contacto_nombre: string | null;
   contacto_telefono: string | null;
   contacto_correo: string | null;
+  condiciones_pago: string | null;
+  condicion_despacho: string | null;
+  plazo_entrega: string | null;
+  moneda: string | null;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -24,6 +28,10 @@ export interface CreateProveedorInput {
   contacto_nombre?: string | null;
   contacto_telefono?: string | null;
   contacto_correo?: string | null;
+  condiciones_pago?: string | null;
+  condicion_despacho?: string | null;
+  plazo_entrega?: string | null;
+  moneda?: string | null;
 }
 
 export interface UpdateProveedorInput extends Partial<CreateProveedorInput> {

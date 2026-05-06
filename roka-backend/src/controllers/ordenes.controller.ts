@@ -5,6 +5,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/authMiddleware';
 import * as ordenesModel from '../models/ordenes.model';
 import { generarOrdenCompra } from '../services/ordenes.service';
+import { crearOCManual } from '../services/ordenesManual.service';
 import puppeteer from 'puppeteer-core';
 
 function detectChromePath(): string | undefined {
@@ -349,7 +350,9 @@ export async function getById(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: 'Orden de compra no encontrada' });
     }
 
-    const items = await ordenesModel.getOrdenItems(orden.cotizacion_id);
+    const items = orden.cotizacion_id
+      ? await ordenesModel.getOrdenItems(orden.cotizacion_id)
+      : await ordenesModel.getOrdenItemsByOC(orden.id);
     res.json({ ...orden, items });
   } catch (error) {
     console.error('Error al obtener orden:', error);
@@ -400,7 +403,9 @@ export async function exportarHtml(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: 'Orden de compra no encontrada' });
     }
 
-    const items = await ordenesModel.getOrdenItems(orden.cotizacion_id);
+    const items = orden.cotizacion_id
+      ? await ordenesModel.getOrdenItems(orden.cotizacion_id)
+      : await ordenesModel.getOrdenItemsByOC(orden.id);
     const html = buildOCHtml(orden, items, pdfUrl);
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -427,7 +432,9 @@ export async function exportarPdf(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: 'Orden de compra no encontrada' });
     }
 
-    const items = await ordenesModel.getOrdenItems(orden.cotizacion_id);
+    const items = orden.cotizacion_id
+      ? await ordenesModel.getOrdenItems(orden.cotizacion_id)
+      : await ordenesModel.getOrdenItemsByOC(orden.id);
     const html = buildOCHtml(orden, items);
     const pdfBuffer = await htmlToPdf(html);
 
@@ -458,7 +465,9 @@ export async function generarPdfLink(req: AuthRequest, res: Response) {
       fs.mkdirSync(PDF_OUTPUT_DIR, { recursive: true });
     }
 
-    const items = await ordenesModel.getOrdenItems(orden.cotizacion_id);
+    const items = orden.cotizacion_id
+      ? await ordenesModel.getOrdenItems(orden.cotizacion_id)
+      : await ordenesModel.getOrdenItemsByOC(orden.id);
     const html = buildOCHtml(orden, items);
     const pdfBuffer = await htmlToPdf(html);
 
@@ -479,5 +488,16 @@ export async function generarPdfLink(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error('Error al generar link de PDF:', error);
     res.status(500).json({ error: 'Error al generar PDF de orden de compra' });
+  }
+}
+
+export async function createManual(req: AuthRequest, res: Response) {
+  try {
+    const result = await crearOCManual(req.body, req.user?.id || null);
+    res.status(201).json(result);
+  } catch (error: any) {
+    const statusCode = error.statusCode || 500;
+    console.error('Error al crear OC manual:', error);
+    res.status(statusCode).json({ error: error.message || 'Error al crear la orden de compra manual' });
   }
 }

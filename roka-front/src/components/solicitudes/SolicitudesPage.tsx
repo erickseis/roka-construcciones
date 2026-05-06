@@ -196,17 +196,17 @@ export default function SolicitudesPage() {
               Gestiona las solicitudes de materiales para cada proyecto de obra.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
               onClick={() => setShowBulkImport(true)}
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
+              className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
             >
               <Upload size={18} />
               Importar
             </button>
             <button
               onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 hover:shadow-amber-500/30 active:scale-[0.98]"
+              className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 hover:shadow-amber-500/30 active:scale-[0.98]"
             >
               <Plus size={18} />
               Nueva Solicitud
@@ -217,7 +217,7 @@ export default function SolicitudesPage() {
       </motion.div>
 
       {/* Stats Row */}
-      <div className="mb-6 grid grid-cols-3 gap-4">
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
           { label: 'Pendientes', value: solicitudes?.filter((s: any) => s.estado === 'Pendiente').length || 0, color: 'text-amber-600' },
           { label: 'Cotizando', value: solicitudes?.filter((s: any) => s.estado === 'Cotizando').length || 0, color: 'text-blue-600' },
@@ -254,7 +254,7 @@ export default function SolicitudesPage() {
         size="xl"
       >
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Proyecto</label>
               <select
@@ -294,8 +294,8 @@ export default function SolicitudesPage() {
             </div>
             <div className="space-y-4">
               {form.items.map((item, idx) => (
-                <div key={idx} className="space-y-2 border-b border-slate-100 pb-4 last:border-0 last:pb-0">
-                  <div className="flex items-end gap-2">
+                <div key={idx} className="space-y-4 border-b border-slate-100 pb-4 last:border-0 last:pb-0">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
                          <label className="text-[10px] font-bold uppercase text-slate-400">Material / Insumo <span className="text-slate-300 normal-case font-normal">(catálogo opcional)</span></label>
@@ -335,41 +335,45 @@ export default function SolicitudesPage() {
                       </select>
                     </div>
 
-                    <div className="w-24">
-                      <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Cant.</label>
-                      <input
-                        required
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        value={item.cantidad_requerida}
-                        onChange={e => updateItem(idx, 'cantidad_requerida', e.target.value)}
-                        className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-sm outline-none focus:border-amber-400"
-                      />
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Cant.</label>
+                        <input
+                          required
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={item.cantidad_requerida}
+                          onChange={e => updateItem(idx, 'cantidad_requerida', e.target.value)}
+                          className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-sm outline-none focus:border-amber-400"
+                        />
+                      </div>
+
+                      <div className="w-28">
+                         <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Unidad</label>
+                         <select
+                          value={item.unidad}
+                          onChange={e => updateItem(idx, 'unidad', e.target.value)}
+                          className="w-full rounded-md border border-slate-200 bg-white px-2 py-2 text-sm outline-none focus:border-amber-400"
+                        >
+                          {masterUnidades?.map((u: any) => (
+                            <option key={u.id} value={u.abreviatura}>{u.nombre} ({u.abreviatura})</option>
+                          )) || unidadesStatic.map(u => <option key={u} value={u}>{u}</option>)}
+                        </select>
+                      </div>
                     </div>
 
-                    <div className="w-28">
-                       <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Unidad</label>
-                       <select
-                        value={item.unidad}
-                        onChange={e => updateItem(idx, 'unidad', e.target.value)}
-                        className="w-full rounded-md border border-slate-200 bg-white px-2 py-2 text-sm outline-none focus:border-amber-400"
-                      >
-                        {masterUnidades?.map((u: any) => (
-                          <option key={u.id} value={u.abreviatura}>{u.nombre} ({u.abreviatura})</option>
-                        )) || unidadesStatic.map(u => <option key={u} value={u}>{u}</option>)}
-                      </select>
+                    <div className="flex items-end">
+                      {form.items.length > 1 && (
+                        <button type="button" onClick={() => removeItem(idx)} className="mb-2 p-1 text-slate-400 hover:text-red-500">
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
-
-                    {form.items.length > 1 && (
-                      <button type="button" onClick={() => removeItem(idx)} className="mb-2 p-1 text-slate-400 hover:text-red-500">
-                        <Trash2 size={16} />
-                      </button>
-                    )}
                   </div>
 
                   {/* Nombre + Código — siempre visibles, requerido nombre si no hay catálogo */}
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       required={!item.material_id}
                       type="text"
@@ -383,7 +387,7 @@ export default function SolicitudesPage() {
                       placeholder="Código (opcional)"
                       value={item.codigo}
                       onChange={e => updateItem(idx, 'codigo', e.target.value)}
-                      className="w-32 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-mono outline-none focus:border-amber-400"
+                      className="w-full sm:w-32 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-mono outline-none focus:border-amber-400"
                     />
                   </div>
                 </div>
@@ -423,7 +427,7 @@ export default function SolicitudesPage() {
           <div className="space-y-4">
             <FlowStepper currentStep={0} estado={showDetail.estado} tipo="solicitud" />
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="rounded-lg bg-slate-50 p-3">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Solicitante</p>
                 <p className="text-sm font-bold text-slate-800">{showDetail.solicitante}</p>
@@ -439,7 +443,7 @@ export default function SolicitudesPage() {
             </div>
 
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-2">Ítems de la solicitud</p>
-            <div className="rounded-lg border border-slate-200 overflow-hidden">
+            <div className="rounded-lg border border-slate-200 overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50"><tr>
                   <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Material</th>

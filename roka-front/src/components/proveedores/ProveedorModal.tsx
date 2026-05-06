@@ -25,7 +25,11 @@ export default function ProveedorModal({ isOpen, onClose, onSave, editingProveed
     correo: '',
     contacto_nombre: '',
     contacto_telefono: '',
-    contacto_correo: ''
+    contacto_correo: '',
+    condiciones_pago: '',
+    condicion_despacho: '',
+    plazo_entrega: '',
+    moneda: 'CLP'
   };
 
   const [form, setForm] = useState(initialForm);
@@ -41,7 +45,11 @@ export default function ProveedorModal({ isOpen, onClose, onSave, editingProveed
         correo: editingProveedor.correo || '',
         contacto_nombre: editingProveedor.contacto_nombre || '',
         contacto_telefono: editingProveedor.contacto_telefono || '',
-        contacto_correo: editingProveedor.contacto_correo || ''
+        contacto_correo: editingProveedor.contacto_correo || '',
+        condiciones_pago: editingProveedor.condiciones_pago || '',
+        condicion_despacho: editingProveedor.condicion_despacho || '',
+        plazo_entrega: editingProveedor.plazo_entrega || '',
+        moneda: editingProveedor.moneda || 'CLP'
       });
     } else {
       setForm(initialForm);
@@ -182,6 +190,54 @@ export default function ProveedorModal({ isOpen, onClose, onSave, editingProveed
               placeholder="contacto@proveedor.cl"
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
             />
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200 pt-4">
+          <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+            Condiciones Comerciales
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Condiciones de Pago</label>
+              <input
+                type="text"
+                value={form.condiciones_pago}
+                onChange={e => setForm({ ...form, condiciones_pago: e.target.value })}
+                placeholder="Neto 30 días, Contado, etc."
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Condición de Despacho</label>
+              <input
+                type="text"
+                value={form.condicion_despacho}
+                onChange={e => setForm({ ...form, condicion_despacho: e.target.value })}
+                placeholder="Despacho a obra, Retiro en bodega"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Plazo de Entrega</label>
+              <input
+                type="text"
+                value={form.plazo_entrega}
+                onChange={e => setForm({ ...form, plazo_entrega: e.target.value })}
+                placeholder="5 días hábiles, Inmediato, etc."
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Moneda</label>
+              <input
+                type="text"
+                value={form.moneda}
+                onChange={e => setForm({ ...form, moneda: e.target.value })}
+                placeholder="CLP, USD, EUR"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+              />
+            </div>
           </div>
         </div>
 

@@ -13,7 +13,7 @@ import {
 } from '../lib/notifications';
 
 export async function crearCotizacion(input: CreateCotizacionInput, usuarioId: number | null) {
-  const { solicitud_id, proveedor_id, proveedor, items } = input;
+  const { solicitud_id, solicitud_cotizacion_id, proveedor_id, proveedor, items } = input;
 
   if (!solicitud_id || (!proveedor_id && !proveedor) || !items || items.length === 0) {
     throw Object.assign(new Error('Faltan campos requeridos'), { statusCode: 400 });
@@ -85,6 +85,7 @@ export async function crearCotizacion(input: CreateCotizacionInput, usuarioId: n
     const cotizacion = await createCotizacion(
       {
         solicitud_id,
+        solicitud_cotizacion_id: solicitud_cotizacion_id || null,
         proveedor_id: proveedor_id || null,
         proveedor: nombreProveedor,
         total,
@@ -110,6 +111,14 @@ export async function crearCotizacion(input: CreateCotizacionInput, usuarioId: n
         `INSERT INTO cotizacion_items (cotizacion_id, solicitud_item_id, precio_unitario, subtotal)
          VALUES ${placeholders.join(', ')}`,
         values
+      );
+    }
+
+    // Si se vincularon de una solicitud_cotizacion, marcarla como Respondida
+    if (solicitud_cotizacion_id) {
+      await client.query(
+        `UPDATE solicitud_cotizacion SET estado = 'Respondida', updated_at = NOW() WHERE id = $1 AND estado IN ('Borrador', 'Enviada')`,
+        [solicitud_cotizacion_id]
       );
     }
 

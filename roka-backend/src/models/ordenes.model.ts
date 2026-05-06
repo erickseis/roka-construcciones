@@ -9,12 +9,15 @@ export interface OrdenFilters {
 export async function getAllOrdenes(filters: OrdenFilters): Promise<OrdenCompra[]> {
   const db = getDb();
   let query = `
-    SELECT oc.*, c.proveedor, c.solicitud_id,
-           p.nombre AS proyecto_nombre
+    SELECT oc.*,
+           COALESCE(c.proveedor, oc.proveedor) AS proveedor,
+           c.solicitud_id,
+           p.nombre AS proyecto_nombre,
+           COALESCE(sm.proyecto_id, oc.proyecto_id) AS proyecto_id
     FROM ordenes_compra oc
-    JOIN cotizaciones c ON c.id = oc.cotizacion_id
-    JOIN solicitudes_material sm ON sm.id = c.solicitud_id
-    JOIN proyectos p ON p.id = sm.proyecto_id
+    LEFT JOIN cotizaciones c ON c.id = oc.cotizacion_id
+    LEFT JOIN solicitudes_material sm ON sm.id = c.solicitud_id
+    LEFT JOIN proyectos p ON p.id = COALESCE(sm.proyecto_id, oc.proyecto_id)
     WHERE 1=1
   `;
   const params: any[] = [];
@@ -25,7 +28,7 @@ export async function getAllOrdenes(filters: OrdenFilters): Promise<OrdenCompra[
   }
   if (filters.proyecto_id) {
     params.push(filters.proyecto_id);
-    query += ` AND sm.proyecto_id = $${params.length}`;
+    query += ` AND COALESCE(sm.proyecto_id, oc.proyecto_id) = $${params.length}`;
   }
 
   query += ' ORDER BY oc.created_at DESC';
@@ -37,24 +40,26 @@ export async function getAllOrdenes(filters: OrdenFilters): Promise<OrdenCompra[
 export async function getOrdenById(id: number): Promise<OrdenCompraDetalle | null> {
   const db = getDb();
   const { rows: [orden] } = await db.query(`
-    SELECT oc.*, c.proveedor, c.proveedor_id, c.solicitud_id, c.total AS cotizacion_total,
+    SELECT oc.*,
+           COALESCE(c.proveedor, oc.proveedor) AS proveedor,
+           c.proveedor_id, c.solicitud_id, c.total AS cotizacion_total,
            sm.solicitante, sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
            p.nombre AS proyecto_nombre, p.ubicacion AS proyecto_ubicacion,
            p.numero_licitacion AS proyecto_numero_licitacion,
            p.descripcion_licitacion AS proyecto_descripcion_licitacion,
-           pr.rut AS proveedor_rut,
+           COALESCE(pr.rut, oc.proveedor_rut) AS proveedor_rut,
            pr.razon_social AS proveedor_razon_social,
-           pr.direccion AS proveedor_direccion,
-           pr.telefono AS proveedor_telefono,
-           pr.correo AS proveedor_correo,
+           COALESCE(pr.direccion, oc.proveedor_direccion) AS proveedor_direccion,
+           COALESCE(pr.telefono, oc.proveedor_telefono) AS proveedor_telefono,
+           COALESCE(pr.correo, oc.proveedor_correo) AS proveedor_correo,
            pr.contacto_nombre AS proveedor_contacto_nombre,
            pr.contacto_telefono AS proveedor_contacto_telefono,
            pr.contacto_correo AS proveedor_contacto_correo,
            CONCAT(u.nombre, ' ', u.apellido) AS autorizado_por_nombre
     FROM ordenes_compra oc
-    JOIN cotizaciones c ON c.id = oc.cotizacion_id
-    JOIN solicitudes_material sm ON sm.id = c.solicitud_id
-    JOIN proyectos p ON p.id = sm.proyecto_id
+    LEFT JOIN cotizaciones c ON c.id = oc.cotizacion_id
+    LEFT JOIN solicitudes_material sm ON sm.id = c.solicitud_id
+    LEFT JOIN proyectos p ON p.id = COALESCE(sm.proyecto_id, oc.proyecto_id)
     LEFT JOIN proveedores pr ON pr.id = c.proveedor_id
     LEFT JOIN usuarios u ON u.id = oc.created_by_usuario_id
     WHERE oc.id = $1
@@ -64,6 +69,7 @@ export async function getOrdenById(id: number): Promise<OrdenCompraDetalle | nul
 }
 
 export async function getOrdenItems(cotizacionId: number): Promise<OrdenItem[]> {
+  if (!cotizacionId || cotizacionId === 0) return [];
   const db = getDb();
   const { rows } = await db.query(`
     SELECT ci.*, si.nombre_material, si.cantidad_requerida, si.unidad,
@@ -74,6 +80,19 @@ export async function getOrdenItems(cotizacionId: number): Promise<OrdenItem[]> 
     WHERE ci.cotizacion_id = $1
     ORDER BY ci.id
   `, [cotizacionId]);
+
+  return rows;
+}
+
+export async function getOrdenItemsByOC(ordenCompraId: number): Promise<OrdenItem[]> {
+  const db = getDb();
+  const { rows } = await db.query(`
+    SELECT id, nombre_material, cantidad AS cantidad_requerida, unidad,
+           precio_unitario, subtotal, codigo AS material_sku
+    FROM orden_compra_items
+    WHERE orden_compra_id = $1
+    ORDER BY id
+  `, [ordenCompraId]);
 
   return rows;
 }

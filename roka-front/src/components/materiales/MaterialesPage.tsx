@@ -211,31 +211,33 @@ export default function MaterialesPage() {
           </p>
         </div>
 
-        <div className="flex gap-2">
-          {[
-            { id: 'materiales', label: 'Materiales' },
-            { id: 'categorias', label: 'Categorías' },
-            { id: 'unidades', label: 'Unidades' },
-            { id: 'solicitados', label: 'Solicitados' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`relative rounded-xl px-6 py-2.5 text-sm font-bold transition-all duration-300 ${
-                activeTab === tab.id
-                  ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-[0_4px_20px_rgba(245,158,11,0.4)] scale-105 z-10'
-                  : 'bg-white/50 text-slate-500 hover:bg-white border border-slate-200 dark:bg-slate-900/50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800'
-              }`}
-            >
-              {tab.label}
-              {activeTab === tab.id && (
-                <motion.div
-                  layoutId="activeTabGlow"
-                  className="absolute -bottom-1 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full bg-amber-400 blur-[2px]"
-                />
-              )}
-            </button>
-          ))}
+        <div className="flex flex-col gap-4 w-full lg:w-auto">
+          <div className="flex overflow-x-auto pb-2 scrollbar-hide gap-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+            {[
+              { id: 'materiales', label: 'Materiales' },
+              { id: 'categorias', label: 'Categorías' },
+              { id: 'unidades', label: 'Unidades' },
+              { id: 'solicitados', label: 'Solicitados' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`relative whitespace-nowrap rounded-xl px-6 py-2.5 text-sm font-bold transition-all duration-300 ${
+                  activeTab === tab.id
+                    ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-[0_4px_20px_rgba(245,158,11,0.4)] scale-105 z-10'
+                    : 'bg-white/50 text-slate-500 hover:bg-white border border-slate-200 dark:bg-slate-900/50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800'
+                }`}
+              >
+                {tab.label}
+                {activeTab === tab.id && (
+                  <motion.div
+                    layoutId="activeTabGlow"
+                    className="absolute -bottom-1 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full bg-amber-400 blur-[2px]"
+                  />
+                )}
+              </button>
+            ))}
+          </div>
           
           <button
             onClick={() => {
@@ -250,7 +252,7 @@ export default function MaterialesPage() {
                 setIsUnidadModalOpen(true);
               }
             }}
-            className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-black text-white shadow-xl transition-all hover:bg-slate-800 active:scale-95 dark:bg-white dark:text-slate-900"
+            className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-black text-white shadow-xl transition-all hover:bg-slate-800 active:scale-95 dark:bg-white dark:text-slate-900 w-full sm:w-auto"
           >
             <Plus size={18} />
             {activeTab === 'materiales' ? 'Registrar Material' : activeTab === 'categorias' ? 'Nueva Categoría' : activeTab === 'unidades' ? 'Nueva Unidad' : 'Registrar'}
@@ -311,7 +313,7 @@ export default function MaterialesPage() {
           <select
             value={selectedCategoryId}
             onChange={(e) => setSelectedCategoryId(e.target.value)}
-            className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
+            className="flex-1 lg:flex-none rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
           >
             {activeTab === 'solicitados' ? (
               <>

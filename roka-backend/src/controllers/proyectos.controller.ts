@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import * as proyectoModel from '../models/proyectos.model';
+import { importMaterialesFromExcel } from '../services/materialesImport.service';
 import path from 'path';
 
 export async function list(req: Request, res: Response) {
@@ -52,6 +53,7 @@ export async function create(req: Request, res: Response) {
     nombre, ubicacion, estado, fecha_inicio, fecha_fin,
     responsable_usuario_id, numero_licitacion, descripcion_licitacion,
     fecha_apertura_licitacion, monto_referencial_licitacion,
+    mandante, moneda, procesar_materiales,
   } = req.body;
 
   if (!nombre) {
@@ -59,8 +61,14 @@ export async function create(req: Request, res: Response) {
   }
 
   try {
-    const archivo_licitacion_path = req.file ? `uploads/licitaciones/${req.file.filename}` : null;
-    const archivo_licitacion_nombre = req.file ? req.file.originalname : null;
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const licitacionFile = files?.['archivo_licitacion']?.[0];
+    const materialesFile = files?.['archivo_materiales']?.[0];
+
+    const archivo_licitacion_path = licitacionFile ? `uploads/licitaciones/${licitacionFile.filename}` : null;
+    const archivo_licitacion_nombre = licitacionFile ? licitacionFile.originalname : null;
+    const archivo_materiales_path = materialesFile ? `uploads/materiales/${materialesFile.filename}` : null;
+    const archivo_materiales_nombre = materialesFile ? materialesFile.originalname : null;
 
     const created = await proyectoModel.createProyecto({
       nombre,
@@ -75,7 +83,20 @@ export async function create(req: Request, res: Response) {
       monto_referencial_licitacion: monto_referencial_licitacion ? Number(monto_referencial_licitacion) : null,
       archivo_licitacion_path,
       archivo_licitacion_nombre,
+      archivo_materiales_path,
+      archivo_materiales_nombre,
+      mandante: mandante || null,
+      moneda: moneda || 'CLP',
     });
+
+    if (procesar_materiales === 'true' && archivo_materiales_path) {
+      try {
+        const solicitante = req.body.solicitante || 'Importación automática';
+        await importMaterialesFromExcel(created.id, solicitante);
+      } catch (importErr) {
+        console.error('Error al importar materiales:', importErr);
+      }
+    }
 
     res.status(201).json(created);
   } catch (error) {
@@ -94,16 +115,13 @@ export async function update(req: Request, res: Response) {
     nombre, ubicacion, estado, fecha_inicio, fecha_fin,
     responsable_usuario_id, numero_licitacion, descripcion_licitacion,
     fecha_apertura_licitacion, monto_referencial_licitacion,
+    mandante, moneda,
   } = req.body;
 
   try {
-    let archivo_licitacion_path: string | null = null;
-    let archivo_licitacion_nombre: string | null = null;
-
-    if (req.file) {
-      archivo_licitacion_path = `uploads/licitaciones/${req.file.filename}`;
-      archivo_licitacion_nombre = req.file.originalname;
-    }
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const licitacionFile = files?.['archivo_licitacion']?.[0];
+    const materialesFile = files?.['archivo_materiales']?.[0];
 
     const data: Record<string, any> = {
       nombre: nombre || null,
@@ -116,12 +134,18 @@ export async function update(req: Request, res: Response) {
       descripcion_licitacion: descripcion_licitacion || null,
       fecha_apertura_licitacion: fecha_apertura_licitacion || null,
       monto_referencial_licitacion: monto_referencial_licitacion ? Number(monto_referencial_licitacion) : null,
+      mandante: mandante || null,
+      moneda: moneda || null,
     };
 
-    // Only include archivo fields if a file was uploaded
-    if (req.file) {
-      data.archivo_licitacion_path = archivo_licitacion_path;
-      data.archivo_licitacion_nombre = archivo_licitacion_nombre;
+    // Only include archivo fields if files were uploaded
+    if (licitacionFile) {
+      data.archivo_licitacion_path = `uploads/licitaciones/${licitacionFile.filename}`;
+      data.archivo_licitacion_nombre = licitacionFile.originalname;
+    }
+    if (materialesFile) {
+      data.archivo_materiales_path = `uploads/materiales/${materialesFile.filename}`;
+      data.archivo_materiales_nombre = materialesFile.originalname;
     }
 
     const updated = await proyectoModel.updateProyecto(id, data);
@@ -177,5 +201,26 @@ export async function downloadLicitacion(req: Request, res: Response) {
   } catch (error) {
     console.error('Error al descargar archivo de licitacion:', error);
     res.status(500).json({ error: 'Error al descargar archivo' });
+  }
+}
+
+export async function procesarMateriales(req: Request, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'ID invalido' });
+    }
+
+    const { solicitante } = req.body;
+    if (!solicitante) {
+      return res.status(400).json({ error: 'El nombre del solicitante es requerido' });
+    }
+
+    const result = await importMaterialesFromExcel(id, solicitante);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error al procesar materiales:', error);
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.message || 'Error al procesar materiales' });
   }
 }

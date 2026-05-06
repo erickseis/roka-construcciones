@@ -9,10 +9,11 @@ import {
 
 export async function list(req: AuthRequest, res: Response) {
   try {
-    const { solicitud_id, estado } = req.query;
-    const filters: { solicitud_id?: number; estado?: string } = {};
+    const { solicitud_id, estado, solicitud_cotizacion_id } = req.query;
+    const filters: { solicitud_id?: number; estado?: string; solicitud_cotizacion_id?: number } = {};
     if (solicitud_id) filters.solicitud_id = Number(solicitud_id);
     if (estado) filters.estado = String(estado);
+    if (solicitud_cotizacion_id) filters.solicitud_cotizacion_id = Number(solicitud_cotizacion_id);
 
     const rows = await cotizacionesModel.getAllCotizaciones(filters);
     res.json(rows);
@@ -71,5 +72,26 @@ export async function reject(req: AuthRequest, res: Response) {
     const statusCode = error.statusCode || 500;
     console.error('Error al rechazar cotización:', error);
     res.status(statusCode).json({ error: error.message || 'Error al rechazar cotización' });
+  }
+}
+
+export async function uploadArchivo(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    if (!req.file) {
+      return res.status(400).json({ error: 'Archivo no proporcionado' });
+    }
+    const cotizacion = await cotizacionesModel.updateCotizacionArchivo(
+      Number(id),
+      req.file.path,
+      req.file.originalname
+    );
+    if (!cotizacion) {
+      return res.status(404).json({ error: 'Cotización no encontrada' });
+    }
+    res.json(cotizacion);
+  } catch (error) {
+    console.error('Error al subir archivo adjunto:', error);
+    res.status(500).json({ error: 'Error al subir archivo adjunto' });
   }
 }

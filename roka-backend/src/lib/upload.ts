@@ -2,15 +2,24 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-const uploadDir = path.join(process.cwd(), 'uploads', 'licitaciones');
+const uploadDirs = ['uploads/licitaciones', 'uploads/materiales', 'uploads/cotizaciones'];
 
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+uploadDirs.forEach(dir => {
+  const fullPath = path.join(process.cwd(), dir);
+  if (!fs.existsSync(fullPath)) {
+    fs.mkdirSync(fullPath, { recursive: true });
+  }
+});
+
+const getUploadDir = (fieldname: string): string => {
+  if (fieldname === 'archivo_materiales') return 'uploads/materiales';
+  if (fieldname === 'archivo_cotizacion') return 'uploads/cotizaciones';
+  return 'uploads/licitaciones';
+};
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDir);
+    cb(null, path.join(process.cwd(), getUploadDir(file.fieldname)));
   },
   filename: (req, file, cb) => {
     const timestamp = Date.now();

@@ -7,13 +7,12 @@ import {
   PackageCheck,
   Construction,
   CreditCard,
-  Calendar,
-  HardHat,
   Settings,
   LogOut,
   User,
   Package,
-  Truck
+  Truck,
+  X
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
@@ -35,21 +34,38 @@ const secondaryItems = [
   { icon: Settings, label: 'Configuración', to: '/config' },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
 
   return (
-    <aside className="fixed left-0 top-0 z-50 flex h-screen w-64 flex-col overflow-y-auto border-r border-slate-200 bg-slate-100 dark:border-[#1e293b] dark:bg-[#0b0e14]">
+    <aside className={cn(
+      "fixed left-0 top-0 z-50 flex h-screen w-64 flex-col overflow-y-auto border-r border-slate-200 bg-slate-100 transition-transform duration-300 ease-in-out dark:border-[#1e293b] dark:bg-[#0b0e14] lg:translate-x-0",
+      isOpen ? "translate-x-0" : "-translate-x-full"
+    )}>
       <div className="px-6 py-8 flex-1">
-        <div className="mb-10 flex items-center gap-3">
-          <div className="flex w-10 items-center justify-center overflow-hidden rounded bg-slate-900 text-amber-500 dark:bg-slate-800">
-            <img src={logoRoka} alt="Logo Roka" className="w-full h-full object-cover" />
+        <div className="mb-10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex w-10 items-center justify-center overflow-hidden rounded bg-slate-900 text-amber-500 dark:bg-slate-800">
+              <img src={logoRoka} alt="Logo Roka" className="w-full h-full object-cover" />
+            </div>
+            <div>
+              <h1 className="font-headline text-lg font-black leading-tight tracking-tight text-slate-900 dark:text-slate-50">
+                Roka <br /> <span className="text-sm font-extrabold text-slate-500 dark:text-slate-200">Construcciones</span>
+              </h1>
+            </div>
           </div>
-          <div>
-            <h1 className="font-headline text-lg font-black leading-tight tracking-tight text-slate-900 dark:text-slate-50">
-              Roka <br /> <span className="text-sm font-extrabold text-slate-500 dark:text-slate-200">Construcciones</span>
-            </h1>
-          </div>
+          {/* Close button for mobile */}
+          <button 
+            onClick={onClose}
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-200 lg:hidden dark:hover:bg-slate-800"
+          >
+            <X size={20} />
+          </button>
         </div>
 
         {/* Primary Nav — Procurement Modules */}
@@ -62,6 +78,7 @@ export function Sidebar() {
               key={item.label}
               to={item.to}
               end={item.to === '/'}
+              onClick={onClose}
               className={({ isActive }) => cn(
                 "flex items-center gap-3 rounded-lg px-4 py-2.5 transition-all duration-200",
                 isActive
@@ -89,6 +106,7 @@ export function Sidebar() {
             <NavLink
               key={item.label}
               to={item.to}
+              onClick={onClose}
               className={({ isActive }) => cn(
                 "flex items-center gap-3 rounded-lg px-4 py-2.5 transition-all duration-200",
                 isActive
@@ -115,7 +133,6 @@ export function Sidebar() {
           <button
             type="button"
             onClick={() => {
-              console.log('Botón Logout clickeado');
               logout();
             }}
             className="ml-auto rounded-lg p-2 text-slate-400 transition-all hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/40"

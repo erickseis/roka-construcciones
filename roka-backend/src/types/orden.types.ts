@@ -2,7 +2,13 @@ import { Queryable } from './index';
 
 export interface OrdenCompra {
   id: number;
-  cotizacion_id: number;
+  cotizacion_id: number | null;
+  proyecto_id: number | null;
+  proveedor: string | null;
+  proveedor_rut: string | null;
+  proveedor_direccion: string | null;
+  proveedor_telefono: string | null;
+  proveedor_correo: string | null;
   condiciones_pago: string | null;
   total: number;
   folio: string | null;
@@ -20,7 +26,6 @@ export interface OrdenCompra {
   created_by_usuario_id: number | null;
   created_at: Date;
   updated_at: Date;
-  proveedor?: string;
   solicitud_id?: number;
   proyecto_nombre?: string;
 }

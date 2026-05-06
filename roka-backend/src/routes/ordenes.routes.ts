@@ -5,6 +5,7 @@ import {
   list,
   getById,
   create,
+  createManual,
   updateEntrega,
   exportarHtml,
   exportarPdf,
@@ -21,6 +22,9 @@ router.get('/:id', getById);
 
 // POST /api/ordenes — Generar OC desde cotización aprobada
 router.post('/', authMiddleware, requirePermission('ordenes.create'), create);
+
+// POST /api/ordenes/manual — OC manual/esporádica (urgencias)
+router.post('/manual', authMiddleware, requirePermission('ordenes.create'), createManual);
 
 // PATCH /api/ordenes/:id/entrega — Actualizar estado de entrega
 router.patch('/:id/entrega', updateEntrega);

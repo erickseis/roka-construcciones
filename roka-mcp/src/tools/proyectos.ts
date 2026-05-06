@@ -36,9 +36,9 @@ export function registerProyectosTools(server: McpServer, client: ApiClient) {
     }
   );
 
-  server.tool(
+server.tool(
     "crear_proyecto",
-    "Crea un nuevo proyecto con datos opcionales de licitación",
+    "Crea un nuevo proyecto con datos opcionales de licitacion",
     {
       nombre: z.string().describe("Nombre del proyecto"),
       ubicacion: z.string().optional().describe("Ubicación del proyecto"),
@@ -46,13 +46,30 @@ export function registerProyectosTools(server: McpServer, client: ApiClient) {
       fecha_inicio: z.string().optional().describe("Fecha de inicio (YYYY-MM-DD)"),
       fecha_fin: z.string().optional().describe("Fecha de fin (YYYY-MM-DD)"),
       responsable_usuario_id: z.number().optional().describe("ID del usuario responsable"),
-      numero_licitacion: z.string().optional().describe("Número de licitación"),
-      descripcion_licitacion: z.string().optional().describe("Descripción de la licitación"),
-      fecha_apertura_licitacion: z.string().optional().describe("Fecha de apertura de licitación"),
-      monto_referencial_licitacion: z.number().optional().describe("Monto referencial de licitación"),
+      numero_licitacion: z.string().optional().describe("Número de licitacion"),
+      descripcion_licitacion: z.string().optional().describe("Descripción de la licitacion"),
+      fecha_apertura_licitacion: z.string().optional().describe("Fecha de apertura de licitacion"),
+      monto_referencial_licitacion: z.number().optional().describe("Monto de Adjudicación (obra)"),
+      mandante: z.string().optional().describe("Mandante - fuente de financiamiento del proyecto"),
+      moneda: z.string().optional().describe("Moneda del proyecto (CLP, USD, UF, etc)"),
     },
     async (args) => {
       const res = await client.post("proyectos", args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }],
+      };
+    }
+  );
+
+  server.tool(
+    "procesar_materiales_proyecto",
+    "Procesa el archivo Excel de materiales adjunto a un proyecto y crea una solicitud de materiales",
+    {
+      id: z.number().describe("ID del proyecto"),
+      solicitante: z.string().describe("Nombre del solicitante para la solicitud de materiales"),
+    },
+    async ({ id, solicitante }) => {
+      const res = await client.post(`proyectos/${id}/procesar-materiales`, { solicitante });
       return {
         content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }],
       };
@@ -74,6 +91,8 @@ export function registerProyectosTools(server: McpServer, client: ApiClient) {
       descripcion_licitacion: z.string().optional(),
       fecha_apertura_licitacion: z.string().optional(),
       monto_referencial_licitacion: z.number().optional(),
+      mandante: z.string().optional().describe("Mandante - fuente de financiamiento del proyecto"),
+      moneda: z.string().optional().describe("Moneda del proyecto"),
     },
     async ({ id, ...body }) => {
       const res = await client.patch(`proyectos/${id}`, body);

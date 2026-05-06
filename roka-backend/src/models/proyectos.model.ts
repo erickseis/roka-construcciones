@@ -15,6 +15,10 @@ export interface ProyectoRow {
   monto_referencial_licitacion: number | null;
   archivo_licitacion_path: string | null;
   archivo_licitacion_nombre: string | null;
+  archivo_materiales_path: string | null;
+  archivo_materiales_nombre: string | null;
+  mandante: string | null;
+  moneda: string | null;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -47,6 +51,10 @@ export interface CreateProyectoData {
   monto_referencial_licitacion?: number | null;
   archivo_licitacion_path?: string | null;
   archivo_licitacion_nombre?: string | null;
+  archivo_materiales_path?: string | null;
+  archivo_materiales_nombre?: string | null;
+  mandante?: string | null;
+  moneda?: string | null;
 }
 
 export interface UpdateProyectoData {
@@ -55,13 +63,17 @@ export interface UpdateProyectoData {
   estado?: string | null;
   fecha_inicio?: string | null;
   fecha_fin?: string | null;
-  responsable_usuario_id?: number | null;
+  responsable_usuario_id?: string | null;
   numero_licitacion?: string | null;
   descripcion_licitacion?: string | null;
   fecha_apertura_licitacion?: string | null;
   monto_referencial_licitacion?: number | null;
   archivo_licitacion_path?: string | null;
   archivo_licitacion_nombre?: string | null;
+  archivo_materiales_path?: string | null;
+  archivo_materiales_nombre?: string | null;
+  mandante?: string | null;
+  moneda?: string | null;
 }
 
 export async function getAllProyectos(
@@ -146,8 +158,10 @@ export async function createProyecto(data: CreateProyectoData, db?: Queryable): 
        nombre, ubicacion, estado, fecha_inicio, fecha_fin,
        responsable_usuario_id, numero_licitacion, descripcion_licitacion,
        fecha_apertura_licitacion, monto_referencial_licitacion,
-       archivo_licitacion_path, archivo_licitacion_nombre
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       archivo_licitacion_path, archivo_licitacion_nombre, 
+       archivo_materiales_path, archivo_materiales_nombre,
+       mandante, moneda
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
      RETURNING *`,
     [
       data.nombre,
@@ -162,6 +176,10 @@ export async function createProyecto(data: CreateProyectoData, db?: Queryable): 
       data.monto_referencial_licitacion || null,
       data.archivo_licitacion_path || null,
       data.archivo_licitacion_nombre || null,
+      data.archivo_materiales_path || null,
+      data.archivo_materiales_nombre || null,
+      data.mandante || null,
+      data.moneda || 'CLP',
     ]
   );
   return rows[0];
@@ -184,8 +202,12 @@ export async function updateProyecto(id: number, data: UpdateProyectoData, db?: 
        monto_referencial_licitacion = COALESCE($10, monto_referencial_licitacion),
        archivo_licitacion_path = COALESCE($11, archivo_licitacion_path),
        archivo_licitacion_nombre = COALESCE($12, archivo_licitacion_nombre),
+       archivo_materiales_path = COALESCE($13, archivo_materiales_path),
+       archivo_materiales_nombre = COALESCE($14, archivo_materiales_nombre),
+       mandante = COALESCE($15, mandante),
+       moneda = COALESCE($16, moneda),
        updated_at = NOW()
-     WHERE id = $13
+     WHERE id = $17
      RETURNING *`,
     [
       data.nombre || null,
@@ -200,6 +222,10 @@ export async function updateProyecto(id: number, data: UpdateProyectoData, db?: 
       data.monto_referencial_licitacion || null,
       data.archivo_licitacion_path || null,
       data.archivo_licitacion_nombre || null,
+      data.archivo_materiales_path || null,
+      data.archivo_materiales_nombre || null,
+      data.mandante || null,
+      data.moneda || null,
       id,
     ]
   );

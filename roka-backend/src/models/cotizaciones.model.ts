@@ -4,15 +4,18 @@ import { Cotizacion, CotizacionItem } from '../types/cotizacion.types';
 export interface CotizacionFilters {
   solicitud_id?: number;
   estado?: string;
+  solicitud_cotizacion_id?: number;
 }
 
 export async function getAllCotizaciones(filters: CotizacionFilters): Promise<Cotizacion[]> {
   const db = getDb();
   let query = `
-    SELECT c.*, sm.solicitante, p.nombre AS proyecto_nombre
+    SELECT c.*, sm.solicitante, p.nombre AS proyecto_nombre,
+           sc.estado AS solicitud_cotizacion_estado
     FROM cotizaciones c
     JOIN solicitudes_material sm ON sm.id = c.solicitud_id
     JOIN proyectos p ON p.id = sm.proyecto_id
+    LEFT JOIN solicitud_cotizacion sc ON sc.id = c.solicitud_cotizacion_id
     WHERE 1=1
   `;
   const params: any[] = [];
@@ -25,6 +28,10 @@ export async function getAllCotizaciones(filters: CotizacionFilters): Promise<Co
     params.push(filters.estado);
     query += ` AND c.estado = $${params.length}`;
   }
+  if (filters.solicitud_cotizacion_id) {
+    params.push(filters.solicitud_cotizacion_id);
+    query += ` AND c.solicitud_cotizacion_id = $${params.length}`;
+  }
 
   query += ' ORDER BY c.created_at DESC';
 
@@ -36,10 +43,12 @@ export async function getCotizacionById(id: number): Promise<(Cotizacion & { fec
   const db = getDb();
   const { rows: [cotizacion] } = await db.query(`
     SELECT c.*, sm.solicitante, sm.fecha AS fecha_solicitud,
-           p.nombre AS proyecto_nombre
+           p.nombre AS proyecto_nombre,
+           sc.estado AS solicitud_cotizacion_estado
     FROM cotizaciones c
     JOIN solicitudes_material sm ON sm.id = c.solicitud_id
     JOIN proyectos p ON p.id = sm.proyecto_id
+    LEFT JOIN solicitud_cotizacion sc ON sc.id = c.solicitud_cotizacion_id
     WHERE c.id = $1
   `, [id]);
 
@@ -61,6 +70,7 @@ export async function getCotizacionItems(cotizacionId: number): Promise<Cotizaci
 
 export async function createCotizacion(data: {
   solicitud_id: number;
+  solicitud_cotizacion_id: number | null;
   proveedor_id: number | null;
   proveedor: string;
   total: number;
@@ -68,9 +78,9 @@ export async function createCotizacion(data: {
 }, db?: Queryable): Promise<Cotizacion> {
   const conn = getDb(db);
   const { rows: [cotizacion] } = await conn.query(
-    `INSERT INTO cotizaciones (solicitud_id, proveedor_id, proveedor, total, created_by_usuario_id)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [data.solicitud_id, data.proveedor_id, data.proveedor, data.total, data.created_by_usuario_id]
+    `INSERT INTO cotizaciones (solicitud_id, solicitud_cotizacion_id, proveedor_id, proveedor, total, created_by_usuario_id)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [data.solicitud_id, data.solicitud_cotizacion_id, data.proveedor_id, data.proveedor, data.total, data.created_by_usuario_id]
   );
 
   return cotizacion;
@@ -136,4 +146,13 @@ export async function updateSolicitudEstadoIfPendiente(id: number, db?: Queryabl
      WHERE id = $1 AND estado = 'Pendiente'`,
     [id]
   );
+}
+
+export async function updateCotizacionArchivo(id: number, archivoPath: string, archivoNombre: string, db?: Queryable): Promise<Cotizacion | null> {
+  const conn = getDb(db);
+  const { rows: [cotizacion] } = await conn.query(
+    `UPDATE cotizaciones SET archivo_adjunto_path = $1, archivo_adjunto_nombre = $2 WHERE id = $3 RETURNING *`,
+    [archivoPath, archivoNombre, id]
+  );
+  return cotizacion || null;
 }

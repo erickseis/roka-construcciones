@@ -6,6 +6,7 @@ import { StatusBadge } from '../ui/StatusBadge';
 import { Modal } from '../ui/Modal';
 import FlowStepper from '../ui/FlowStepper';
 import OCPreviewModal from './OCPreviewModal';
+import OCManualModal from './OCManualModal';
 import { useApi } from '@/hooks/useApi';
 import {
   getOrdenes, generarOrden, updateEstadoEntrega,
@@ -14,6 +15,7 @@ import {
 
 export default function OrdenesPage() {
   const [showForm, setShowForm] = useState(false);
+  const [showManualForm, setShowManualForm] = useState(false);
   const [showDetail, setShowDetail] = useState<any | null>(null);
   const [ocPreview, setOcPreview] = useState<any | null>(null);
   const [loadingOc, setLoadingOc] = useState(false);
@@ -198,18 +200,27 @@ export default function OrdenesPage() {
               Genera y gestiona órdenes de compra a partir de cotizaciones aprobadas.
             </p>
           </div>
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 hover:shadow-emerald-600/30 active:scale-[0.98]"
-          >
-            <Plus size={18} />
-            Generar OC
-          </button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 hover:shadow-emerald-600/30 active:scale-[0.98]"
+            >
+              <Plus size={18} />
+              Generar OC
+            </button>
+            <button
+              onClick={() => setShowManualForm(true)}
+              className="flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-600 hover:shadow-orange-500/30 active:scale-[0.98]"
+            >
+              <Plus size={18} />
+              OC Manual
+            </button>
+          </div>
         </div>
       </motion.div>
 
       {/* Stats */}
-      <div className="mb-6 grid grid-cols-3 gap-4">
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
           { label: 'Pendientes', value: ordenes?.filter((o: any) => o.estado_entrega === 'Pendiente').length || 0, color: 'text-amber-600' },
           { label: 'Recibido Parcial', value: ordenes?.filter((o: any) => o.estado_entrega === 'Recibido parcial').length || 0, color: 'text-sky-600' },
@@ -280,7 +291,7 @@ export default function OrdenesPage() {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
                 Folio (opcional)
@@ -315,7 +326,7 @@ export default function OrdenesPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
                 Tipo de Descuento
@@ -423,7 +434,7 @@ export default function OrdenesPage() {
           <div className="space-y-4">
             <FlowStepper currentStep={3} estado={showDetail.estado_entrega} tipo="orden" />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="rounded-lg bg-slate-50 p-3">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Cotización</p>
                 <p className="text-sm font-bold text-slate-800">COT-{String(showDetail.cotizacion_id).padStart(3, '0')}</p>
@@ -460,6 +471,13 @@ export default function OrdenesPage() {
         isOpen={!!ocPreview}
         onClose={() => setOcPreview(null)}
         orden={ocPreview}
+      />
+
+      {/* OC Manual Modal */}
+      <OCManualModal
+        isOpen={showManualForm}
+        onClose={() => { setShowManualForm(false); refetch(); }}
+        onSuccess={() => refetch()}
       />
     </div>
   );
