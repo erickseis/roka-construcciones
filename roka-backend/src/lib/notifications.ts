@@ -80,21 +80,28 @@ export async function createNotifications(notifications: NotificationInput[], db
 
   const conn = getDb(db);
 
-  for (const n of notifications) {
+  // Multi-row INSERT con chunking (500 notificaciones por batch)
+  for (let i = 0; i < notifications.length; i += 500) {
+    const chunk = notifications.slice(i, i + 500);
+    const placeholders = chunk.map((_, j) => {
+      const base = j * 8;
+      return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}::jsonb, $${base + 8})`;
+    });
+    const values = chunk.flatMap(n => [
+      n.usuario_destino_id,
+      n.tipo,
+      n.titulo,
+      n.mensaje,
+      n.entidad_tipo || null,
+      n.entidad_id || null,
+      JSON.stringify(n.payload || {}),
+      n.enviado_por_usuario_id || null,
+    ]);
     await conn.query(
       `INSERT INTO notificaciones
          (usuario_destino_id, tipo, titulo, mensaje, entidad_tipo, entidad_id, payload, enviado_por_usuario_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)`,
-      [
-        n.usuario_destino_id,
-        n.tipo,
-        n.titulo,
-        n.mensaje,
-        n.entidad_tipo || null,
-        n.entidad_id || null,
-        JSON.stringify(n.payload || {}),
-        n.enviado_por_usuario_id || null,
-      ]
+       VALUES ${placeholders.join(', ')}`,
+      values
     );
   }
 }

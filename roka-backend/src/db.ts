@@ -5,6 +5,8 @@ dotenv.config();
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/roka_construcciones',
+  statement_timeout: 30_000,
+  connectionTimeoutMillis: 10_000,
 });
 
 pool.on('error', (err) => {

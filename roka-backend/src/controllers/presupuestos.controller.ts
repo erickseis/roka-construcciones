@@ -53,11 +53,17 @@ export async function create(req: AuthRequest, res: Response) {
     );
 
     if (Array.isArray(categorias) && categorias.length > 0) {
-      for (const c of categorias) {
-        if (!c.nombre || !c.monto_asignado) continue;
-        await presupuestosModel.createCategoria(
-          { presupuesto_id: presupuesto.id, nombre: c.nombre, monto_asignado: c.monto_asignado },
-          client
+      const validas = categorias.filter((c: any) => c.nombre && c.monto_asignado);
+      if (validas.length > 0) {
+        const placeholders = validas.map((_: any, j: number) => {
+          const base = j * 3;
+          return `($${base + 1}, $${base + 2}, $${base + 3})`;
+        });
+        const values = validas.flatMap((c: any) => [presupuesto.id, c.nombre, c.monto_asignado]);
+        await client.query(
+          `INSERT INTO presupuesto_categorias (presupuesto_id, nombre, monto_asignado)
+           VALUES ${placeholders.join(', ')}`,
+          values
         );
       }
     }

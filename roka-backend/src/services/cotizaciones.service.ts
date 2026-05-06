@@ -2,9 +2,7 @@ import pool from '../db';
 import { CreateCotizacionInput } from '../types/cotizacion.types';
 import {
   createCotizacion,
-  createCotizacionItem,
   getCotizacionForUpdate,
-  getSolicitudEstado,
   updateCotizacionEstado,
   updateSolicitudEstadoIfPendiente,
 } from '../models/cotizaciones.model';
@@ -45,22 +43,36 @@ export async function crearCotizacion(input: CreateCotizacionInput, usuarioId: n
       if (prov) nombreProveedor = prov.nombre;
     }
 
-    // Calcular total y validar items
+    // Validar duplicados en IDs de items
+    const uniqueIds = new Set(items.map(i => i.solicitud_item_id));
+    if (uniqueIds.size !== items.length) {
+      await client.query('ROLLBACK');
+      throw Object.assign(new Error('IDs duplicados en los ítems de cotización'), { statusCode: 400 });
+    }
+
+    // Batch validar todos los items (1 query en vez de N)
+    const itemIds = items.map(i => i.solicitud_item_id);
+    const { rows: solItems } = await client.query(
+      'SELECT * FROM solicitud_items WHERE id = ANY($1::int[]) AND solicitud_id = $2',
+      [itemIds, solicitud_id]
+    );
+
+    const foundIds = new Set(solItems.map(r => r.id));
+    const missingIds = itemIds.filter(id => !foundIds.has(id));
+    if (missingIds.length > 0) {
+      await client.query('ROLLBACK');
+      throw Object.assign(
+        new Error(`Ítem de solicitud ${missingIds[0]} no válido`),
+        { statusCode: 400 }
+      );
+    }
+
+    // Calcular total y construir validatedItems en memoria
     let total = 0;
     const validatedItems: { solicitud_item_id: number; precio_unitario: number; subtotal: number }[] = [];
-
+    const solItemMap = new Map(solItems.map(r => [r.id, r]));
     for (const item of items) {
-      const { rows: [solItem] } = await client.query(
-        'SELECT * FROM solicitud_items WHERE id = $1 AND solicitud_id = $2',
-        [item.solicitud_item_id, solicitud_id]
-      );
-      if (!solItem) {
-        await client.query('ROLLBACK');
-        throw Object.assign(
-          new Error(`Ítem de solicitud ${item.solicitud_item_id} no válido`),
-          { statusCode: 400 }
-        );
-      }
+      const solItem = solItemMap.get(item.solicitud_item_id)!;
       const subtotal = parseFloat(solItem.cantidad_requerida) * parseFloat(item.precio_unitario);
       total += subtotal;
       validatedItems.push({
@@ -81,15 +93,23 @@ export async function crearCotizacion(input: CreateCotizacionInput, usuarioId: n
       client
     );
 
-    for (const vi of validatedItems) {
-      await createCotizacionItem(
-        {
-          cotizacion_id: cotizacion.id,
-          solicitud_item_id: vi.solicitud_item_id,
-          precio_unitario: vi.precio_unitario,
-          subtotal: vi.subtotal,
-        },
-        client
+    // Multi-row INSERT cotizacion_items con chunking
+    for (let i = 0; i < validatedItems.length; i += 500) {
+      const chunk = validatedItems.slice(i, i + 500);
+      const placeholders = chunk.map((_, j) => {
+        const base = j * 4;
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`;
+      });
+      const values = chunk.flatMap(vi => [
+        cotizacion.id,
+        vi.solicitud_item_id,
+        vi.precio_unitario,
+        vi.subtotal,
+      ]);
+      await client.query(
+        `INSERT INTO cotizacion_items (cotizacion_id, solicitud_item_id, precio_unitario, subtotal)
+         VALUES ${placeholders.join(', ')}`,
+        values
       );
     }
 
