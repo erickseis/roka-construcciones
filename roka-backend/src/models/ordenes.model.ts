@@ -67,7 +67,7 @@ export async function getOrdenItems(cotizacionId: number): Promise<OrdenItem[]> 
   const db = getDb();
   const { rows } = await db.query(`
     SELECT ci.*, si.nombre_material, si.cantidad_requerida, si.unidad,
-           m.sku AS material_sku
+           COALESCE(m.sku, si.codigo) AS material_sku
     FROM cotizacion_items ci
     JOIN solicitud_items si ON si.id = ci.solicitud_item_id
     LEFT JOIN materiales m ON m.id = si.material_id
