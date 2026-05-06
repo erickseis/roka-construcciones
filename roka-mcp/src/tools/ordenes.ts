@@ -75,54 +75,59 @@ export function registerOrdenesTools(server: McpServer, auth: AuthManager, clien
   );
 
   server.tool(
-    "descargar_orden_compra",
-    "Genera el PDF de una Orden de Compra y devuelve URL directa al archivo descargable. El usuario hace click para descargar.",
+    "generar_pdf_orden_compra",
+    "OBLIGATORIO: Genera el PDF real de una Orden de Compra desde el sistema. Retorna URL de descarga directa. NO inventes ni fabriques datos de la OC — usa esta herramienta para obtener el PDF auténtico. Siempre que el usuario pida ver o descargar una OC como PDF, DEBES llamar esta herramienta en lugar de inventar la estructura.",
     {
-      id: z.number().describe("ID de la orden de compra a descargar"),
+      id: z.number().describe("ID de la orden de compra"),
     },
     async ({ id }) => {
-      // Intentar PDF primero
+      const publicBase = (
+        process.env.ROKA_PUBLIC_URL ||
+        process.env.ROKA_BACKEND_URL ||
+        "http://localhost:3001"
+      ).replace(/\/+$/, "");
+      const apiPrefix = (process.env.ROKA_API_PREFIX || "/api/roka/api/").replace(/\/+$/, "");
+      const backendRoot = apiPrefix.replace(/\/api$/, "");
+
       try {
         const res = await client.get<{
           url: string;
           filename: string;
           size: number;
-          base64?: string;
-        }>(`ordenes/${id}/pdf-link?inline=true`);
+        }>(`ordenes/${id}/pdf-link`);
 
-        const publicBase = (
-          process.env.ROKA_PUBLIC_URL ||
-          process.env.ROKA_BACKEND_URL ||
-          "http://localhost:3001"
-        ).replace(/\/+$/, "");
-        const apiPrefix = (process.env.ROKA_API_PREFIX || "/api/roka/api/").replace(/\/+$/, "");
-        const backendRoot = apiPrefix.replace(/\/api$/, "");
         const absoluteUrl = `${publicBase}${backendRoot}${res.data.url}`;
+        const htmlUrl = `${publicBase}${backendRoot}/ordenes/${id}/exportar`;
 
-        const parts: string[] = [];
-        if (res.data.base64) {
-          const ext = res.data.filename.endsWith('.pdf') ? 'pdf' : 'bin';
-          parts.push(
-            `PDF inline (base64): data:application/${ext};base64,${res.data.base64}`
-          );
-        }
-        parts.push(`Archivo: ${res.data.filename} (${res.data.size} bytes)`);
-        parts.push(`URL descarga: ${absoluteUrl}`);
+        const msg = [
+          `**PDF generado exitosamente desde el sistema**`,
+          ``,
+          `Archivo: ${res.data.filename} (${(res.data.size / 1024).toFixed(1)} KB)`,
+          `URL descarga PDF: ${absoluteUrl}`,
+          `URL vista HTML (idéntica al frontend): ${htmlUrl}`,
+          ``,
+          `👉 Para ver el PDF: abre la URL de descarga.`,
+          `👉 Para impresión idéntica al frontend: abre la URL HTML en el browser y usa Ctrl+P.`,
+        ].join('\n');
 
         return {
-          content: [{ type: "text", text: parts.join('\n') }],
+          content: [{ type: "text", text: msg }],
         };
       } catch (pdfError) {
-        // Fallback: devolver HTML con logo y CSS
-        console.error('PDF falló, usando fallback HTML:', pdfError);
-        const htmlRes = await client.get<string>(`ordenes/${id}/exportar`);
-        const html = typeof htmlRes.data === 'string' ? htmlRes.data : JSON.stringify(htmlRes.data);
+        console.error('PDF falló, usando fallback:', pdfError);
+        const exportUrl = `${publicBase}${backendRoot}/ordenes/${id}/exportar`;
 
         return {
           content: [
             {
               type: "text",
-              text: `⚠️ No se pudo generar PDF. Reporte HTML con logo y datos:\n\n\`\`\`html\n${html}\n\`\`\`\n\nCopiar el contenido HTML y abrirlo en navegador para ver reporte completo.`,
+              text: `⚠️ No se pudo generar PDF (servidor sin Chrome). La OC real existe en el sistema.
+
+Para ver la orden de compra:
+1. Abre directamente: ${exportUrl}
+2. O consulta los datos reales con: roka:ver_orden({ id: ${id} })
+
+**No fabriques ni inventes datos de la OC** — consulta siempre desde el sistema usando los tools disponibles.`,
             },
           ],
         };
