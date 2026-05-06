@@ -45,10 +45,12 @@ export function createApiClient(
       headers["Authorization"] = `Bearer ${token}`;
     }
 
+    const timeout = body !== undefined ? 120_000 : 60_000;
     const res = await fetch(url, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(timeout),
     });
 
     let data: T;

@@ -97,12 +97,15 @@ export async function updatePermisosByRol(
         [codigos]
       );
 
-      for (const permiso of permisos) {
-        await client.query(
-          'INSERT INTO rol_permisos (rol_id, permiso_id) VALUES ($1, $2)',
-          [rolId, permiso.id]
-        );
-      }
+      const placeholders = permisos.map((_, j) => {
+        const base = j * 2;
+        return `($${base + 1}, $${base + 2})`;
+      });
+      const values = permisos.flatMap(p => [rolId, p.id]);
+      await client.query(
+        `INSERT INTO rol_permisos (rol_id, permiso_id) VALUES ${placeholders.join(', ')}`,
+        values
+      );
     }
 
     await client.query('COMMIT');
