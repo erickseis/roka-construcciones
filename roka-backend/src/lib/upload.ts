@@ -2,7 +2,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-const uploadDirs = ['uploads/licitaciones', 'uploads/materiales', 'uploads/cotizaciones'];
+const uploadDirs = ['uploads/licitaciones', 'uploads/materiales', 'uploads/cotizaciones', 'uploads/sc-pdf'];
 
 uploadDirs.forEach(dir => {
   const fullPath = path.join(process.cwd(), dir);

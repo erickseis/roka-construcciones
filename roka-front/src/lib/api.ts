@@ -232,6 +232,10 @@ export const changeSolicitudCotizacionEstado = (id: number, estado: string) =>
 export const deleteSolicitudCotizacion = (id: number) =>
   fetchApi<any>(`/solicitud-cotizacion/${id}`, { method: 'DELETE' });
 
+export const descargarSolicitudCotizacionPdf = (id: number) => {
+  window.open(`/api/solicitud-cotizacion/${id}/descargar`, '_blank');
+};
+
 // ---- Órdenes de Compra ----
 export const getOrdenes = (params?: { estado_entrega?: string; proyecto_id?: number }) => {
   const query = new URLSearchParams();

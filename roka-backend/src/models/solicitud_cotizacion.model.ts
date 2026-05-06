@@ -123,3 +123,30 @@ export async function deleteSolicitudCotizacion(id: number, db?: Queryable): Pro
   );
   return (rowCount || 0) > 0;
 }
+
+export async function checkAllItemsCovered(solicitudId: number, db?: Queryable): Promise<boolean> {
+  const conn = getDb(db);
+  const { rows: [{ total }] } = await conn.query(
+    'SELECT COUNT(*) as total FROM solicitud_items WHERE solicitud_id = $1',
+    [solicitudId]
+  );
+  if (Number(total) === 0) return false;
+
+  const { rows: [{ covered }] } = await conn.query(`
+    SELECT COUNT(DISTINCT scd.solicitud_item_id) as covered
+    FROM solicitud_cotizacion_detalle scd
+    JOIN solicitud_cotizacion sc ON sc.id = scd.solicitud_cotizacion_id
+    WHERE sc.solicitud_id = $1 AND sc.estado != 'Anulada'
+  `, [solicitudId]);
+
+  return Number(covered) >= Number(total);
+}
+
+export async function updateSolicitudEstadoIfPendiente(solicitudId: number, db?: Queryable): Promise<void> {
+  const conn = getDb(db);
+  await conn.query(
+    `UPDATE solicitudes_material SET estado = 'Cotizando', updated_at = NOW()
+     WHERE id = $1 AND estado = 'Pendiente'`,
+    [solicitudId]
+  );
+}

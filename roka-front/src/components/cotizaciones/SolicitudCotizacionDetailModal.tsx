@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { StatusBadge } from '../ui/StatusBadge';
 import FlowStepper from '../ui/FlowStepper';
-import { getSolicitudCotizacion, changeSolicitudCotizacionEstado, deleteSolicitudCotizacion } from '@/lib/api';
-import { Send, Trash2, DollarSign } from 'lucide-react';
+import { getSolicitudCotizacion, changeSolicitudCotizacionEstado, deleteSolicitudCotizacion, descargarSolicitudCotizacionPdf } from '@/lib/api';
+import { Send, Trash2, DollarSign, FileDown } from 'lucide-react';
 import RegistrarCotizacionVentaModal from './RegistrarCotizacionVentaModal';
 
 export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, onSuccess }: { id: number | null; isOpen: boolean; onClose: () => void; onSuccess: () => void }) {
@@ -98,7 +98,11 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
 
             {/* Actions */}
             <div className="flex justify-between border-t border-slate-100 pt-4">
-              <div>
+              <div className="flex gap-2">
+                <button onClick={() => descargarSolicitudCotizacionPdf(id!)}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100">
+                  <FileDown size={14} /> Descargar PDF
+                </button>
                 {(data.estado === 'Borrador') && (
                   <button onClick={handleDelete}
                     className="rounded-lg px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-50">

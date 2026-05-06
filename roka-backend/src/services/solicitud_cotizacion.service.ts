@@ -4,6 +4,8 @@ import {
   createSolicitudCotizacion,
   createBatchSolicitudCotizacionDetalle,
   updateSolicitudCotizacionEstado,
+  checkAllItemsCovered,
+  updateSolicitudEstadoIfPendiente,
 } from '../models/solicitud_cotizacion.model';
 
 export async function crearSolicitudCotizacion(input: CreateSolicitudCotizacionInput, usuarioId: number | null) {
@@ -57,6 +59,14 @@ export async function crearSolicitudCotizacion(input: CreateSolicitudCotizacionI
     );
 
     await createBatchSolicitudCotizacionDetalle(sc.id, solicitud_item_ids, client);
+
+    // Si todos los ítems están cubiertos, avanzar solicitud a Cotizando
+    if (solicitud.estado === 'Pendiente') {
+      const allCovered = await checkAllItemsCovered(solicitud_id, client);
+      if (allCovered) {
+        await updateSolicitudEstadoIfPendiente(solicitud_id, client);
+      }
+    }
 
     await client.query('COMMIT');
     return sc;
@@ -134,6 +144,14 @@ export async function crearBatchSolicitudesCotizacion(input: BatchCreateSolicitu
 
       await createBatchSolicitudCotizacionDetalle(sc.id, asig.solicitud_item_ids, client);
       results.push(sc);
+    }
+
+    // Si todos los ítems están cubiertos, avanzar solicitud a Cotizando
+    if (solicitud.estado === 'Pendiente') {
+      const allCovered = await checkAllItemsCovered(solicitud_id, client);
+      if (allCovered) {
+        await updateSolicitudEstadoIfPendiente(solicitud_id, client);
+      }
     }
 
     await client.query('COMMIT');
