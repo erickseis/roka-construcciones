@@ -50,6 +50,7 @@ export function registerSolicitudesTools(server: McpServer, client: ApiClient) {
             nombre_material: z.string().describe("Nombre del material"),
             cantidad_requerida: z.number().describe("Cantidad requerida"),
             unidad: z.string().describe("Unidad de medida"),
+            codigo: z.string().optional().describe("Código o SKU del material (opcional, ej: MAL0151). Se mostrará en la OC."),
           })
         )
         .describe("Lista de ítems solicitados"),

@@ -41,14 +41,14 @@ export default function SolicitudesPage() {
   const [form, setForm] = useState({
     proyecto_id: '',
     solicitante: '',
-    items: [{ material_id: null as number | null, nombre_material: '', cantidad_requerida: '', unidad: 'Unidades' }],
+    items: [{ material_id: null as number | null, nombre_material: '', cantidad_requerida: '', unidad: 'Unidades', codigo: '' }],
   });
   const [submitting, setSubmitting] = useState(false);
 
   const addItem = () => {
     setForm(prev => ({
       ...prev,
-      items: [...prev.items, { material_id: null, nombre_material: '', cantidad_requerida: '', unidad: 'Unidades' }],
+      items: [...prev.items, { material_id: null, nombre_material: '', cantidad_requerida: '', unidad: 'Unidades', codigo: '' }],
     }));
   };
 
@@ -75,13 +75,14 @@ export default function SolicitudesPage() {
           nombre_material: i.nombre_material,
           cantidad_requerida: Number(i.cantidad_requerida),
           unidad: i.unidad,
+          ...(i.codigo ? { codigo: i.codigo } : {}),
         })),
       });
       setShowForm(false);
       setForm({
         proyecto_id: '',
         solicitante: '',
-        items: [{ material_id: null, nombre_material: '', cantidad_requerida: '', unidad: 'Unidades' }],
+        items: [{ material_id: null, nombre_material: '', cantidad_requerida: '', unidad: 'Unidades', codigo: '' }],
       });
       refetch();
     } catch (err) {
@@ -297,9 +298,9 @@ export default function SolicitudesPage() {
                   <div className="flex items-end gap-2">
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
-                         <label className="text-[10px] font-bold uppercase text-slate-400">Material / Insumo</label>
-                         <button 
-                          type="button" 
+                         <label className="text-[10px] font-bold uppercase text-slate-400">Material / Insumo <span className="text-slate-300 normal-case font-normal">(catálogo opcional)</span></label>
+                         <button
+                          type="button"
                           onClick={() => setIsMaterialModalOpen(true)}
                           className="text-[10px] font-bold text-amber-600 hover:underline"
                           title="Registrar nuevo material en el catálogo"
@@ -308,33 +309,32 @@ export default function SolicitudesPage() {
                          </button>
                       </div>
                       <select
-                        required
                         value={item.material_id || ''}
                         onChange={e => {
                           const matId = Number(e.target.value);
                           const mat = masterMateriales?.find((m: any) => m.id === matId);
                           setForm(prev => ({
                             ...prev,
-                            items: prev.items.map((it, i) => i === idx ? { 
-                              ...it, 
-                              material_id: matId,
-                              nombre_material: mat?.nombre || '',
-                              unidad: mat?.unidad_abreviatura || it.unidad
+                            items: prev.items.map((it, i) => i === idx ? {
+                              ...it,
+                              material_id: matId || null,
+                              nombre_material: mat?.nombre || it.nombre_material,
+                              unidad: mat?.unidad_abreviatura || it.unidad,
+                              codigo: mat?.sku || it.codigo,
                             } : it)
                           }));
                         }}
                         className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-sm outline-none focus:border-amber-400"
                       >
-                        <option value="">Buscar en catálogo...</option>
+                        <option value="">— Sin catálogo / manual —</option>
                         {masterMateriales?.map((m: any) => (
                           <option key={m.id} value={m.id}>
                             {m.nombre} {m.sku ? `(${m.sku})` : ''} — {m.unidad_abreviatura}
                           </option>
                         ))}
-                        <option value="legacy" disabled>———— O especifica manual ————</option>
                       </select>
                     </div>
-                    
+
                     <div className="w-24">
                       <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Cant.</label>
                       <input
@@ -367,18 +367,25 @@ export default function SolicitudesPage() {
                       </button>
                     )}
                   </div>
-                  
-                  {/* Fallback Manual Name (hidden if material selected, but kept for logic) */}
-                  {!item.material_id && (
+
+                  {/* Nombre + Código — siempre visibles, requerido nombre si no hay catálogo */}
+                  <div className="flex gap-2">
                     <input
-                      required
+                      required={!item.material_id}
                       type="text"
-                      placeholder="Nombre manual del material (Si no está en catálogo)"
+                      placeholder={item.material_id ? 'Nombre (auto desde catálogo)' : 'Nombre del material *'}
                       value={item.nombre_material}
                       onChange={e => updateItem(idx, 'nombre_material', e.target.value)}
-                      className="w-full rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs italic outline-none focus:border-amber-400"
+                      className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs italic outline-none focus:border-amber-400"
                     />
-                  )}
+                    <input
+                      type="text"
+                      placeholder="Código (opcional)"
+                      value={item.codigo}
+                      onChange={e => updateItem(idx, 'codigo', e.target.value)}
+                      className="w-32 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
                 </div>
               ))}
             </div>
