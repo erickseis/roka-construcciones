@@ -71,13 +71,7 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
       [cotizacion.proyecto_id]
     );
 
-    if (!presupuesto) {
-      await client.query('ROLLBACK');
-      throw Object.assign(
-        new Error('El proyecto no tiene presupuesto disponible para generar la OC'),
-        { statusCode: 409 }
-      );
-    }
+    // Presupuesto es opcional — si no existe, se genera OC sin comprometer
 
     const subtotalBase = Number(cotizacion.total);
     if (!Number.isFinite(subtotalBase) || subtotalBase <= 0) {
@@ -119,55 +113,62 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
     const totalFinal = Number((subtotalNeto + impuestoMonto).toFixed(2));
     const montoCompromiso = subtotalNeto;
 
-    const disponiblePresupuesto = Number(presupuesto.monto_total) - Number(presupuesto.monto_comprometido);
-    const presupuestoTotal = Number(presupuesto.monto_total);
-    const previoComprometido = Number(presupuesto.monto_comprometido);
-    const nuevoComprometido = previoComprometido + montoCompromiso;
-    const porcentajePrevio = presupuestoTotal > 0 ? (previoComprometido / presupuestoTotal) * 100 : 0;
-    const porcentajeNuevo = presupuestoTotal > 0 ? (nuevoComprometido / presupuestoTotal) * 100 : 0;
-    const umbral = Number(presupuesto.umbral_alerta);
-
-    if (montoCompromiso > disponiblePresupuesto) {
-      await client.query('ROLLBACK');
-      throw Object.assign(
-        new Error('La orden supera el presupuesto disponible del proyecto'),
-        { statusCode: 409 }
-      );
-    }
-
+    let porcentajePrevio = 0;
+    let porcentajeNuevo = 0;
+    let umbral = 0;
     let categoriaComprometidaId: number | null = null;
-    if (cotizacion.presupuesto_categoria_id) {
-      const { rows: [categoria] } = await client.query(
-        `SELECT *
-         FROM presupuesto_categorias
-         WHERE id = $1 AND presupuesto_id = $2
-         FOR UPDATE`,
-        [cotizacion.presupuesto_categoria_id, presupuesto.id]
-      );
 
-      if (!categoria) {
+    if (presupuesto) {
+      const disponiblePresupuesto = Number(presupuesto.monto_total) - Number(presupuesto.monto_comprometido);
+      const presupuestoTotal = Number(presupuesto.monto_total);
+      const previoComprometido = Number(presupuesto.monto_comprometido);
+      const nuevoComprometido = previoComprometido + montoCompromiso;
+      porcentajePrevio = presupuestoTotal > 0 ? (previoComprometido / presupuestoTotal) * 100 : 0;
+      porcentajeNuevo = presupuestoTotal > 0 ? (nuevoComprometido / presupuestoTotal) * 100 : 0;
+      umbral = Number(presupuesto.umbral_alerta);
+
+      if (montoCompromiso > disponiblePresupuesto) {
         await client.query('ROLLBACK');
-        throw Object.assign(new Error('La categoría presupuestaria asociada a la solicitud no existe'), { statusCode: 409 });
+        throw Object.assign(
+          new Error('La orden supera el presupuesto disponible del proyecto'),
+          { statusCode: 409 }
+        );
       }
 
-      const disponibleCategoria = Number(categoria.monto_asignado) - Number(categoria.monto_comprometido);
-      if (montoCompromiso > disponibleCategoria) {
-        await client.query('ROLLBACK');
-        throw Object.assign(new Error('La orden supera el presupuesto disponible de la categoría asignada'), { statusCode: 409 });
-      }
+      if (cotizacion.presupuesto_categoria_id) {
+        const { rows: [categoria] } = await client.query(
+          `SELECT *
+           FROM presupuesto_categorias
+           WHERE id = $1 AND presupuesto_id = $2
+           FOR UPDATE`,
+          [cotizacion.presupuesto_categoria_id, presupuesto.id]
+        );
 
-      categoriaComprometidaId = categoria.id;
+        if (!categoria) {
+          await client.query('ROLLBACK');
+          throw Object.assign(new Error('La categoría presupuestaria asociada a la solicitud no existe'), { statusCode: 409 });
+        }
+
+        const disponibleCategoria = Number(categoria.monto_asignado) - Number(categoria.monto_comprometido);
+        if (montoCompromiso > disponibleCategoria) {
+          await client.query('ROLLBACK');
+          throw Object.assign(new Error('La orden supera el presupuesto disponible de la categoría asignada'), { statusCode: 409 });
+        }
+
+        categoriaComprometidaId = categoria.id;
+      }
     }
 
     // 4. Crear la Orden de Compra
     const folioLimpio = typeof folio === 'string' ? folio.trim() : '';
+    const folioTemporal = folioLimpio || `OC-TEMP-${Date.now()}`;
     const ordenCreada = await createOrden(
       {
         cotizacion_id,
         condiciones_pago: condiciones_pago || 'Neto 30 días',
         total: montoCompromiso,
         created_by_usuario_id: usuarioId,
-        folio: folioLimpio || null,
+        folio: folioTemporal,
         descuento_tipo: descuentoTipo,
         descuento_valor: descuentoTipo === 'none' ? 0 : Number(descuentoValorNumerico.toFixed(2)),
         descuento_monto: descuentoMontoFinal,
@@ -190,25 +191,27 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
       if (ordenConFolio) orden = ordenConFolio;
     }
 
-    // 5. Comprometer monto en presupuesto del proyecto y categoria
-    await commitPresupuesto(presupuesto.id, montoCompromiso, client);
+    // 5. Comprometer monto en presupuesto del proyecto y categoria (opcional)
+    if (presupuesto) {
+      await commitPresupuesto(presupuesto.id, montoCompromiso, client);
 
-    if (categoriaComprometidaId) {
-      await commitCategoria(categoriaComprometidaId, montoCompromiso, client);
+      if (categoriaComprometidaId) {
+        await commitCategoria(categoriaComprometidaId, montoCompromiso, client);
+      }
+
+      await insertMovimiento(
+        {
+          presupuesto_id: presupuesto.id,
+          categoria_id: categoriaComprometidaId,
+          orden_compra_id: orden.id,
+          tipo: 'Compromiso',
+          monto: montoCompromiso,
+          descripcion: `Compromiso por creación de OC #${orden.id}`,
+          created_by: usuarioId,
+        },
+        client
+      );
     }
-
-    await insertMovimiento(
-      {
-        presupuesto_id: presupuesto.id,
-        categoria_id: categoriaComprometidaId,
-        orden_compra_id: orden.id,
-        tipo: 'Compromiso',
-        monto: montoCompromiso,
-        descripcion: `Compromiso por creación de OC #${orden.id}`,
-        created_by: usuarioId,
-      },
-      client
-    );
 
     // 6. Notificaciones
     const actorId = usuarioId;
@@ -233,42 +236,44 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
       enviado_por_usuario_id: actorId,
     }));
 
-    if (porcentajePrevio < 100 && porcentajeNuevo >= 100) {
-      notifications.push(
-        ...recipients.map(uid => ({
-          usuario_destino_id: uid,
-          tipo: 'presupuesto.sobreconsumo',
-          titulo: 'Presupuesto excedido',
-          mensaje: `El proyecto ${cotizacion.proyecto_nombre} alcanzó ${porcentajeNuevo.toFixed(1)}% de uso del presupuesto tras la OC-${String(orden.id).padStart(3, '0')}.`,
-          entidad_tipo: 'presupuesto' as const,
-          entidad_id: presupuesto.id,
-          payload: {
-            proyecto_id: cotizacion.proyecto_id,
-            porcentaje_uso: Number(porcentajeNuevo.toFixed(2)),
-            umbral_alerta: umbral,
-            estado_alerta: 'Sobreconsumo',
-          },
-          enviado_por_usuario_id: actorId,
-        }))
-      );
-    } else if (porcentajePrevio < umbral && porcentajeNuevo >= umbral) {
-      notifications.push(
-        ...recipients.map(uid => ({
-          usuario_destino_id: uid,
-          tipo: 'presupuesto.umbral',
-          titulo: 'Umbral de presupuesto alcanzado',
-          mensaje: `El proyecto ${cotizacion.proyecto_nombre} alcanzó ${porcentajeNuevo.toFixed(1)}% de uso del presupuesto (umbral ${umbral}%).`,
-          entidad_tipo: 'presupuesto' as const,
-          entidad_id: presupuesto.id,
-          payload: {
-            proyecto_id: cotizacion.proyecto_id,
-            porcentaje_uso: Number(porcentajeNuevo.toFixed(2)),
-            umbral_alerta: umbral,
-            estado_alerta: 'Umbral alcanzado',
-          },
-          enviado_por_usuario_id: actorId,
-        }))
-      );
+    if (presupuesto) {
+      if (porcentajePrevio < 100 && porcentajeNuevo >= 100) {
+        notifications.push(
+          ...recipients.map(uid => ({
+            usuario_destino_id: uid,
+            tipo: 'presupuesto.sobreconsumo',
+            titulo: 'Presupuesto excedido',
+            mensaje: `El proyecto ${cotizacion.proyecto_nombre} alcanzó ${porcentajeNuevo.toFixed(1)}% de uso del presupuesto tras la OC-${String(orden.id).padStart(3, '0')}.`,
+            entidad_tipo: 'presupuesto' as const,
+            entidad_id: presupuesto.id,
+            payload: {
+              proyecto_id: cotizacion.proyecto_id,
+              porcentaje_uso: Number(porcentajeNuevo.toFixed(2)),
+              umbral_alerta: umbral,
+              estado_alerta: 'Sobreconsumo',
+            },
+            enviado_por_usuario_id: actorId,
+          }))
+        );
+      } else if (porcentajePrevio < umbral && porcentajeNuevo >= umbral) {
+        notifications.push(
+          ...recipients.map(uid => ({
+            usuario_destino_id: uid,
+            tipo: 'presupuesto.umbral',
+            titulo: 'Umbral de presupuesto alcanzado',
+            mensaje: `El proyecto ${cotizacion.proyecto_nombre} alcanzó ${porcentajeNuevo.toFixed(1)}% de uso del presupuesto (umbral ${umbral}%).`,
+            entidad_tipo: 'presupuesto' as const,
+            entidad_id: presupuesto.id,
+            payload: {
+              proyecto_id: cotizacion.proyecto_id,
+              porcentaje_uso: Number(porcentajeNuevo.toFixed(2)),
+              umbral_alerta: umbral,
+              estado_alerta: 'Umbral alcanzado',
+            },
+            enviado_por_usuario_id: actorId,
+          }))
+        );
+      }
     }
 
     await createNotifications(notifications, client);
