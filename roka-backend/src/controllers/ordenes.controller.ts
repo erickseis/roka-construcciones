@@ -101,7 +101,7 @@ function scape(s: unknown): string {
     .replace(/"/g, '&quot;');
 }
 
-const ROKA_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1079 1079" width="62" height="62" style="flex-shrink:0;border-radius:10px">
+const ROKA_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1079 1079" width="52" height="52" style="flex-shrink:0;border-radius:8px">
   <rect width="1079" height="1079" fill="#ea9a00"/>
   <path d="M 656,606 L 646,591 L 635,591 L 356,678 L 318,777 L 343,776 L 374,702 L 656,615 Z M 989,597 L 968,585 L 815,818 L 282,818 L 293,843 L 834,843 Z M 885,539 L 868,522 L 858,522 L 691,574 L 691,583 L 701,598 L 711,598 L 873,547 L 885,547 Z" fill="#c58200" opacity="0.9"/>
   <path d="M 972,572 L 664,252 L 327,348 L 116,565 L 273,816 L 815,816 Z M 764,770 L 763,779 L 315,778 L 355,676 L 637,588 L 649,591 Z M 370,522 L 370,535 L 283,748 L 275,748 L 173,589 L 173,579 Z M 868,519 L 922,575 L 922,583 L 811,753 L 800,756 L 690,586 L 688,573 Z M 831,480 L 828,490 L 377,626 L 426,503 L 760,407 Z M 722,367 L 720,377 L 219,522 L 219,514 L 350,380 L 653,296 Z" fill="white" fill-rule="evenodd"/>
@@ -124,21 +124,21 @@ function buildOCHtml(orden: any, items: any[], pdfUrl?: string): string {
   else if (descuentoTipo === 'monto') descuentoDetalle = fmtMoney(descuentoValor);
 
   const itemsRows = items.length === 0
-    ? '<tr><td colspan="6" style="border:1px solid #e2e8f0;padding:12px;text-align:center;font-size:12px;color:#64748b">Esta orden no tiene items cargados.</td></tr>'
+    ? '<tr><td colspan="6" style="border:1px solid #e2e8f0;padding:10px;text-align:center;font-size:10px;color:#64748b">Esta orden no tiene items cargados.</td></tr>'
     : items.map((it: any, i: number) => {
       const cant = Number(it.cantidad_requerida || 0);
       const punit = Number(it.precio_unitario || 0);
       const sub = Number(it.subtotal ?? cant * punit);
-      return `<tr>
-          <td style="border:1px solid #e2e8f0;padding:7px 6px;font-size:12px;text-align:center">${i + 1}</td>
-          <td style="border:1px solid #e2e8f0;padding:7px 6px;font-size:12px;text-align:right">${cant.toLocaleString('es-CL')}</td>
-          <td style="border:1px solid #e2e8f0;padding:7px 6px;font-size:12px;text-align:center">${scape(it.material_sku)}</td>
-          <td style="border:1px solid #e2e8f0;padding:7px 6px;font-size:12px">
+      return `<tr style="page-break-inside:avoid;break-inside:avoid">
+          <td style="border:1px solid #e2e8f0;padding:5px 4px;font-size:10px;text-align:center">${i + 1}</td>
+          <td style="border:1px solid #e2e8f0;padding:5px 4px;font-size:10px;text-align:right">${cant.toLocaleString('es-CL')}</td>
+          <td style="border:1px solid #e2e8f0;padding:5px 4px;font-size:10px;text-align:center">${scape(it.material_sku)}</td>
+          <td style="border:1px solid #e2e8f0;padding:5px 4px;font-size:10px">
             <div style="font-weight:700">${scape(it.nombre_material)}</div>
-            <div style="color:#475569;font-size:11px">Unidad: ${scape(it.unidad)}</div>
+            <div style="color:#475569;font-size:9px">Unidad: ${scape(it.unidad)}</div>
           </td>
-          <td style="border:1px solid #e2e8f0;padding:7px 6px;font-size:12px;text-align:right">${fmtMoney(punit)}</td>
-          <td style="border:1px solid #e2e8f0;padding:7px 6px;font-size:12px;text-align:right">${fmtMoney(sub)}</td>
+          <td style="border:1px solid #e2e8f0;padding:5px 4px;font-size:10px;text-align:right">${fmtMoney(punit)}</td>
+          <td style="border:1px solid #e2e8f0;padding:5px 4px;font-size:10px;text-align:right">${fmtMoney(sub)}</td>
         </tr>`;
     }).join('');
 
@@ -152,10 +152,14 @@ function buildOCHtml(orden: any, items: any[], pdfUrl?: string): string {
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { background:#f1f5f9; display:flex; justify-content:center; padding:20px; }
+  tr { page-break-inside: avoid; break-inside: avoid; }
+  thead { display: table-header-group; }
   @media print {
     body { background:#fff; padding:0; display:block; }
     @page { margin:0; size:A4 portrait; }
     .download-bar { display:none !important; }
+    tr { page-break-inside: avoid; break-inside: avoid; }
+    thead { display: table-header-group; }
   }
 </style>
 </head>
@@ -166,60 +170,60 @@ ${pdfUrl ? `<div class="download-bar" style="position:sticky;top:0;z-index:999;b
     📥 Descargar PDF
   </a>
 </div>` : ''}
-<div style="width:210mm;min-height:297mm;box-sizing:border-box;padding:8mm 10mm;color:#111827;background:#fff;font-family:'Trebuchet MS','Gill Sans',sans-serif">
+<div style="width:210mm;min-height:297mm;box-sizing:border-box;padding:7mm 8mm;color:#111827;background:#fff;font-family:'Trebuchet MS','Gill Sans',sans-serif">
 
-  <div style="border:2px solid #0f172a;border-radius:10px;overflow:hidden;margin-bottom:10px">
-    <div style="background:linear-gradient(90deg,#0f172a,#1e293b);color:#f8fafc;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
-      <div style="display:flex;align-items:center;gap:12px">
+  <div style="border:2px solid #0f172a;border-radius:8px;overflow:hidden;margin-bottom:8px;page-break-inside:avoid;break-inside:avoid">
+    <div style="background:linear-gradient(90deg,#0f172a,#1e293b);color:#f8fafc;padding:7px 10px;display:flex;justify-content:space-between;align-items:center">
+      <div style="display:flex;align-items:center;gap:10px">
         ${logoTag}
-        <div style="line-height:1.3">
-          <div style="font-size:13px;opacity:0.9">Sistema de Compras y Abastecimiento</div>
-          <div style="font-size:20px;font-weight:800;letter-spacing:0.03em;margin-bottom:3px">ORDEN DE COMPRA</div>
-          <div style="font-size:13px;font-weight:700">Constructora Roka SpA</div>
-          <div style="font-size:11px;opacity:0.95">General Arteaga N°30</div>
-          <div style="font-size:11px;opacity:0.95">Rut 77.122.411-3</div>
-          <div style="font-size:11px;opacity:0.95">Tel. +56 582 295842</div>
-          <div style="font-size:11px;opacity:0.95">Cel. +56 9 31234288</div>
+        <div style="line-height:1.25">
+          <div style="font-size:11px;opacity:0.9">Sistema de Compras y Abastecimiento</div>
+          <div style="font-size:17px;font-weight:800;letter-spacing:0.03em;margin-bottom:2px">ORDEN DE COMPRA</div>
+          <div style="font-size:11px;font-weight:700">Constructora Roka SpA</div>
+          <div style="font-size:9px;opacity:0.95">General Arteaga N°30</div>
+          <div style="font-size:9px;opacity:0.95">Rut 77.122.411-3</div>
+          <div style="font-size:9px;opacity:0.95">Tel. +56 582 295842</div>
+          <div style="font-size:9px;opacity:0.95">Cel. +56 9 31234288</div>
         </div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:12px;opacity:0.85">Folio</div>
-        <div style="font-size:22px;font-weight:800">${folio}</div>
-        <div style="font-size:12px">Fecha: ${fmtDate(orden.fecha_emision)}</div>
+        <div style="font-size:10px;opacity:0.85">Folio</div>
+        <div style="font-size:19px;font-weight:800">${folio}</div>
+        <div style="font-size:10px">Fecha: ${fmtDate(orden.fecha_emision)}</div>
       </div>
     </div>
 
     <table style="width:100%;border-collapse:collapse">
       <tr>
-        <td style="width:50%;padding:10px 7px 12px 12px;vertical-align:top">
-          <div style="border:1px solid #cbd5e1;border-radius:8px;padding:10px;height:100%">
-            <div style="font-size:12px;font-weight:800;margin-bottom:8px;color:#0f172a">DATOS DEL PROVEEDOR</div>
+        <td style="width:50%;padding:8px 5px 10px 10px;vertical-align:top">
+          <div style="border:1px solid #cbd5e1;border-radius:6px;padding:8px;height:100%">
+            <div style="font-size:10px;font-weight:800;margin-bottom:5px;color:#0f172a">DATOS DEL PROVEEDOR</div>
             <table style="width:100%;border-collapse:collapse">
-              <tr><td style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:3px 5px;width:36%">Señor(es)</td><td style="font-size:13px;font-weight:700;color:#0f172a;padding:3px 5px">${scape(orden.proveedor) || '-'}</td></tr>
-              <tr><td style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:3px 5px">Atención</td><td style="font-size:13px;font-weight:700;color:#0f172a;padding:3px 5px">${scape(atencion)}</td></tr>
-              <tr><td style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:3px 5px">Dirección</td><td style="font-size:13px;font-weight:700;color:#0f172a;padding:3px 5px">${scape(orden.proveedor_direccion) || '-'}</td></tr>
-              <tr><td style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:3px 5px">Rut</td><td style="font-size:13px;font-weight:700;color:#0f172a;padding:3px 5px">${scape(orden.proveedor_rut) || '-'}</td></tr>
-              <tr><td style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:3px 5px">Teléfono</td><td style="font-size:13px;font-weight:700;color:#0f172a;padding:3px 5px">${scape(orden.proveedor_telefono) || '-'}</td></tr>
-              <tr><td style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:3px 5px">Email</td><td style="font-size:13px;font-weight:700;color:#0f172a;padding:3px 5px">${scape(orden.proveedor_correo) || '-'}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px;width:36%">Señor(es)</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proveedor) || '-'}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Atención</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(atencion)}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Dirección</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proveedor_direccion) || '-'}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Rut</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proveedor_rut) || '-'}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Teléfono</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proveedor_telefono) || '-'}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Email</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proveedor_correo) || '-'}</td></tr>
             </table>
           </div>
         </td>
-        <td style="width:50%;padding:10px 12px 12px 7px;vertical-align:top">
-          <div style="border:1px solid #cbd5e1;border-radius:8px;padding:10px;height:100%">
-            <div style="font-size:12px;font-weight:800;margin-bottom:8px;color:#0f172a">DATOS DE OBRA</div>
+        <td style="width:50%;padding:8px 10px 10px 5px;vertical-align:top">
+          <div style="border:1px solid #cbd5e1;border-radius:6px;padding:8px;height:100%">
+            <div style="font-size:10px;font-weight:800;margin-bottom:5px;color:#0f172a">DATOS DE OBRA</div>
             <table style="width:100%;border-collapse:collapse">
-              <tr><td style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:3px 5px;width:36%">Despachar a</td><td style="font-size:13px;font-weight:700;color:#0f172a;padding:3px 5px">${scape(orden.condiciones_entrega || 'Despachar a Obra')}</td></tr>
-              <tr><td style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:3px 5px">Plazo de Entrega</td><td style="font-size:13px;font-weight:700;color:#0f172a;padding:3px 5px">${scape(orden.plazo_entrega) || '-'}</td></tr>
-              <tr><td style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:3px 5px">Obra</td><td style="font-size:13px;font-weight:700;color:#0f172a;padding:3px 5px">${scape(orden.proyecto_nombre) || '-'}</td></tr>
-              <tr><td style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:3px 5px">Autorizado por</td><td style="font-size:13px;font-weight:700;color:#0f172a;padding:3px 5px">${scape(orden.autorizado_por_nombre) || '-'}</td></tr>
-              <tr><td style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:3px 5px">Nro. Cotización</td><td style="font-size:13px;font-weight:700;color:#0f172a;padding:3px 5px">${numeroCotizacion}</td></tr>
-              <tr><td style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:3px 5px">Encargado</td><td style="font-size:13px;font-weight:700;color:#0f172a;padding:3px 5px">${scape(atencion)}</td></tr>
-              <tr><td style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:3px 5px">Forma de Pago</td><td style="font-size:13px;font-weight:700;color:#0f172a;padding:3px 5px">${scape(orden.condiciones_pago || 'Crédito 45 días')}</td></tr>
-              <tr><td style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:3px 5px">Emitida por</td><td style="font-size:13px;font-weight:700;color:#0f172a;padding:3px 5px">${scape(orden.autorizado_por_nombre) || '-'}</td></tr>
-              <tr><td style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:3px 5px">Cód. Obra</td><td style="font-size:13px;font-weight:700;color:#0f172a;padding:3px 5px">${scape(orden.proyecto_numero_licitacion) || '-'}</td></tr>
-              <tr><td style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:3px 5px">Fecha Autorización</td><td style="font-size:13px;font-weight:700;color:#0f172a;padding:3px 5px">${fmtDate(orden.updated_at || orden.fecha_emision)}</td></tr>
-              <tr><td style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:3px 5px">Moneda</td><td style="font-size:13px;font-weight:700;color:#0f172a;padding:3px 5px">PESO CHILENO</td></tr>
-              <tr><td style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:3px 5px">Nro. Solic. Mat.</td><td style="font-size:13px;font-weight:700;color:#0f172a;padding:3px 5px">${numeroSolicitud}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px;width:36%">Despachar a</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.condiciones_entrega || 'Despachar a Obra')}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Plazo de Entrega</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.plazo_entrega) || '-'}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Obra</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proyecto_nombre) || '-'}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Autorizado por</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.autorizado_por_nombre) || '-'}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Nro. Cotización</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${numeroCotizacion}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Encargado</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(atencion)}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Forma de Pago</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.condiciones_pago || 'Crédito 45 días')}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Emitida por</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.autorizado_por_nombre) || '-'}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Cód. Obra</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proyecto_numero_licitacion) || '-'}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Fecha Autorización</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${fmtDate(orden.updated_at || orden.fecha_emision)}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Moneda</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">PESO CHILENO</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Nro. Solic. Mat.</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${numeroSolicitud}</td></tr>
             </table>
           </div>
         </td>
@@ -228,53 +232,53 @@ ${pdfUrl ? `<div class="download-bar" style="position:sticky;top:0;z-index:999;b
   </div>
 
   <!-- Items table -->
-  <table style="width:100%;border-collapse:collapse;border:1px solid #cbd5e1;margin-bottom:10px">
+  <table style="width:100%;border-collapse:collapse;border:1px solid #cbd5e1;margin-bottom:8px">
     <thead>
       <tr style="background:#f1f5f9">
-        <th style="border:1px solid #cbd5e1;padding:7px 6px;font-size:12px;width:32px">#</th>
-        <th style="border:1px solid #cbd5e1;padding:7px 6px;font-size:12px;width:68px">Cant.</th>
-        <th style="border:1px solid #cbd5e1;padding:7px 6px;font-size:12px;width:76px">Codigo</th>
-        <th style="border:1px solid #cbd5e1;padding:7px 6px;font-size:12px">Descripcion</th>
-        <th style="border:1px solid #cbd5e1;padding:7px 6px;font-size:12px;width:96px">P. Unitario</th>
-        <th style="border:1px solid #cbd5e1;padding:7px 6px;font-size:12px;width:100px">Subtotal</th>
+        <th style="border:1px solid #cbd5e1;padding:5px 4px;font-size:10px;width:28px">#</th>
+        <th style="border:1px solid #cbd5e1;padding:5px 4px;font-size:10px;width:58px">Cant.</th>
+        <th style="border:1px solid #cbd5e1;padding:5px 4px;font-size:10px;width:68px">Codigo</th>
+        <th style="border:1px solid #cbd5e1;padding:5px 4px;font-size:10px">Descripcion</th>
+        <th style="border:1px solid #cbd5e1;padding:5px 4px;font-size:10px;width:86px">P. Unitario</th>
+        <th style="border:1px solid #cbd5e1;padding:5px 4px;font-size:10px;width:90px">Subtotal</th>
       </tr>
     </thead>
     <tbody>${itemsRows}</tbody>
   </table>
 
   <!-- Footer table -->
-  <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
+  <table style="width:100%;border-collapse:collapse;margin-bottom:8px;page-break-inside:avoid;break-inside:avoid">
     <tr>
-      <td style="width:55%;padding-right:6px;vertical-align:top">
-        <div style="border:1px solid #cbd5e1;border-radius:8px;padding:10px">
-          <div style="font-size:12px;font-weight:800;color:#0f172a;margin-bottom:6px">CONDICIONES COMERCIALES</div>
+      <td style="width:55%;padding-right:5px;vertical-align:top">
+        <div style="border:1px solid #cbd5e1;border-radius:6px;padding:8px">
+          <div style="font-size:10px;font-weight:800;color:#0f172a;margin-bottom:4px">CONDICIONES COMERCIALES</div>
           <table style="width:100%;border-collapse:collapse">
-            <tr><td style="padding:5px 7px;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em;width:36%">Cond. de pago</td><td style="padding:5px 7px;font-size:12px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.condiciones_pago) || '-'}</td></tr>
-            <tr><td style="padding:5px 7px;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em">Plazo entrega</td><td style="padding:5px 7px;font-size:12px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.plazo_entrega) || '-'}</td></tr>
-            <tr><td style="padding:5px 7px;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em">Cond. entrega</td><td style="padding:5px 7px;font-size:12px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.condiciones_entrega) || '-'}</td></tr>
-            <tr><td style="padding:5px 7px;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em">Observaciones</td><td style="padding:5px 7px;font-size:12px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.observaciones) || '-'}</td></tr>
-            <tr><td style="padding:5px 7px;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em">Autorizado por</td><td style="padding:5px 7px;font-size:12px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.autorizado_por_nombre) || '-'}</td></tr>
+            <tr><td style="padding:3px 5px;font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em;width:36%">Cond. de pago</td><td style="padding:3px 5px;font-size:10px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.condiciones_pago) || '-'}</td></tr>
+            <tr><td style="padding:3px 5px;font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em">Plazo entrega</td><td style="padding:3px 5px;font-size:10px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.plazo_entrega) || '-'}</td></tr>
+            <tr><td style="padding:3px 5px;font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em">Cond. entrega</td><td style="padding:3px 5px;font-size:10px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.condiciones_entrega) || '-'}</td></tr>
+            <tr><td style="padding:3px 5px;font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em">Observaciones</td><td style="padding:3px 5px;font-size:10px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.observaciones) || '-'}</td></tr>
+            <tr><td style="padding:3px 5px;font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em">Autorizado por</td><td style="padding:3px 5px;font-size:10px;color:#111827;border-bottom:1px dotted #d1d5db">${scape(orden.autorizado_por_nombre) || '-'}</td></tr>
           </table>
         </div>
       </td>
-      <td style="width:45%;padding-left:6px;vertical-align:top">
-        <div style="border:1px solid #1e293b;border-radius:8px;overflow:hidden">
+      <td style="width:45%;padding-left:5px;vertical-align:top">
+        <div style="border:1px solid #1e293b;border-radius:6px;overflow:hidden">
           <table style="width:100%;border-collapse:collapse">
             <tr>
-              <td style="padding:9px 10px;font-size:12px;border-bottom:1px solid #e2e8f0">Subtotal Neto</td>
-              <td style="padding:9px 10px;font-size:12px;text-align:right;border-bottom:1px solid #e2e8f0">${fmtMoney(subtotalNeto)}</td>
+              <td style="padding:6px 8px;font-size:10px;border-bottom:1px solid #e2e8f0">Subtotal Neto</td>
+              <td style="padding:6px 8px;font-size:10px;text-align:right;border-bottom:1px solid #e2e8f0">${fmtMoney(subtotalNeto)}</td>
             </tr>
             <tr>
-              <td style="padding:9px 10px;font-size:12px;border-bottom:1px solid #e2e8f0">Descuento (${descuentoDetalle})</td>
-              <td style="padding:9px 10px;font-size:12px;text-align:right;border-bottom:1px solid #e2e8f0">- ${fmtMoney(descuentoMonto)}</td>
+              <td style="padding:6px 8px;font-size:10px;border-bottom:1px solid #e2e8f0">Descuento (${descuentoDetalle})</td>
+              <td style="padding:6px 8px;font-size:10px;text-align:right;border-bottom:1px solid #e2e8f0">- ${fmtMoney(descuentoMonto)}</td>
             </tr>
             <tr>
-              <td style="padding:9px 10px;font-size:12px;border-bottom:1px solid #e2e8f0">IVA (19%)</td>
-              <td style="padding:9px 10px;font-size:12px;text-align:right;border-bottom:1px solid #e2e8f0">${fmtMoney(impuesto)}</td>
+              <td style="padding:6px 8px;font-size:10px;border-bottom:1px solid #e2e8f0">IVA (19%)</td>
+              <td style="padding:6px 8px;font-size:10px;text-align:right;border-bottom:1px solid #e2e8f0">${fmtMoney(impuesto)}</td>
             </tr>
             <tr style="background:#0f172a;color:#f8fafc">
-              <td style="padding:11px 10px;font-size:14px;font-weight:800">TOTAL FINAL</td>
-              <td style="padding:11px 10px;font-size:15px;font-weight:800;text-align:right">${fmtMoney(totalFinal)}</td>
+              <td style="padding:8px;font-size:12px;font-weight:800">TOTAL FINAL</td>
+              <td style="padding:8px;font-size:13px;font-weight:800;text-align:right">${fmtMoney(totalFinal)}</td>
             </tr>
           </table>
         </div>
@@ -283,33 +287,33 @@ ${pdfUrl ? `<div class="download-bar" style="position:sticky;top:0;z-index:999;b
   </table>
 
   <!-- Signatures -->
-  <table style="width:100%;border-collapse:collapse;margin-top:14px">
+  <table style="width:100%;border-collapse:collapse;margin-top:8px;page-break-inside:avoid;break-inside:avoid">
     <tr>
-      <td style="width:33%;text-align:center;padding:0 7px;vertical-align:top">
-        <div style="height:48px"></div>
-        <div style="border-top:1px solid #94a3b8;padding-top:7px">
-          <div style="font-size:13px;font-weight:700">Solicitado por</div>
-          <div style="font-size:11px;color:#475569">${scape(orden.solicitante) || '-'}</div>
+      <td style="width:33%;text-align:center;padding:0 5px;vertical-align:top">
+        <div style="height:32px"></div>
+        <div style="border-top:1px solid #94a3b8;padding-top:5px">
+          <div style="font-size:11px;font-weight:700">Solicitado por</div>
+          <div style="font-size:9px;color:#475569">${scape(orden.solicitante) || '-'}</div>
         </div>
       </td>
-      <td style="width:33%;text-align:center;padding:0 7px;vertical-align:top">
-        <div style="height:48px"></div>
-        <div style="border-top:1px solid #94a3b8;padding-top:7px">
-          <div style="font-size:13px;font-weight:700">Revisado por</div>
-          <div style="font-size:11px;color:#475569">${scape(orden.autorizado_por_nombre) || '-'}</div>
+      <td style="width:33%;text-align:center;padding:0 5px;vertical-align:top">
+        <div style="height:32px"></div>
+        <div style="border-top:1px solid #94a3b8;padding-top:5px">
+          <div style="font-size:11px;font-weight:700">Revisado por</div>
+          <div style="font-size:9px;color:#475569">${scape(orden.autorizado_por_nombre) || '-'}</div>
         </div>
       </td>
-      <td style="width:34%;text-align:center;padding:0 7px;vertical-align:top">
-        <div style="height:48px"></div>
-        <div style="border-top:1px solid #94a3b8;padding-top:7px">
-          <div style="font-size:13px;font-weight:700">Aprobado por</div>
-          <div style="font-size:11px;color:#475569">Constructora Roka SpA</div>
+      <td style="width:34%;text-align:center;padding:0 5px;vertical-align:top">
+        <div style="height:32px"></div>
+        <div style="border-top:1px solid #94a3b8;padding-top:5px">
+          <div style="font-size:11px;font-weight:700">Aprobado por</div>
+          <div style="font-size:9px;color:#475569">Constructora Roka SpA</div>
         </div>
       </td>
     </tr>
   </table>
 
-  <div style="margin-top:10px;font-size:10px;color:#64748b;text-align:right">
+  <div style="margin-top:6px;font-size:8px;color:#64748b;text-align:right">
     Documento generado por ROKA | ${fmtDate(new Date().toISOString())}
   </div>
 
