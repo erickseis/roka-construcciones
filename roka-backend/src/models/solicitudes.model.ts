@@ -68,7 +68,11 @@ export async function getAllSolicitudes(
     query += ` AND sm.estado = $${params.length}`;
   }
 
-  query += ' ORDER BY sm.created_at DESC';
+  if (!filters.estado) {
+    query += " AND sm.estado != 'Anulada'";
+  }
+  
+  query += " ORDER BY sm.created_at DESC";
 
   const { rows } = await conn.query(query, params);
   return rows;
@@ -137,9 +141,26 @@ export async function updateSolicitudEstado(id: number, estado: string, db?: Que
 
 export async function deleteSolicitud(id: number, db?: Queryable): Promise<boolean> {
   const conn = getDb(db);
-  const { rowCount } = await conn.query(
-    'DELETE FROM solicitudes_material WHERE id = $1',
-    [id]
-  );
-  return (rowCount ?? 0) > 0;
+  
+  // Verificamos el estado actual
+  const { rows } = await conn.query('SELECT estado FROM solicitudes_material WHERE id = $1', [id]);
+  if (rows.length === 0) return false;
+  
+  const currentEstado = rows[0].estado;
+  
+  if (currentEstado !== 'Anulada') {
+    // Primer paso: Anular
+    const { rowCount } = await conn.query(
+      "UPDATE solicitudes_material SET estado = 'Anulada', updated_at = NOW() WHERE id = $1",
+      [id]
+    );
+    return (rowCount ?? 0) > 0;
+  } else {
+    // Segundo paso: Eliminación física (ya tiene ON DELETE CASCADE en las FKs actualizadas)
+    const { rowCount } = await conn.query(
+      'DELETE FROM solicitudes_material WHERE id = $1',
+      [id]
+    );
+    return (rowCount ?? 0) > 0;
+  }
 }

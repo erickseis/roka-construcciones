@@ -20,7 +20,7 @@ export default function MaterialModal({ isOpen, onClose, onSave, material, unida
     unidad_medida_id: 0,
     categoria_id: 0,
     categoria: '',
-    precio_referencial: 0,
+    precio_referencial: undefined,
     is_active: true
   });
   const [categorias, setCategorias] = useState<MaterialCategoria[]>([]);
@@ -51,7 +51,7 @@ export default function MaterialModal({ isOpen, onClose, onSave, material, unida
         unidad_medida_id: material.unidad_medida_id,
         categoria_id: material.categoria_id || 0,
         categoria: material.categoria || '',
-        precio_referencial: Number(material.precio_referencial) || 0,
+        precio_referencial: material.precio_referencial ? Number(material.precio_referencial) : undefined,
         is_active: material.is_active
       });
     } else {
@@ -62,7 +62,7 @@ export default function MaterialModal({ isOpen, onClose, onSave, material, unida
         unidad_medida_id: unidades.length > 0 ? unidades[0].id : 0,
         categoria_id: 0,
         categoria: '',
-        precio_referencial: 0,
+        precio_referencial: undefined,
         is_active: true
       });
     }
@@ -85,7 +85,7 @@ export default function MaterialModal({ isOpen, onClose, onSave, material, unida
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl dark:bg-slate-900">
         <div className="flex items-center justify-between border-b border-slate-100 p-6 dark:border-slate-800">
           <h2 className="text-xl font-black text-slate-900 dark:text-slate-50">
@@ -166,12 +166,13 @@ export default function MaterialModal({ isOpen, onClose, onSave, material, unida
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Precio Ref. ($)</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Precio Ref. ($) <span className="text-[9px] text-slate-400 font-normal lowercase">(opcional)</span></label>
               <input
                 type="number"
                 step="0.01"
-                value={formData.precio_referencial}
-                onChange={(e) => setFormData({ ...formData, precio_referencial: Number(e.target.value) })}
+                placeholder="Ej: 1500"
+                value={formData.precio_referencial ?? ''}
+                onChange={(e) => setFormData({ ...formData, precio_referencial: e.target.value ? Number(e.target.value) : undefined })}
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
               />
             </div>

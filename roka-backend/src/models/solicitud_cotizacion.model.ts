@@ -150,3 +150,63 @@ export async function updateSolicitudEstadoIfPendiente(solicitudId: number, db?:
     [solicitudId]
   );
 }
+
+export async function updateDetalleConPrecios(
+  detalleId: number,
+  data: {
+    precio_unitario: number;
+    descuento_porcentaje?: number;
+    codigo_proveedor?: string;
+  },
+  db?: Queryable
+): Promise<void> {
+  const conn = getDb(db);
+  const subtotal = data.descuento_porcentaje && data.descuento_porcentaje > 0
+    ? data.precio_unitario * (1 - data.descuento_porcentaje / 100)
+    : data.precio_unitario;
+
+  await conn.query(
+    `UPDATE solicitud_cotizacion_detalle 
+     SET precio_unitario = $1, 
+         subtotal = $2, 
+         descuento_porcentaje = COALESCE($3, descuento_porcentaje),
+         codigo_proveedor = $4
+     WHERE id = $5`,
+    [data.precio_unitario, subtotal, data.descuento_porcentaje ?? null, data.codigo_proveedor ?? null, detalleId]
+  );
+}
+
+export async function getDetalleConPrecios(scId: number): Promise<any[]> {
+  const db = getDb();
+  const { rows } = await db.query(`
+    SELECT scd.*, si.nombre_material, si.cantidad_requerida, si.unidad
+    FROM solicitud_cotizacion_detalle scd
+    JOIN solicitud_items si ON si.id = scd.solicitud_item_id
+    WHERE scd.solicitud_cotizacion_id = $1
+    ORDER BY scd.id
+  `, [scId]);
+  return rows;
+}
+
+export async function updateSCArchivo(
+  scId: number,
+  archivoPath: string,
+  archivoNombre: string,
+  db?: Queryable
+): Promise<void> {
+  const conn = getDb(db);
+  await conn.query(
+    `UPDATE solicitud_cotizacion 
+     SET archivo_adjunto_path = $1, archivo_adjunto_nombre = $2, updated_at = NOW()
+     WHERE id = $3`,
+    [archivoPath, archivoNombre, scId]
+  );
+}
+
+export async function updateSCNumeroCov(scId: number, numeroCov: string, db?: Queryable): Promise<void> {
+  const conn = getDb(db);
+  await conn.query(
+    `UPDATE solicitud_cotizacion SET numero_cov = $1, updated_at = NOW() WHERE id = $2`,
+    [numeroCov, scId]
+  );
+}

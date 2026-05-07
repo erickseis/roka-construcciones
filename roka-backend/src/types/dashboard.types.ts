@@ -16,8 +16,21 @@ export interface DashboardTiempoConversion {
   max_dias: number;
 }
 
+export interface DashboardSolicitudUrgente {
+  id: number;
+  solicitante: string;
+  estado: string;
+  fecha_requerida: string | null;
+  created_at: string;
+  proyecto_nombre: string;
+  proyecto_id: number;
+  total_items: number;
+  dias_restantes: number | null;
+}
+
 export interface DashboardResumen {
   solicitudes_mensual: DashboardSolicitudesMensual;
   gasto_por_proyecto: DashboardGastoPorProyecto[];
   tiempo_conversion: DashboardTiempoConversion;
+  solicitudes_urgentes: DashboardSolicitudUrgente[];
 }

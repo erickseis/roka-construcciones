@@ -19,7 +19,7 @@ export default function Dashboard() {
             <p className="mb-1 text-xs font-bold uppercase tracking-widest text-amber-600">
               Resumen Ejecutivo
             </p>
-            <h2 className="font-headline text-4xl font-extrabold leading-none tracking-tight text-slate-900 mb-4">
+            <h2 className="font-headline text-4xl font-extrabold leading-none tracking-tight text-slate-900 dark:text-white mb-4">
               Consola de Control
             </h2>
             <div className="flex items-center gap-2">
@@ -36,12 +36,12 @@ export default function Dashboard() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="col-span-12 flex flex-col justify-between rounded-xl border border-transparent bg-white p-6 shadow-sm transition-all hover:shadow-md lg:col-span-4"
+              className="col-span-12 flex flex-col justify-between rounded-xl border border-transparent bg-white p-6 shadow-sm transition-all hover:shadow-md lg:col-span-4 dark:bg-slate-900 dark:border-slate-800"
             >
               <div className="mb-6 flex items-start justify-between">
                 <div>
-                  <h3 className="text-lg font-bold leading-tight text-slate-900">Estado de Proyecto</h3>
-                  <p className="text-xs text-slate-500">Torre Miramar - Etapa C</p>
+                  <h3 className="text-lg font-bold leading-tight text-slate-900 dark:text-slate-100">Estado de Proyecto</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Torre Miramar - Etapa C</p>
                 </div>
                 <span className="rounded bg-amber-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700">
                   En Curso
@@ -60,15 +60,15 @@ export default function Dashboard() {
                   ></circle>
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-3xl font-black text-slate-900">65%</span>
+                  <span className="text-3xl font-black text-slate-900 dark:text-white">65%</span>
                   <span className="text-[10px] font-bold uppercase text-slate-400">Avance</span>
                 </div>
               </div>
 
               <div className="mt-6 space-y-3">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Próximo Hito:</span>
-                  <span className="font-bold text-slate-900">Vaciado de Losa 4</span>
+                  <span className="text-slate-500 dark:text-slate-400">Próximo Hito:</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">Vaciado de Losa 4</span>
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                   <div className="h-full w-[65%] bg-amber-500"></div>
@@ -81,12 +81,12 @@ export default function Dashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="col-span-12 rounded-xl bg-white p-6 shadow-sm lg:col-span-8"
+               className="col-span-12 rounded-xl bg-white p-6 shadow-sm lg:col-span-8 dark:bg-slate-900 dark:border-slate-800 dark:border"
             >
               <div className="mb-8 flex items-end justify-between">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Control Presupuestario</h3>
-                  <p className="text-xs text-slate-500">Presupuesto vs. Gasto Real (Acumulado)</p>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Control Presupuestario</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Presupuesto vs. Gasto Real (Acumulado)</p>
                 </div>
                 <div className="flex gap-4 text-[10px] font-bold uppercase tracking-wider">
                   <div className="flex items-center gap-2">
@@ -107,10 +107,10 @@ export default function Dashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="col-span-12 rounded-xl bg-white p-6 shadow-sm lg:col-span-5"
+               className="col-span-12 rounded-xl bg-white p-6 shadow-sm lg:col-span-5 dark:bg-slate-900 dark:border-slate-800 dark:border"
             >
               <div className="mb-6 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-slate-900">Solicitud de Materiales</h3>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Solicitud de Materiales</h3>
                 <button className="text-[10px] font-bold uppercase tracking-wider text-amber-600 hover:underline">
                   Ver Todo
                 </button>
@@ -123,9 +123,9 @@ export default function Dashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="col-span-12 flex flex-col rounded-xl bg-white p-6 shadow-sm lg:col-span-7"
+               className="col-span-12 flex flex-col rounded-xl bg-white p-6 shadow-sm lg:col-span-7 dark:bg-slate-900 dark:border-slate-800 dark:border"
             >
-              <h3 className="mb-8 text-lg font-bold text-slate-900">Flujo de Pagos</h3>
+              <h3 className="mb-8 text-lg font-bold text-slate-900 dark:text-white">Flujo de Pagos</h3>
               <div className="grid flex-grow grid-cols-2 gap-8">
                 {/* Facturas Pendientes */}
                 <div className="relative flex flex-col justify-between overflow-hidden rounded-lg bg-slate-900 p-5 text-white">

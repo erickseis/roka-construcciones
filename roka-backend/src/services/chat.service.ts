@@ -20,7 +20,7 @@ El sistema ROKA gestiona el ciclo de compras y control presupuestario.
 5. **Concision**: Maximo 2-3 parrafos de texto explicativo rodeando las tablas.
 
 Puedes responder sobre:
-- Estado de solicitudes, cotizaciones y ordenes de compra
+- Estado de solicitudes, solicitudes de cotización y ordenes de compra
 - Informacion de proveedores
 - Estadisticas y KPIs operativos (Presupuestos, Gasto OC, Tiempos)
 - Estado de proyectos y comparativas mensuales`;

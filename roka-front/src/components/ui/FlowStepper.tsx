@@ -4,7 +4,7 @@ import { CheckCircle, Circle } from 'lucide-react';
 interface FlowStepperProps {
   currentStep: number;
   estado?: string;
-  tipo?: 'solicitud' | 'cotizacion' | 'orden';
+  tipo?: 'solicitud' | 'solicitud_cotizacion' | 'orden';
 }
 
 const FlowStepper: React.FC<FlowStepperProps> = ({ currentStep, estado, tipo = 'solicitud' }) => {
@@ -20,7 +20,7 @@ const FlowStepper: React.FC<FlowStepperProps> = ({ currentStep, estado, tipo = '
       if (estado === 'Pendiente') return 0;
       if (estado === 'Cotizando') return 1;
       if (estado === 'Aprobado') return 2;
-    } else if (tipo === 'cotizacion') {
+    } else if (tipo === 'solicitud_cotizacion') {
       if (estado === 'Pendiente') return 1;
       if (estado === 'Aprobada') return 2;
       if (estado === 'Rechazada') return 1;

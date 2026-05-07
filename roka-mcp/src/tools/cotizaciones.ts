@@ -98,116 +98,18 @@ export function registerCotizacionesTools(server: McpServer, client: ApiClient) 
   );
 
   // ==========================================
-  // Cotizaciones de Venta (respuesta del proveedor con precios)
+  // Importación de Respuestas de Cotización desde Archivos
   // ==========================================
 
   server.tool(
-    "listar_cotizaciones",
-    "Lista todas las cotizaciones de venta (respuesta del proveedor con precios). Filtros opcionales.",
-    {
-      solicitud_id: z.number().optional().describe("Filtrar por ID de solicitud"),
-      estado: z.string().optional().describe("Filtrar por estado (Pendiente, Aprobada, Rechazada)"),
-      solicitud_cotizacion_id: z.number().optional().describe("Filtrar por ID de solicitud de cotización"),
-    },
-    async (args) => {
-      const params = new URLSearchParams();
-      if (args.solicitud_id) params.set("solicitud_id", String(args.solicitud_id));
-      if (args.estado) params.set("estado", args.estado);
-      if (args.solicitud_cotizacion_id) params.set("solicitud_cotizacion_id", String(args.solicitud_cotizacion_id));
-      const qs = params.toString();
-      const res = await client.get(`cotizaciones${qs ? "?" + qs : ""}`);
-      return {
-        content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }],
-      };
-    }
-  );
-
-  server.tool(
-    "ver_cotizacion",
-    "Obtiene el detalle de una cotización de venta con sus ítems cotizados y precios",
-    {
-      id: z.number().describe("ID de la cotización"),
-    },
-    async ({ id }) => {
-      const res = await client.get(`cotizaciones/${id}`);
-      return {
-        content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }],
-      };
-    }
-  );
-
-  server.tool(
-    "crear_cotizacion",
-    "Crea una cotización de venta (respuesta del proveedor con precios). Opcionalmente puede vincularse a una solicitud de cotización.",
-    {
-      solicitud_id: z.number().describe("ID de la solicitud de material"),
-      solicitud_cotizacion_id: z.number().optional().describe("ID de la solicitud de cotización (opcional, para vincular respuesta)"),
-      proveedor_id: z.number().optional().describe("ID del proveedor del catálogo (opcional)"),
-      proveedor: z.string().optional().describe("Nombre del proveedor (si no usa ID del catálogo)"),
-      numero_cov: z.string().optional().describe("Número de cotización de venta del proveedor"),
-      imported_from_file: z.boolean().optional().describe("Indica si fue importada desde archivo"),
-      metodo_importacion: z.enum(["manual", "pdf", "excel", "imagen"]).optional().describe("Método de creación"),
-      datos_importados: z.record(z.any()).optional().describe("Datos adicionales importados del archivo"),
-      items: z
-        .array(
-          z.object({
-            solicitud_item_id: z.number().describe("ID del ítem de la solicitud"),
-            precio_unitario: z.number().describe("Precio unitario cotizado"),
-            descuento_porcentaje: z.number().optional().describe("Porcentaje de descuento por línea"),
-            codigo_proveedor: z.string().optional().describe("Código/SKU del proveedor"),
-          })
-        )
-        .describe("Lista de ítems con su precio unitario cotizado"),
-    },
-    async (args) => {
-      const res = await client.post("cotizaciones", args);
-      return {
-        content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }],
-      };
-    }
-  );
-
-  server.tool(
-    "aprobar_cotizacion",
-    "Aprueba una cotización de venta pendiente. Dispara notificaciones a roles operativos.",
-    {
-      id: z.number().describe("ID de la cotización a aprobar"),
-    },
-    async ({ id }) => {
-      const res = await client.patch(`cotizaciones/${id}/aprobar`);
-      return {
-        content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }],
-      };
-    }
-  );
-
-  server.tool(
-    "rechazar_cotizacion",
-    "Rechaza una cotización de venta pendiente. Dispara notificaciones a roles operativos.",
-    {
-      id: z.number().describe("ID de la cotización a rechazar"),
-    },
-    async ({ id }) => {
-      const res = await client.patch(`cotizaciones/${id}/rechazar`);
-      return {
-        content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }],
-      };
-    }
-  );
-
-  // ==========================================
-  // Importación de Cotizaciones desde Archivos
-  // ==========================================
-
-  server.tool(
-    "importar_cotizacion_venta_desde_archivo",
-    "Importa una cotización de venta desde un archivo PDF, Excel o imagen del proveedor. Parsea el archivo con IA, extrae ítems y precios, y los valida contra la solicitud de cotización enviada al proveedor. Retorna una vista previa con matching de ítems para confirmación.",
+    "importar_respuesta_cotizacion_desde_archivo",
+    "Importa una respuesta de cotización desde un archivo PDF, Excel o imagen del proveedor. Parsea el archivo con IA, extrae ítems y precios, y los valida contra la solicitud de cotización enviada al proveedor. Retorna una vista previa con matching de ítems para confirmación.",
     {
       archivo_path: z.string().describe("Ruta del archivo en el servidor (PDF, Excel o imagen)"),
       solicitud_cotizacion_id: z.number().describe("ID de la solicitud de cotización a la cual vincular la respuesta"),
     },
     async ({ archivo_path, solicitud_cotizacion_id }) => {
-      const res = await client.post("cotizaciones/importar", {
+      const res = await client.post("solicitud-cotizacion/importar", {
         archivo_path,
         solicitud_cotizacion_id,
       });
@@ -218,8 +120,8 @@ export function registerCotizacionesTools(server: McpServer, client: ApiClient) 
   );
 
   server.tool(
-    "confirmar_importacion_cotizacion",
-    "Confirma la importación de una cotización de venta previamente validada. Crea la cotización con los datos del archivo importado, vincula los ítems a la solicitud de cotización, y marca la SC como Respondida.",
+    "confirmar_importacion_respuesta_cotizacion",
+    "Confirma la importación de una respuesta de cotización previamente validada. Crea la cotización con los datos del archivo importado, vincula los ítems a la solicitud de cotización, y marca la SC como Respondida.",
     {
       solicitud_id: z.number().describe("ID de la solicitud de materiales"),
       solicitud_cotizacion_id: z.number().describe("ID de la solicitud de cotización"),
@@ -238,7 +140,7 @@ export function registerCotizacionesTools(server: McpServer, client: ApiClient) 
       datos_importados: z.record(z.any()).optional().describe("Datos adicionales importados del archivo"),
     },
     async (args) => {
-      const res = await client.post("cotizaciones/importar/confirmar", args);
+      const res = await client.post("solicitud-cotizacion/importar/confirmar", args);
       return {
         content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }],
       };

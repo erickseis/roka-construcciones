@@ -1,7 +1,7 @@
 import pool from '../db';
 import { GenerarOCInput } from '../types/orden.types';
 import {
-  getCotizacionForOC,
+  getSolicitudCotizacionForOC,
   checkExistingOC,
   createOrden,
   updateFolio,
@@ -22,7 +22,7 @@ const IVA_RATE = 0.19;
 
 export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: number | null) {
   const {
-    cotizacion_id,
+    solicitud_cotizacion_id,
     condiciones_pago,
     folio,
     descuento_tipo,
@@ -35,31 +35,31 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
     codigo_obra,
   } = input;
 
-  if (!cotizacion_id) {
-    throw Object.assign(new Error('Se requiere cotizacion_id'), { statusCode: 400 });
+  if (!solicitud_cotizacion_id) {
+    throw Object.assign(new Error('Se requiere solicitud_cotizacion_id'), { statusCode: 400 });
   }
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // 1. Verificar que la cotización existe y está aprobada
-    const cotizacion = await getCotizacionForOC(cotizacion_id, client);
-    if (!cotizacion) {
+    // 1. Verificar que la solicitud de cotización existe y está respondida
+    const sc = await getSolicitudCotizacionForOC(solicitud_cotizacion_id, client);
+    if (!sc) {
       await client.query('ROLLBACK');
-      throw Object.assign(new Error('Cotización no encontrada'), { statusCode: 404 });
+      throw Object.assign(new Error('Solicitud de cotización no encontrada'), { statusCode: 404 });
     }
-    if (cotizacion.estado !== 'Aprobada') {
+    if (sc.estado !== 'Respondida') {
       await client.query('ROLLBACK');
-      throw Object.assign(new Error('La cotización debe estar aprobada para generar una OC'), { statusCode: 400 });
+      throw Object.assign(new Error('La solicitud de cotización debe estar respondida para generar una OC'), { statusCode: 400 });
     }
 
     // 2. Verificar que no exista OC duplicada
-    const existingOCId = await checkExistingOC(cotizacion_id, client);
+    const existingOCId = await checkExistingOC(solicitud_cotizacion_id, client);
     if (existingOCId) {
       await client.query('ROLLBACK');
       throw Object.assign(
-        new Error('Ya existe una orden de compra para esta cotización'),
+        new Error('Ya existe una orden de compra para esta solicitud de cotización'),
         { statusCode: 409 }
       );
     }
@@ -70,15 +70,15 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
        FROM presupuestos_proyecto
        WHERE proyecto_id = $1 AND estado IN ('Vigente', 'Borrador')
        FOR UPDATE`,
-      [cotizacion.proyecto_id]
+      [sc.proyecto_id]
     );
 
     // Presupuesto es opcional — si no existe, se genera OC sin comprometer
 
-    const subtotalBase = Number(cotizacion.total);
+    const subtotalBase = Number(sc.total);
     if (!Number.isFinite(subtotalBase) || subtotalBase <= 0) {
       await client.query('ROLLBACK');
-      throw Object.assign(new Error('La cotización tiene un total inválido para generar la OC'), { statusCode: 400 });
+      throw Object.assign(new Error('La solicitud de cotización tiene un total inválido para generar la OC'), { statusCode: 400 });
     }
 
     const descuentoTipoNormalizado = String(descuento_tipo || 'none').toLowerCase();
@@ -106,7 +106,7 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
 
     if (descuentoMonto > subtotalBase) {
       await client.query('ROLLBACK');
-      throw Object.assign(new Error('El descuento no puede superar el subtotal de la cotización'), { statusCode: 400 });
+      throw Object.assign(new Error('El descuento no puede superar el subtotal de la solicitud de cotización'), { statusCode: 400 });
     }
 
     const descuentoMontoFinal = Number(descuentoMonto.toFixed(2));
@@ -137,13 +137,13 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
         );
       }
 
-      if (cotizacion.presupuesto_categoria_id) {
+      if (sc.presupuesto_categoria_id) {
         const { rows: [categoria] } = await client.query(
           `SELECT *
            FROM presupuesto_categorias
            WHERE id = $1 AND presupuesto_id = $2
            FOR UPDATE`,
-          [cotizacion.presupuesto_categoria_id, presupuesto.id]
+          [sc.presupuesto_categoria_id, presupuesto.id]
         );
 
         if (!categoria) {
@@ -166,12 +166,12 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
     const folioTemporal = folioLimpio || `OC-TEMP-${Date.now()}`;
     const ordenCreada = await createOrden(
       {
-        cotizacion_id,
+        solicitud_cotizacion_id,
         condiciones_pago: condiciones_pago || 'Neto 30 días',
         total: montoCompromiso,
         created_by_usuario_id: usuarioId,
         autorizado_por_usuario_id: autorizado_por_usuario_id ?? null,
-        solicitud_id: cotizacion.solicitud_id ?? null,
+        solicitud_id: sc.solicitud_id ?? null,
         codigo_obra: codigo_obra ?? null,
         folio: folioTemporal,
         descuento_tipo: descuentoTipo,
@@ -223,7 +223,7 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
     const actorName = actorId ? await getActorDisplayName(actorId, client) : 'Sistema';
     const recipients = await resolveRecipientUserIds(
       {
-        creatorUserId: cotizacion.created_by_usuario_id,
+        creatorUserId: sc.created_by_usuario_id,
         roleNames: ['Director de Obra', 'Adquisiciones'],
         excludeUserId: actorId,
       },
@@ -234,10 +234,10 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
       usuario_destino_id: uid,
       tipo: 'orden.generada',
       titulo: 'Orden de compra generada',
-      mensaje: `${actorName} generó la orden ${orden.folio} desde COT-${String(cotizacion.id).padStart(3, '0')} por $${montoCompromiso.toLocaleString('es-CL')}.`,
+      mensaje: `${actorName} generó la orden ${orden.folio} desde SC-${String(sc.id).padStart(3, '0')} por $${montoCompromiso.toLocaleString('es-CL')}.`,
       entidad_tipo: 'orden',
       entidad_id: orden.id,
-      payload: { cotizacion_id: cotizacion.id, total: montoCompromiso, folio: orden.folio },
+      payload: { solicitud_cotizacion_id: sc.id, total: montoCompromiso, folio: orden.folio },
       enviado_por_usuario_id: actorId,
     }));
 
@@ -248,11 +248,11 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
             usuario_destino_id: uid,
             tipo: 'presupuesto.sobreconsumo',
             titulo: 'Presupuesto excedido',
-            mensaje: `El proyecto ${cotizacion.proyecto_nombre} alcanzó ${porcentajeNuevo.toFixed(1)}% de uso del presupuesto tras la OC-${String(orden.id).padStart(3, '0')}.`,
+            mensaje: `El proyecto ${sc.proyecto_nombre} alcanzó ${porcentajeNuevo.toFixed(1)}% de uso del presupuesto tras la OC-${String(orden.id).padStart(3, '0')}.`,
             entidad_tipo: 'presupuesto' as const,
             entidad_id: presupuesto.id,
             payload: {
-              proyecto_id: cotizacion.proyecto_id,
+              proyecto_id: sc.proyecto_id,
               porcentaje_uso: Number(porcentajeNuevo.toFixed(2)),
               umbral_alerta: umbral,
               estado_alerta: 'Sobreconsumo',
@@ -266,11 +266,11 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
             usuario_destino_id: uid,
             tipo: 'presupuesto.umbral',
             titulo: 'Umbral de presupuesto alcanzado',
-            mensaje: `El proyecto ${cotizacion.proyecto_nombre} alcanzó ${porcentajeNuevo.toFixed(1)}% de uso del presupuesto (umbral ${umbral}%).`,
+            mensaje: `El proyecto ${sc.proyecto_nombre} alcanzó ${porcentajeNuevo.toFixed(1)}% de uso del presupuesto (umbral ${umbral}%).`,
             entidad_tipo: 'presupuesto' as const,
             entidad_id: presupuesto.id,
             payload: {
-              proyecto_id: cotizacion.proyecto_id,
+              proyecto_id: sc.proyecto_id,
               porcentaje_uso: Number(porcentajeNuevo.toFixed(2)),
               umbral_alerta: umbral,
               estado_alerta: 'Umbral alcanzado',
@@ -287,7 +287,7 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
     await client.query(
       `UPDATE solicitudes_material SET estado = 'Aprobado', updated_at = NOW()
        WHERE id = $1`,
-      [cotizacion.solicitud_id]
+      [sc.solicitud_id]
     );
 
     await client.query('COMMIT');

@@ -3,13 +3,12 @@ import { Modal } from '../ui/Modal';
 import { StatusBadge } from '../ui/StatusBadge';
 import FlowStepper from '../ui/FlowStepper';
 import { getSolicitudCotizacion, changeSolicitudCotizacionEstado, deleteSolicitudCotizacion, descargarSolicitudCotizacionPdf } from '@/lib/api';
-import { Send, Trash2, DollarSign, FileDown } from 'lucide-react';
-import RegistrarCotizacionVentaModal from './RegistrarCotizacionVentaModal';
-
+import { Send, Trash2, FileDown, Upload } from 'lucide-react';
+import ImportarRespuestaSCModal from './ImportarRespuestaSCModal';
 export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, onSuccess }: { id: number | null; isOpen: boolean; onClose: () => void; onSuccess: () => void }) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [showRegistrar, setShowRegistrar] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !id) { setData(null); return; }
@@ -50,7 +49,7 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
         {loading && <div className="text-center py-8 text-sm text-slate-400">Cargando...</div>}
         {data && (
           <div className="space-y-4">
-            <FlowStepper currentStep={1} estado={data.estado} tipo="cotizacion" />
+            <FlowStepper currentStep={1} estado={data.estado} tipo="solicitud_cotizacion" />
 
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-lg bg-slate-50 p-3">
@@ -67,11 +66,11 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
               <p className="text-sm font-bold text-slate-800">{data.proyecto_nombre}</p>
             </div>
 
-            {/* Items (sin precios) */}
+            {/* Items con precios si existen */}
             {data.items && data.items.length > 0 && (
               <div>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Ítems solicitados al proveedor ({data.items.length})
+                  Ítems ({data.items.length})
                 </p>
                 <div className="rounded-lg border border-slate-200 overflow-hidden">
                   <table className="min-w-full text-sm">
@@ -81,15 +80,27 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
                         <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Código</th>
                         <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Cantidad</th>
                         <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Unidad</th>
+                        {data.items.some((item: any) => item.precio_unitario != null) && (
+                          <>
+                            <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">P. Unitario</th>
+                            <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Subtotal</th>
+                          </>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
                       {data.items.map((item: any) => (
                         <tr key={item.id} className="border-t border-slate-100">
                           <td className="px-3 py-2 font-medium text-slate-800">{item.nombre_material}</td>
-                          <td className="px-3 py-2 font-mono text-xs text-slate-500">{item.codigo || '-'}</td>
+                          <td className="px-3 py-2 font-mono text-xs text-slate-500">{item.codigo_proveedor || item.codigo || '-'}</td>
                           <td className="px-3 py-2 text-right font-mono text-slate-600">{Number(item.cantidad_requerida).toLocaleString()}</td>
                           <td className="px-3 py-2 text-slate-500">{item.unidad}</td>
+                          {item.precio_unitario != null && (
+                            <>
+                              <td className="px-3 py-2 text-right font-mono text-slate-800">${Number(item.precio_unitario).toLocaleString('es-CL', { minimumFractionDigits: 2 })}</td>
+                              <td className="px-3 py-2 text-right font-mono font-bold text-slate-800">${Number(item.subtotal || item.precio_unitario * item.cantidad_requerida).toLocaleString('es-CL', { minimumFractionDigits: 2 })}</td>
+                            </>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -126,11 +137,12 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
                   </button>
                 )}
                 {(data.estado === 'Enviada' || data.estado === 'Respondida') && (
-                  <button onClick={() => setShowRegistrar(true)}
+                  <button onClick={() => setShowImport(true)}
                     className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">
-                    <DollarSign size={14} /> Registrar Cotización de Venta
+                    <Upload size={14} /> Cargar Respuesta
                   </button>
                 )}
+
                 {data.estado === 'Respondida' && (
                   <button onClick={() => handleEstado('Anulada')}
                     className="rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-100">
@@ -148,17 +160,14 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
           </div>
         )}
       </Modal>
-
-      <RegistrarCotizacionVentaModal
-        isOpen={showRegistrar}
-        onClose={() => setShowRegistrar(false)}
+      <ImportarRespuestaSCModal
+        isOpen={showImport}
+        onClose={() => setShowImport(false)}
         solicitudCotizacionId={id || 0}
-        proveedor={data?.proveedor || ''}
-        items={data?.items || []}
-        solicitudId={data?.solicitud_id || 0}
+        scItems={data?.items || []}
+        solicitudData={data}
         onSuccess={() => {
-          setShowRegistrar(false);
-          // Backend already marks SC as Respondida, just refresh data
+          setShowImport(false);
           if (id) getSolicitudCotizacion(id).then(setData);
           onSuccess();
         }}

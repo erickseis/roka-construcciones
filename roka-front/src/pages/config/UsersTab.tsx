@@ -106,8 +106,8 @@ export default function UsersTab() {
       sortable: true,
       render: (row: any) => (
         <div className="flex flex-col">
-          <span className="font-bold text-slate-800">{row.nombre} {row.apellido}</span>
-          <span className="text-[10px] text-slate-400">{row.correo}</span>
+          <span className="font-bold text-slate-800 dark:text-slate-100">{row.nombre} {row.apellido}</span>
+          <span className="text-[10px] text-slate-400 dark:text-slate-500">{row.correo}</span>
         </div>
       ),
     },
@@ -117,7 +117,7 @@ export default function UsersTab() {
       header: 'Rol', 
       sortable: true,
       render: (row: any) => (
-        <span className="flex items-center gap-1 text-xs font-semibold text-slate-600">
+        <span className="flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
           <ShieldAlert size={14} className="text-amber-500" />
           {row.rol_nombre || 'Sin Rol'}
         </span>
@@ -154,7 +154,7 @@ export default function UsersTab() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-xl font-bold text-slate-900">Personal Registrado</h3>
+        <h3 className="text-xl font-bold text-slate-900 dark:text-white">Personal Registrado</h3>
         <button
           onClick={() => setShowForm(true)}
           className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 active:scale-[0.98]"
@@ -164,7 +164,7 @@ export default function UsersTab() {
         </button>
       </div>
 
-      <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
+      <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 dark:bg-[#111827]/40 dark:border-slate-800">
         <DataTable
           columns={columns}
           data={usuarios || []}
@@ -200,7 +200,7 @@ export default function UsersTab() {
                 value={form.nombre}
                 onChange={e => setForm({...form, nombre: e.target.value})}
                 title="Nombre del usuario que se registrará en el sistema"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                 placeholder="Juan"
               />
             </div>
@@ -212,7 +212,7 @@ export default function UsersTab() {
                 value={form.apellido}
                 onChange={e => setForm({...form, apellido: e.target.value})}
                 title="Apellido paterno del usuario"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                 placeholder="Pérez"
               />
             </div>
@@ -227,7 +227,7 @@ export default function UsersTab() {
                 value={form.rut}
                 onChange={handleRutChange}
                 title="RUT del usuario en formato 12.345.678-9, identificador único nacional"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                 placeholder="12.345.678-9"
               />
             </div>
@@ -239,7 +239,7 @@ export default function UsersTab() {
                 value={form.correo}
                 onChange={e => setForm({...form, correo: e.target.value})}
                 title="Correo electrónico corporativo del usuario, será utilizado para iniciar sesión"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                 placeholder="juan@roka.cl"
               />
             </div>
@@ -253,7 +253,7 @@ export default function UsersTab() {
                 value={form.telefono}
                 onChange={e => setForm({...form, telefono: e.target.value})}
                 title="Número de teléfono de contacto del usuario"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                 placeholder="+56 9 1234 5678"
               />
             </div>
@@ -264,7 +264,7 @@ export default function UsersTab() {
                 value={form.rol_id}
                 onChange={e => setForm({...form, rol_id: e.target.value})}
                 title="Rol que determina los permisos y nivel de acceso del usuario en el sistema"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               >
                 <option value="">Seleccionar Rol...</option>
                 {roles?.map((r: any) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
@@ -279,7 +279,7 @@ export default function UsersTab() {
                 value={form.departamento_id}
                 onChange={e => setForm({...form, departamento_id: e.target.value})}
                 title="Departamento de la organización al que pertenece el usuario"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               >
                 <option value="">Seleccionar...</option>
                 {departamentos?.map((d: any) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
@@ -291,7 +291,7 @@ export default function UsersTab() {
                 value={form.cargo_id}
                 onChange={e => setForm({...form, cargo_id: e.target.value})}
                 title="Cargo o puesto que ocupa el usuario dentro de la empresa"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               >
                 <option value="">Seleccionar...</option>
                 {cargos?.filter((c: any) => !form.departamento_id || c.departamento_id === Number(form.departamento_id))
@@ -309,7 +309,7 @@ export default function UsersTab() {
                 value={form.password}
                 onChange={e => setForm({...form, password: e.target.value})}
                 title="Contraseña de acceso al sistema, debe tener al menos 6 caracteres"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                 placeholder="••••••••"
               />
             </div>
@@ -321,7 +321,7 @@ export default function UsersTab() {
                 value={form.confirmPassword}
                 onChange={e => setForm({...form, confirmPassword: e.target.value})}
                 title="Repetir la contraseña para confirmar que fue ingresada correctamente"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                 placeholder="••••••••"
               />
             </div>

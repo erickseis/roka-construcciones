@@ -78,7 +78,7 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
   const atencion = atencionManual.trim() || orden?.atencion_a || orden?.proveedor_contacto_nombre || '-';
   const folio = orden?.folio || `OC-${String(orden?.id || 0).padStart(6, '0')}`;
   const numeroSolicitud = orden?.solicitud_id ? `SM-${String(orden.solicitud_id).padStart(3, '0')}` : '-';
-  const numeroCotizacion = orden?.cotizacion_id ? `COT-${String(orden.cotizacion_id).padStart(3, '0')}` : '-';
+  const numeroSolicitudCotizacion = orden?.solicitud_cotizacion_id ? `SC-${String(orden.solicitud_cotizacion_id).padStart(3, '0')}` : '-';
   const moneda = 'PESO CHILENO';
   const subtotalNeto = Number(orden?.subtotal_neto ?? orden?.total ?? 0);
   const descuentoMonto = Number(orden?.descuento_monto ?? 0);
@@ -196,8 +196,8 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
                   <td style={headerValueStyle}>{orden?.autorizado_por_nombre || '-'}</td>
                 </tr>
                 <tr>
-                  <td style={headerLabelStyle}>Nro. Cotización</td>
-                  <td style={headerValueStyle}>{numeroCotizacion}</td>
+                  <td style={headerLabelStyle}>Nro. Solicitud de Cotización</td>
+                  <td style={headerValueStyle}>{numeroSolicitudCotizacion}</td>
                 </tr>
                 <tr>
                   <td style={headerLabelStyle}>Encargado</td>

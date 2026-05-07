@@ -12,6 +12,7 @@ import {
 import * as XLSX from 'xlsx-js-style';
 import { Modal } from '../ui/Modal';
 import { createSolicitud } from '@/lib/api';
+import { showAlert, showToast } from '@/lib/alerts';
 
 interface BulkImportModalProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ export default function BulkImportModal({
   // Header state
   const [proyectoId, setProyectoId] = useState('');
   const [solicitante, setSolicitante] = useState('');
+  const [fechaRequerida, setFechaRequerida] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -90,6 +92,7 @@ export default function BulkImportModal({
             nombre_material: matchedMaterial?.nombre || materialName,
             cantidad_requerida: cantidad,
             unidad: matchedMaterial?.unidad_abreviatura || unidad,
+            codigo: matchedMaterial?.sku || sku || '',
             is_valid: materialName && cantidad > 0,
             original_row: row
           };
@@ -123,17 +126,27 @@ export default function BulkImportModal({
       await createSolicitud({
         proyecto_id: Number(proyectoId),
         solicitante,
+        fecha_requerida: fechaRequerida || null,
         items: validItems.map(i => ({
           material_id: i.material_id,
           nombre_material: i.nombre_material,
           cantidad_requerida: i.cantidad_requerida,
           unidad: i.unidad,
+          codigo: i.codigo,
         })),
+      });
+      showToast({
+        title: 'Importación completada',
+        icon: 'success'
       });
       onSuccess();
       handleClose();
     } catch (err: any) {
-      setError(err.message || 'Error al crear la solicitud masiva.');
+      showAlert({
+        title: 'Error de Importación',
+        text: err.message || 'Error al crear la solicitud masiva.',
+        icon: 'error'
+      });
     } finally {
       setSubmitting(false);
     }
@@ -145,6 +158,7 @@ export default function BulkImportModal({
     setError(null);
     setProyectoId('');
     setSolicitante('');
+    setFechaRequerida('');
     onClose();
   };
 
@@ -226,7 +240,7 @@ export default function BulkImportModal({
     >
       <div className="space-y-6">
         {/* Step 1: Info & Header */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Proyecto</label>
             <select
@@ -248,6 +262,19 @@ export default function BulkImportModal({
               onChange={e => setSolicitante(e.target.value)}
               placeholder="Nombre de quien solicita"
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-amber-500/50 dark:focus:ring-amber-500/10"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Fecha requerida en terreno</label>
+            <input
+              type="date"
+              value={fechaRequerida}
+              onChange={e => setFechaRequerida(e.target.value)}
+              title="Fecha en que se necesita el material físicamente en terreno"
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-amber-500/50 dark:focus:ring-amber-500/10"
             />
           </div>
         </div>
@@ -324,8 +351,9 @@ export default function BulkImportModal({
                   <tr>
                     <th className="px-3 py-2 text-center w-8">#</th>
                     <th className="px-3 py-2">Material</th>
-                    <th className="px-3 py-2 w-20 text-right">Cant.</th>
-                    <th className="px-3 py-2 w-20">Unidad</th>
+                    <th className="px-3 py-2 w-24">Código</th>
+                    <th className="px-3 py-2 w-16 text-right">Cant.</th>
+                    <th className="px-3 py-2 w-16">Unidad</th>
                     <th className="px-3 py-2 text-center w-10">Estado</th>
                     <th className="px-3 py-2 w-8"></th>
                   </tr>
@@ -335,10 +363,13 @@ export default function BulkImportModal({
                     <tr key={item.id} className={!item.is_valid ? 'bg-red-50/30' : ''}>
                       <td className="px-3 py-2 text-center text-slate-400 dark:text-slate-500">{idx + 1}</td>
                       <td className="px-3 py-2">
-                        <div className="font-bold text-slate-700 dark:text-slate-200">{item.nombre_material || 'N/A'}</div>
+                        <div className="font-bold text-slate-700 dark:text-slate-200 leading-tight">{item.nombre_material || 'N/A'}</div>
                         {item.material_id && (
                           <div className="text-[9px] text-amber-600 font-medium dark:text-amber-400">Vinculado al catálogo</div>
                         )}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-slate-500 dark:text-slate-400">
+                        {item.codigo || '—'}
                       </td>
                       <td className="px-3 py-2 text-right font-mono font-bold text-slate-600 dark:text-slate-300">
                         {item.cantidad_requerida}

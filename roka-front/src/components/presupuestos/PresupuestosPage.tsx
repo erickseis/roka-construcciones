@@ -174,8 +174,8 @@ export default function PresupuestosPage() {
         <p className="mb-1 text-xs font-bold uppercase tracking-widest text-amber-600">Administración</p>
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-slate-900">Presupuesto</h2>
-            <p className="mt-1 text-sm text-slate-500">Controla el presupuesto por proyecto y categorías de gasto.</p>
+            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Presupuesto</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Controla el presupuesto por proyecto y categorías de gasto.</p>
           </div>
           <button
             onClick={() => setShowCreate(true)}
@@ -188,21 +188,21 @@ export default function PresupuestosPage() {
       </motion.div>
 
       <div className="mb-6 grid grid-cols-3 gap-4">
-        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:bg-slate-800/50 dark:border-slate-700">
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Total Asignado</p>
           <p className="text-2xl font-black text-blue-600">${totalAsignado.toLocaleString('es-ES')}</p>
         </div>
-        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:bg-slate-800/50 dark:border-slate-700">
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Total Comprometido</p>
           <p className="text-2xl font-black text-amber-600">${totalComprometido.toLocaleString('es-ES')}</p>
         </div>
-        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:bg-slate-800/50 dark:border-slate-700">
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Alertas</p>
           <p className="text-2xl font-black text-red-600">{alertasCriticas}</p>
         </div>
       </div>
 
-      <div className="rounded-xl bg-white p-6 shadow-sm">
+      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-[#111827]/40 dark:border dark:border-slate-800">
         <DataTable
           columns={columns}
           data={rows}
@@ -231,7 +231,7 @@ export default function PresupuestosPage() {
                 value={form.proyecto_id}
                 onChange={(e) => setForm({ ...form, proyecto_id: e.target.value })}
                 title="Proyecto al cual se asigna el presupuesto. Solo se permite un presupuesto por proyecto"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               >
                 <option value="">Seleccionar proyecto...</option>
                 {proyectos
@@ -251,7 +251,7 @@ export default function PresupuestosPage() {
                 value={form.monto_total}
                 onChange={(e) => setForm({ ...form, monto_total: e.target.value })}
                 title="Monto total del presupuesto asignado al proyecto en pesos"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
             <div>
@@ -264,7 +264,7 @@ export default function PresupuestosPage() {
                 value={form.umbral_alerta}
                 onChange={(e) => setForm({ ...form, umbral_alerta: e.target.value })}
                 title="Porcentaje de uso del presupuesto a partir del cual se generarán alertas de notificación (por defecto 80%)"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
           </div>
@@ -334,21 +334,21 @@ export default function PresupuestosPage() {
         {showDetail && (
           <div className="space-y-4">
             <div className="grid grid-cols-4 gap-3">
-              <div className="rounded-lg bg-slate-50 p-3">
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Monto Total</p>
-                <p className="text-sm font-bold text-slate-900">${Number(showDetail.monto_total).toLocaleString('es-ES')}</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">${Number(showDetail.monto_total).toLocaleString('es-ES')}</p>
               </div>
-              <div className="rounded-lg bg-slate-50 p-3">
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Comprometido</p>
-                <p className="text-sm font-bold text-amber-700">${Number(showDetail.monto_comprometido).toLocaleString('es-ES')}</p>
+                <p className="text-sm font-bold text-amber-700 dark:text-amber-400">${Number(showDetail.monto_comprometido).toLocaleString('es-ES')}</p>
               </div>
-              <div className="rounded-lg bg-slate-50 p-3">
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Disponible</p>
-                <p className="text-sm font-bold text-emerald-700">${Number(showDetail.monto_disponible).toLocaleString('es-ES')}</p>
+                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">${Number(showDetail.monto_disponible).toLocaleString('es-ES')}</p>
               </div>
-              <div className="rounded-lg bg-slate-50 p-3">
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Uso</p>
-                <p className="text-sm font-bold text-slate-900">{Number(showDetail.porcentaje_uso).toFixed(1)}%</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{Number(showDetail.porcentaje_uso).toFixed(1)}%</p>
               </div>
             </div>
 

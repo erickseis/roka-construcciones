@@ -111,7 +111,7 @@ const ROKA_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1079
 function buildOCHtml(orden: any, items: any[], pdfUrl?: string): string {
   const folio = orden.folio || 'OC-' + String(orden.id).padStart(6, '0');
   const numeroSolicitud = orden.solicitud_id ? 'SM-' + String(orden.solicitud_id).padStart(3, '0') : '-';
-  const numeroCotizacion = orden.cotizacion_id ? 'COT-' + String(orden.cotizacion_id).padStart(3, '0') : '-';
+  const numeroCotizacion = orden.solicitud_cotizacion_id ? 'SC-' + String(orden.solicitud_cotizacion_id).padStart(3, '0') : '-';
   const atencion = orden.atencion_a || orden.proveedor_contacto_nombre || '-';
   const subtotalNeto = Number(orden.subtotal_neto ?? orden.total ?? 0);
   const descuentoMonto = Number(orden.descuento_monto ?? 0);
@@ -352,9 +352,7 @@ export async function getById(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: 'Orden de compra no encontrada' });
     }
 
-    const items = orden.cotizacion_id
-      ? await ordenesModel.getOrdenItems(orden.cotizacion_id)
-      : await ordenesModel.getOrdenItemsByOC(orden.id);
+    const items = await ordenesModel.getOrdenItemsByOC(orden.id);
     res.json({ ...orden, items });
   } catch (error) {
     console.error('Error al obtener orden:', error);
@@ -421,9 +419,7 @@ export async function exportarHtml(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: 'Orden de compra no encontrada' });
     }
 
-    const items = orden.cotizacion_id
-      ? await ordenesModel.getOrdenItems(orden.cotizacion_id)
-      : await ordenesModel.getOrdenItemsByOC(orden.id);
+    const items = await ordenesModel.getOrdenItemsByOC(orden.id);
     const html = buildOCHtml(orden, items, pdfUrl);
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -450,9 +446,7 @@ export async function exportarPdf(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: 'Orden de compra no encontrada' });
     }
 
-    const items = orden.cotizacion_id
-      ? await ordenesModel.getOrdenItems(orden.cotizacion_id)
-      : await ordenesModel.getOrdenItemsByOC(orden.id);
+    const items = await ordenesModel.getOrdenItemsByOC(orden.id);
     const html = buildOCHtml(orden, items);
     const pdfBuffer = await htmlToPdf(html);
 
@@ -483,9 +477,7 @@ export async function generarPdfLink(req: AuthRequest, res: Response) {
       fs.mkdirSync(PDF_OUTPUT_DIR, { recursive: true });
     }
 
-    const items = orden.cotizacion_id
-      ? await ordenesModel.getOrdenItems(orden.cotizacion_id)
-      : await ordenesModel.getOrdenItemsByOC(orden.id);
+    const items = await ordenesModel.getOrdenItemsByOC(orden.id);
     const html = buildOCHtml(orden, items);
     const pdfBuffer = await htmlToPdf(html);
 

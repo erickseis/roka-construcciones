@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/authMiddleware';
+import upload from '../lib/upload';
 import {
   list,
   getById,
@@ -10,6 +11,8 @@ import {
   exportarHtml,
   exportarPdf,
   generarPdfLink,
+  importarArchivo,
+  confirmarImportacion,
 } from '../controllers/solicitud_cotizacion.controller';
 
 const router = Router();
@@ -24,5 +27,9 @@ router.delete('/:id', authMiddleware, remove);
 router.get('/:id/exportar', exportarHtml);
 router.get('/:id/descargar', exportarPdf);
 router.get('/:id/pdf-link', generarPdfLink);
+
+// Importar respuesta de cotización desde archivo
+router.post('/importar', authMiddleware, upload.single('archivo_sc'), importarArchivo);
+router.post('/importar/confirmar', authMiddleware, confirmarImportacion);
 
 export default router;

@@ -23,11 +23,11 @@ export default function ConfigPage() {
         <p className="mb-1 text-xs font-bold uppercase tracking-widest text-slate-500">Configuración</p>
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-3">
+            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
               Administración del Sistema
-              <Settings className="text-slate-300" size={24} />
+              <Settings className="text-slate-300 dark:text-slate-600" size={24} />
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Administra el personal, la estructura organizacional y los niveles de acceso.
             </p>
           </div>
@@ -35,14 +35,16 @@ export default function ConfigPage() {
       </motion.div>
 
       {/* Navigation Tabs */}
-      <div className="mb-8 flex gap-1 rounded-2xl bg-slate-200/50 p-1.5 w-fit">
+      <div className="mb-8 flex gap-1 rounded-2xl bg-slate-200/50 p-1.5 w-fit dark:bg-slate-800/50">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as Tab)}
             className={`
               relative flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-all duration-300
-              ${activeTab === tab.id ? 'bg-white text-amber-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}
+              ${activeTab === tab.id 
+                ? 'bg-white text-amber-600 shadow-sm dark:bg-slate-700 dark:text-amber-500' 
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}
             `}
           >
             <tab.icon size={18} />

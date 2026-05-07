@@ -37,8 +37,8 @@ export async function getSystemStats(): Promise<SystemStats> {
           COALESCE(SUM(oc.total), 0)::numeric AS gasto_total
         FROM proyectos p
         LEFT JOIN solicitudes_material sm ON sm.proyecto_id = p.id
-        LEFT JOIN cotizaciones c ON c.solicitud_id = sm.id AND c.estado = 'Aprobada'
-        LEFT JOIN ordenes_compra oc ON oc.cotizacion_id = c.id
+        LEFT JOIN solicitud_cotizacion sc ON sc.solicitud_id = sm.id AND sc.estado = 'Respondida'
+        LEFT JOIN ordenes_compra oc ON oc.solicitud_cotizacion_id = sc.id
         GROUP BY p.id, p.nombre
         ORDER BY gasto_total DESC
       `),
@@ -47,8 +47,8 @@ export async function getSystemStats(): Promise<SystemStats> {
           COALESCE(ROUND(AVG(EXTRACT(EPOCH FROM (oc.created_at - sm.created_at)) / 86400), 1), 0)
             AS promedio_dias
         FROM ordenes_compra oc
-        JOIN cotizaciones c ON c.id = oc.cotizacion_id
-        JOIN solicitudes_material sm ON sm.id = c.solicitud_id
+        JOIN solicitud_cotizacion sc ON sc.id = oc.solicitud_cotizacion_id
+        JOIN solicitudes_material sm ON sm.id = sc.solicitud_id
       `),
       pool.query(`
         SELECT nombre, estado, fecha_inicio, ubicacion

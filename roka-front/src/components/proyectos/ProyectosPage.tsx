@@ -236,8 +236,8 @@ export default function ProyectosPage() {
         <p className="mb-1 text-xs font-bold uppercase tracking-widest text-amber-600">Administración</p>
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-slate-900">Proyectos</h2>
-            <p className="mt-1 text-sm text-slate-500">Gestiona la cartera de proyectos y sus responsables.</p>
+            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Proyectos</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Gestiona la cartera de proyectos y sus responsables.</p>
           </div>
           <button
             onClick={openCreate}
@@ -250,21 +250,21 @@ export default function ProyectosPage() {
       </motion.div>
 
       <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:bg-slate-800/50 dark:border-slate-700">
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Activos</p>
           <p className="text-2xl font-black text-emerald-600">{estadoCounts.activos}</p>
         </div>
-        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:bg-slate-800/50 dark:border-slate-700">
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">En Curso</p>
           <p className="text-2xl font-black text-amber-600">{estadoCounts.enCurso}</p>
         </div>
-        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:bg-slate-800/50 dark:border-slate-700">
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Planificación</p>
           <p className="text-2xl font-black text-violet-600">{estadoCounts.planificacion}</p>
         </div>
       </div>
 
-      <div className="rounded-xl bg-white p-6 shadow-sm">
+      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-900 dark:border dark:border-slate-800">
         <DataTable
           columns={columns}
           data={proyectos || []}
@@ -295,7 +295,7 @@ export default function ProyectosPage() {
               value={form.nombre}
               onChange={(e) => setForm({ ...form, nombre: e.target.value })}
               title="Nombre identificatorio del proyecto de obra"
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
             />
           </div>
 
@@ -316,7 +316,7 @@ export default function ProyectosPage() {
                 value={form.estado}
                 onChange={(e) => setForm({ ...form, estado: e.target.value })}
                 title="Estado actual del proyecto: Planificación, En Curso o Completado"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               >
                 <option value="Planificación">Planificación</option>
                 <option value="En Curso">En Curso</option>
@@ -352,7 +352,7 @@ export default function ProyectosPage() {
                 value={form.responsable_usuario_id}
                 onChange={(e) => setForm({ ...form, responsable_usuario_id: e.target.value })}
                 title="Persona responsable de la gestión y supervisión del proyecto"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               >
                 <option value="">Sin responsable</option>
                 {users?.map((u: any) => (
@@ -496,14 +496,14 @@ export default function ProyectosPage() {
                     {archivo_materiales && (
                       <p className="mt-2 text-xs text-green-600 font-medium">✓ {archivo_materiales.name}</p>
                     )}
-                    <label className="mt-3 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                    <label className="mt-3 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
                       <input
                         type="checkbox"
                         checked={procesarMateriales}
                         onChange={(e) => setProcesarMateriales(e.target.checked)}
-                        className="rounded border-slate-300 text-amber-500 focus:ring-amber-400"
+                        className="rounded border-slate-300 text-amber-500 focus:ring-amber-400 dark:border-slate-600"
                       />
-                      <span className="text-xs font-medium text-slate-700">
+                      <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
                         Procesar como solicitud de materiales
                       </span>
                     </label>

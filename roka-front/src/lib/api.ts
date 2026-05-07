@@ -174,74 +174,7 @@ export const updateSolicitudEstado = (id: number, estado: string) =>
 export const deleteSolicitud = (id: number) =>
   fetchApi<any>(`/solicitudes/${id}`, { method: 'DELETE' });
 
-// ---- Cotizaciones ----
-export const getCotizaciones = (params?: { solicitud_id?: number; estado?: string }) => {
-  const query = new URLSearchParams();
-  if (params?.solicitud_id) query.set('solicitud_id', String(params.solicitud_id));
-  if (params?.estado) query.set('estado', params.estado);
-  const qs = query.toString();
-  return fetchApi<any[]>(`/cotizaciones${qs ? `?${qs}` : ''}`);
-};
-
-export const getCotizacion = (id: number) => fetchApi<any>(`/cotizaciones/${id}`);
-
-export const createCotizacion = (data: any) =>
-  fetchApi<any>('/cotizaciones', { method: 'POST', body: JSON.stringify(data) });
-
-export const aprobarCotizacion = (id: number) =>
-  fetchApi<any>(`/cotizaciones/${id}/aprobar`, { method: 'PATCH' });
-
-export const rechazarCotizacion = (id: number) =>
-  fetchApi<any>(`/cotizaciones/${id}/rechazar`, { method: 'PATCH' });
-
-export const subirArchivoCotizacion = (id: number, file: File) => {
-  const formData = new FormData();
-  formData.append('archivo_cotizacion', file);
-  const token = localStorage.getItem('roka_token');
-  const headers: HeadersInit = {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  return fetch(`${API_BASE}/cotizaciones/${id}/archivo`, {
-    method: 'PATCH',
-    body: formData,
-    headers,
-  }).then(async res => {
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(error.error || `Error ${res.status}`);
-    }
-    return res.json();
-  });
-};
-
-// ---- Importar Cotización desde Archivo ----
-export const importarCotizacionArchivo = (file: File, solicitudCotizacionId: number): Promise<any> => {
-  const formData = new FormData();
-  formData.append('archivo_cotizacion', file);
-  formData.append('solicitud_cotizacion_id', String(solicitudCotizacionId));
-  
-  const token = localStorage.getItem('roka_token');
-  const headers: HeadersInit = {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  // Don't set Content-Type for FormData - browser sets it with boundary
-  
-  return fetch(`${API_BASE}/cotizaciones/importar`, {
-    method: 'POST',
-    body: formData,
-    headers,
-  }).then(async res => {
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(error.error || `Error ${res.status}`);
-    }
-    return res.json();
-  });
-};
-
-export const confirmImportCotizacion = (data: any): Promise<any> =>
-  fetchApi('/cotizaciones/importar/confirmar', { method: 'POST', body: JSON.stringify(data) });
-
-// ---- Solicitudes de Cotización (envío a proveedor, sin precios) ----
+// ---- Solicitudes de Cotización ----
 export const getSolicitudesCotizacion = (params?: { solicitud_id?: number; estado?: string; proveedor?: string; proyecto_id?: number }) => {
   const query = new URLSearchParams();
   if (params?.solicitud_id) query.set('solicitud_id', String(params.solicitud_id));
@@ -270,8 +203,46 @@ export const deleteSolicitudCotizacion = (id: number) =>
   fetchApi<any>(`/solicitud-cotizacion/${id}`, { method: 'DELETE' });
 
 export const descargarSolicitudCotizacionPdf = (id: number) => {
-  window.open(`/api/solicitud-cotizacion/${id}/descargar`, '_blank');
+  const baseUrl = import.meta.env.VITE_API_URL + '/roka/api';
+  // Open in new window - the browser will handle the PDF download
+  window.open(`${baseUrl}/solicitud-cotizacion/${id}/descargar`, '_blank');
 };
+
+export const importarRespuestaSC = (solicitudCotizacionId: number, file: File) => {
+  const formData = new FormData();
+  formData.append('solicitud_cotizacion_id', String(solicitudCotizacionId));
+  formData.append('archivo_sc', file);
+  const baseUrl = import.meta.env.VITE_API_URL + '/roka/api';
+  const token = localStorage.getItem('roka_token');
+  return fetch(`${baseUrl}/solicitud-cotizacion/importar`, {
+    method: 'POST',
+    headers: {
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  }).then(res => {
+    if (!res.ok) return res.json().then(err => { throw new Error(err.error || 'Error al importar'); });
+    return res.json();
+  });
+};
+
+export const confirmarImportacionSC = (data: {
+  solicitud_cotizacion_id: number;
+  archivo_path: string;
+  archivo_nombre: string;
+  numero_cov?: string;
+  proveedor_nombre?: string;
+  items: Array<{
+    solicitud_item_id: number;
+    precio_unitario: number;
+    descuento_porcentaje?: number;
+    codigo_proveedor?: string;
+  }>;
+}) =>
+  fetchApi<any>('/solicitud-cotizacion/importar/confirmar', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 
 // ---- Órdenes de Compra ----
 export const getOrdenes = (params?: { estado_entrega?: string; proyecto_id?: number }) => {
@@ -285,7 +256,7 @@ export const getOrdenes = (params?: { estado_entrega?: string; proyecto_id?: num
 export const getOrden = (id: number) => fetchApi<any>(`/ordenes/${id}`);
 
 export const generarOrden = (data: {
-  cotizacion_id: number;
+  solicitud_cotizacion_id: number;
   condiciones_pago?: string;
   folio?: string;
   descuento_tipo?: 'none' | 'porcentaje' | 'monto';

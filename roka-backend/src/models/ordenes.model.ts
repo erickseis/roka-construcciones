@@ -10,13 +10,13 @@ export async function getAllOrdenes(filters: OrdenFilters): Promise<OrdenCompra[
   const db = getDb();
   let query = `
     SELECT oc.*,
-           COALESCE(c.proveedor, oc.proveedor) AS proveedor,
-           c.solicitud_id,
+           COALESCE(sc.proveedor, oc.proveedor) AS proveedor,
+           sc.solicitud_id,
            p.nombre AS proyecto_nombre,
            COALESCE(sm.proyecto_id, oc.proyecto_id) AS proyecto_id
     FROM ordenes_compra oc
-    LEFT JOIN cotizaciones c ON c.id = oc.cotizacion_id
-    LEFT JOIN solicitudes_material sm ON sm.id = c.solicitud_id
+    LEFT JOIN solicitud_cotizacion sc ON sc.id = oc.solicitud_cotizacion_id
+    LEFT JOIN solicitudes_material sm ON sm.id = COALESCE(oc.solicitud_id, sc.solicitud_id)
     LEFT JOIN proyectos p ON p.id = COALESCE(sm.proyecto_id, oc.proyecto_id)
     WHERE 1=1
   `;
@@ -41,8 +41,8 @@ export async function getOrdenById(id: number): Promise<OrdenCompraDetalle | nul
   const db = getDb();
   const { rows: [orden] } = await db.query(`
     SELECT oc.*,
-           COALESCE(c.proveedor, oc.proveedor) AS proveedor,
-           c.proveedor_id, c.solicitud_id AS cotizacion_solicitud_id, c.total AS cotizacion_total,
+           COALESCE(sc.proveedor, oc.proveedor) AS proveedor,
+           sc.proveedor_id, sc.solicitud_id AS cotizacion_solicitud_id,
            sm.solicitante, sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
            p.nombre AS proyecto_nombre, p.ubicacion AS proyecto_ubicacion,
            p.numero_licitacion AS proyecto_numero_licitacion,
@@ -57,10 +57,10 @@ export async function getOrdenById(id: number): Promise<OrdenCompraDetalle | nul
            pr.contacto_correo AS proveedor_contacto_correo,
            CONCAT(ua.nombre, ' ', ua.apellido) AS autorizado_por_nombre
     FROM ordenes_compra oc
-    LEFT JOIN cotizaciones c ON c.id = oc.cotizacion_id
-    LEFT JOIN solicitudes_material sm ON sm.id = COALESCE(oc.solicitud_id, c.solicitud_id)
+    LEFT JOIN solicitud_cotizacion sc ON sc.id = oc.solicitud_cotizacion_id
+    LEFT JOIN solicitudes_material sm ON sm.id = COALESCE(oc.solicitud_id, sc.solicitud_id)
     LEFT JOIN proyectos p ON p.id = COALESCE(sm.proyecto_id, oc.proyecto_id)
-    LEFT JOIN proveedores pr ON pr.id = c.proveedor_id
+    LEFT JOIN proveedores pr ON pr.id = sc.proveedor_id
     LEFT JOIN usuarios ua ON ua.id = COALESCE(oc.autorizado_por_usuario_id, oc.created_by_usuario_id)
     WHERE oc.id = $1
   `, [id]);
@@ -72,13 +72,13 @@ export async function getOrdenItems(cotizacionId: number): Promise<OrdenItem[]> 
   if (!cotizacionId || cotizacionId === 0) return [];
   const db = getDb();
   const { rows } = await db.query(`
-    SELECT ci.*, si.nombre_material, si.cantidad_requerida, si.unidad,
+    SELECT scd.*, si.nombre_material, si.cantidad_requerida, si.unidad,
            COALESCE(m.sku, si.codigo) AS material_sku
-    FROM cotizacion_items ci
-    JOIN solicitud_items si ON si.id = ci.solicitud_item_id
+    FROM solicitud_cotizacion_detalle scd
+    JOIN solicitud_items si ON si.id = scd.solicitud_item_id
     LEFT JOIN materiales m ON m.id = si.material_id
-    WHERE ci.cotizacion_id = $1
-    ORDER BY ci.id
+    WHERE scd.solicitud_cotizacion_id = $1 AND scd.precio_unitario IS NOT NULL
+    ORDER BY scd.id
   `, [cotizacionId]);
 
   return rows;
@@ -97,7 +97,7 @@ export async function getOrdenItemsByOC(ordenCompraId: number): Promise<OrdenIte
   return rows;
 }
 
-export async function getCotizacionForOC(cotizacionId: number, db: Queryable): Promise<{
+export async function getSolicitudCotizacionForOC(solicitudCotizacionId: number, db: Queryable): Promise<{
   id: number;
   solicitud_id: number;
   total: number;
@@ -109,31 +109,47 @@ export async function getCotizacionForOC(cotizacionId: number, db: Queryable): P
   presupuesto_categoria_id: number | null;
   solicitud_estado: string;
 } | null> {
-  const { rows: [cotizacion] } = await db.query(
-    `SELECT c.*, s.id AS solicitud_id_ref, s.estado AS solicitud_estado,
+  // Calcular total desde solicitud_cotizacion_detalle (donde precio_unitario IS NOT NULL)
+  const { rows: [sc] } = await db.query(
+    `SELECT sc.*, 
+            s.id AS solicitud_id_ref, s.estado AS solicitud_estado,
             s.proyecto_id, s.presupuesto_categoria_id,
-            p.nombre AS proyecto_nombre
-     FROM cotizaciones c
-     JOIN solicitudes_material s ON s.id = c.solicitud_id
+            p.nombre AS proyecto_nombre,
+            COALESCE(
+              (SELECT SUM(
+                CASE 
+                  WHEN scd.descuento_porcentaje > 0 THEN 
+                    (scd.cantidad_requerida * scd.precio_unitario) * (1 - scd.descuento_porcentaje / 100)
+                  ELSE 
+                    scd.cantidad_requerida * scd.precio_unitario
+                END
+              )
+              FROM solicitud_cotizacion_detalle scd
+              JOIN solicitud_items si ON si.id = scd.solicitud_item_id
+              WHERE scd.solicitud_cotizacion_id = sc.id AND scd.precio_unitario IS NOT NULL),
+              0
+            ) AS total
+     FROM solicitud_cotizacion sc
+     JOIN solicitudes_material s ON s.id = sc.solicitud_id
      JOIN proyectos p ON p.id = s.proyecto_id
-     WHERE c.id = $1`,
-    [cotizacionId]
+     WHERE sc.id = $1`,
+    [solicitudCotizacionId]
   );
 
-  return cotizacion || null;
+  return sc || null;
 }
 
-export async function checkExistingOC(cotizacionId: number, db?: Queryable): Promise<number | null> {
+export async function checkExistingOC(solicitudCotizacionId: number, db?: Queryable): Promise<number | null> {
   const conn = getDb(db);
   const { rows } = await conn.query(
-    'SELECT id FROM ordenes_compra WHERE cotizacion_id = $1',
-    [cotizacionId]
+    'SELECT id FROM ordenes_compra WHERE solicitud_cotizacion_id = $1',
+    [solicitudCotizacionId]
   );
   return rows[0]?.id || null;
 }
 
 export async function createOrden(data: {
-  cotizacion_id: number;
+  solicitud_cotizacion_id: number;
   condiciones_pago: string;
   total: number;
   created_by_usuario_id: number | null;
@@ -155,7 +171,7 @@ export async function createOrden(data: {
   const conn = getDb(db);
   const { rows: [orden] } = await conn.query(
     `INSERT INTO ordenes_compra (
-        cotizacion_id, condiciones_pago, total, created_by_usuario_id,
+        solicitud_cotizacion_id, condiciones_pago, total, created_by_usuario_id,
         autorizado_por_usuario_id, solicitud_id, codigo_obra,
         folio, descuento_tipo, descuento_valor, descuento_monto,
         subtotal_neto, impuesto_monto, total_final,
@@ -164,7 +180,7 @@ export async function createOrden(data: {
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
      RETURNING *`,
     [
-      data.cotizacion_id,
+      data.solicitud_cotizacion_id,
       data.condiciones_pago,
       data.total,
       data.created_by_usuario_id,

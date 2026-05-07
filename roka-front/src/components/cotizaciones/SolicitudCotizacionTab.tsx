@@ -88,7 +88,7 @@ export default function SolicitudCotizacionTab() {
     <>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Envío de solicitudes a proveedores para que coticen materiales. Sin precios.
           </p>
         </div>
@@ -107,7 +107,7 @@ export default function SolicitudCotizacionTab() {
           { label: 'Respondidas', value: list?.filter((c: any) => c.estado === 'Respondida').length || 0, color: 'text-emerald-600' },
           { label: 'Anuladas', value: list?.filter((c: any) => c.estado === 'Anulada').length || 0, color: 'text-red-600' },
         ].map(stat => (
-          <div key={stat.label} className="rounded-xl bg-white p-4 shadow-sm border border-slate-100">
+          <div key={stat.label} className="rounded-xl bg-white p-4 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700">
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stat.label}</p>
             <p className={`text-2xl font-black ${stat.color}`}>{stat.value}</p>
           </div>
@@ -116,7 +116,7 @@ export default function SolicitudCotizacionTab() {
 
       {/* Table */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <div className="rounded-xl bg-white p-6 shadow-sm">
+        <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-[#111827]/40 dark:border dark:border-slate-800">
           <DataTable
             columns={columns}
             data={list || []}

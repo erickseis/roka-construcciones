@@ -53,7 +53,7 @@ export default function CategoriaModal({ isOpen, onClose, onSave, categoria }: C
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
       <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl dark:bg-slate-900">
         <div className="flex items-center justify-between border-b border-slate-100 p-6 dark:border-slate-800">
           <h2 className="text-xl font-black text-slate-900 dark:text-slate-50">

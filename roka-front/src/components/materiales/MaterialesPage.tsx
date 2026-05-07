@@ -198,7 +198,7 @@ export default function MaterialesPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2 text-sm font-medium text-slate-500 mb-1">
+          <div className="flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">
             <span>Configuración</span>
             <ChevronRight size={14} />
             <span className="text-amber-600">Catálogo</span>
@@ -206,7 +206,7 @@ export default function MaterialesPage() {
           <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50">
             Gestiona tus <span className="text-amber-500">Materiales</span>
           </h1>
-          <p className="text-sm font-medium text-slate-500">
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
             Gestiona el catálogo centralizado para mejorar la trazabilidad de tus compras.
           </p>
         </div>
@@ -262,7 +262,7 @@ export default function MaterialesPage() {
 
       {/* Stats Quick View */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-[#111827]/40">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/20">
               <Package size={24} />
@@ -273,7 +273,7 @@ export default function MaterialesPage() {
             </div>
           </div>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-[#111827]/40">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-900/20">
               <Filter size={24} />
@@ -284,7 +284,7 @@ export default function MaterialesPage() {
             </div>
           </div>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-[#111827]/40">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50 text-green-600 dark:bg-green-900/20">
               <RefreshCw size={24} />
@@ -298,7 +298,7 @@ export default function MaterialesPage() {
       </div>
 
       {/* Filters & Search */}
-      <div className="flex flex-col gap-4 p-4 rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:flex-row lg:items-center">
+      <div className="flex flex-col gap-4 p-4 rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-[#111827]/40 lg:flex-row lg:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input
@@ -342,7 +342,7 @@ export default function MaterialesPage() {
 
       {/* Conditional Rendering based on Tab */}
       {activeTab === 'materiales' ? (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-[#111827]/40">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -397,7 +397,7 @@ export default function MaterialesPage() {
           </div>
         </div>
       ) : activeTab === 'categorias' ? (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-[#111827]/40">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -431,7 +431,7 @@ export default function MaterialesPage() {
           </div>
         </div>
       ) : activeTab === 'unidades' ? (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-[#111827]/40">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -463,7 +463,7 @@ export default function MaterialesPage() {
           </div>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-[#111827]/40">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>

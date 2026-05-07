@@ -44,12 +44,12 @@ const STEPS = [
     detail: 'Lista los materiales con cantidad y unidad de medida requeridos.',
   },
   {
-    id: 'cotizaciones',
+    id: 'solicitudes-cotizacion',
     path: '/cotizaciones',
     icon: DollarSign,
-    label: 'Cotización',
-    description: 'Obtener precios de proveedores',
-    detail: 'Registra precios de uno o más proveedores para comparar.',
+    label: 'Solicitud de Cotización',
+    description: 'Gestionar solicitudes de cotización a proveedores',
+    detail: 'Crea y envía solicitudes de cotización para obtener precios de proveedores.',
   },
   {
     id: 'ordenes',

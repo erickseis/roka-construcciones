@@ -2,7 +2,6 @@ import express from 'express';
 // import cors from 'cors';
 
 import solicitudesRouter from './routes/solicitudes.routes';
-import cotizacionesRouter from './routes/cotizaciones.routes';
 import ordenesRouter from './routes/ordenes.routes';
 import dashboardRouter from './routes/dashboard.routes';
 import authRouter from './routes/auth.routes';
@@ -27,7 +26,6 @@ export function createRokaApp(): express.Application {
   app.use('/uploads', express.static('uploads'));
 
   app.use('/api/solicitudes', solicitudesRouter);
-  app.use('/api/cotizaciones', cotizacionesRouter);
   app.use('/api/ordenes', ordenesRouter);
   app.use('/api/dashboard', dashboardRouter);
   app.use('/api/auth', authRouter);

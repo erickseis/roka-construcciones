@@ -2,7 +2,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-const uploadDirs = ['uploads/licitaciones', 'uploads/materiales', 'uploads/cotizaciones', 'uploads/sc-pdf'];
+const uploadDirs = ['uploads/licitaciones', 'uploads/materiales', 'uploads/sc-pdf', 'uploads/sc-respuestas'];
 
 uploadDirs.forEach(dir => {
   const fullPath = path.join(process.cwd(), dir);
@@ -13,7 +13,7 @@ uploadDirs.forEach(dir => {
 
 const getUploadDir = (fieldname: string): string => {
   if (fieldname === 'archivo_materiales') return 'uploads/materiales';
-  if (fieldname === 'archivo_cotizacion') return 'uploads/cotizaciones';
+  if (fieldname === 'archivo_sc') return 'uploads/sc-respuestas';
   return 'uploads/licitaciones';
 };
 

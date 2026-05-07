@@ -117,51 +117,7 @@ export interface SolicitudInput {
   items: SolicitudItemInput[];
 }
 
-// --- Cotizaciones ---
-
-export type CotizacionEstado = 'Pendiente' | 'Aprobada' | 'Rechazada';
-
-export interface CotizacionItem {
-  id: number;
-  cotizacion_id: number;
-  solicitud_item_id: number;
-  nombre_material?: string;
-  cantidad_requerida?: number;
-  unidad?: string;
-  precio_unitario: number;
-  subtotal: number;
-  descuento_porcentaje?: number;
-  codigo_proveedor?: string | null;
-}
-
-export interface CotizacionItemInput {
-  solicitud_item_id: number;
-  precio_unitario: number;
-}
-
-export interface Cotizacion {
-  id: number;
-  solicitud_id: number;
-  proveedor: string;
-  total: number;
-  archivo_adjunto?: string;
-  estado: CotizacionEstado;
-  items?: CotizacionItem[];
-  solicitud?: Solicitud;
-  created_at: string;
-  numero_cov?: string | null;
-  imported_from_file?: boolean;
-  metodo_importacion?: string;
-  datos_importados?: any;
-}
-
-export interface CotizacionInput {
-  solicitud_id: number;
-  proveedor: string;
-  items: CotizacionItemInput[];
-}
-
-// --- Importación de Cotizaciones ---
+// --- Importación de Precios desde Archivo ---
 
 export interface ParsedItem {
   codigo: string;
@@ -247,7 +203,7 @@ export type DescuentoTipo = 'none' | 'porcentaje' | 'monto';
 
 export interface OrdenCompra {
   id: number;
-  cotizacion_id: number;
+  solicitud_cotizacion_id: number;
   fecha_emision: string;
   folio: string;
   condiciones_pago: string;
@@ -263,7 +219,6 @@ export interface OrdenCompra {
   total_final: number;
   estado_entrega: EstadoEntrega;
   total: number;
-  cotizacion?: Cotizacion;
   proveedor?: string;
   proveedor_rut?: string;
   proveedor_razon_social?: string;
@@ -282,7 +237,7 @@ export interface OrdenCompra {
 }
 
 export interface OrdenCompraInput {
-  cotizacion_id: number;
+  solicitud_cotizacion_id: number;
   condiciones_pago?: string;
   folio?: string;
   descuento_tipo?: DescuentoTipo;
@@ -373,8 +328,6 @@ export interface PresupuestoAlerta {
 // --- Notificaciones ---
 
 export type TipoNotificacion =
-  | 'cotizacion.aprobada'
-  | 'cotizacion.rechazada'
   | 'orden.generada'
   | 'presupuesto.umbral'
   | 'presupuesto.sobreconsumo';

@@ -38,7 +38,7 @@ export function RokaChatbot() {
       {
         id: 'initial',
         role: 'bot',
-        text: `¡Buen día, ${firstName}! Soy **Roka AI**, su asistente virtual. Puedo ayudarle con información sobre solicitudes, cotizaciones, órdenes de compra y estadísticas del sistema. ¿En qué le puedo asistir hoy?`,
+        text: `¡Buen día, ${firstName}! Soy **Roka AI**, su asistente virtual. Puedo ayudarle con información sobre solicitudes, solicitudes de cotización, órdenes de compra y estadísticas del sistema. ¿En qué le puedo asistir hoy?`,
         time: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }),
       }
     ]);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
-import { createOrdenManual, getSolicitudes } from '@/lib/api';
+import { createOrdenManual, getSolicitudes, getUnidadesMedida } from '@/lib/api';
 import { AlertCircle, Plus, Trash2 } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import { getProyectosAdmin } from '@/lib/api';
@@ -16,6 +16,7 @@ interface OCIItem {
 
 export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: boolean; onClose: () => void; onSuccess: () => void }) {
   const { data: proyectos } = useApi(() => getProyectosAdmin(), []);
+  const { data: masterUnidades } = useApi(() => getUnidadesMedida(), []);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -157,25 +158,38 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
               <Plus size={14} /> Agregar ítem
             </button>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {items.map((item, idx) => (
-              <div key={item.id} className="flex items-start gap-2 rounded-lg border border-slate-200 p-2">
-                <div className="flex-1 grid grid-cols-5 gap-2">
+              <div key={item.id} className="flex items-end gap-2 rounded-lg border border-slate-200 p-3 bg-slate-50/50">
+                <div className="flex-1 grid grid-cols-5 gap-3">
                   <div className="col-span-2">
-                    <input type="text" value={item.nombre_material} onChange={e => updateItem(item.id, 'nombre_material', e.target.value)} placeholder="Material" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs outline-none focus:border-amber-400" />
+                    <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Material / Descripción</label>
+                    <input type="text" value={item.nombre_material} onChange={e => updateItem(item.id, 'nombre_material', e.target.value)} placeholder="Ej: Cemento" className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs outline-none focus:border-amber-400" />
                   </div>
                   <div>
-                    <input type="number" step="0.01" min="0" value={item.cantidad} onChange={e => updateItem(item.id, 'cantidad', Number(e.target.value))} placeholder="Cant" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs outline-none focus:border-amber-400" />
+                    <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Cant.</label>
+                    <input type="number" step="0.01" min="0" value={item.cantidad} onChange={e => updateItem(item.id, 'cantidad', Number(e.target.value))} placeholder="0" className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs outline-none focus:border-amber-400" />
                   </div>
                   <div>
-                    <input type="text" value={item.unidad} onChange={e => updateItem(item.id, 'unidad', e.target.value)} placeholder="Unidad" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs outline-none focus:border-amber-400" />
+                    <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Unidad</label>
+                    <select 
+                      value={item.unidad} 
+                      onChange={e => updateItem(item.id, 'unidad', e.target.value)} 
+                      className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs outline-none focus:border-amber-400"
+                    >
+                      <option value="">Seleccionar</option>
+                      {masterUnidades?.map((u: any) => (
+                        <option key={u.id} value={u.abreviatura}>{u.nombre} ({u.abreviatura})</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
-                    <input type="number" step="0.01" min="0" value={item.precio_unitario} onChange={e => updateItem(item.id, 'precio_unitario', Number(e.target.value))} placeholder="$ unit." className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs outline-none focus:border-amber-400" />
+                    <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Precio Unit. ($)</label>
+                    <input type="number" step="0.01" min="0" value={item.precio_unitario} onChange={e => updateItem(item.id, 'precio_unitario', Number(e.target.value))} placeholder="0" className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs outline-none focus:border-amber-400" />
                   </div>
                 </div>
-                <button type="button" onClick={() => removeItem(item.id)} className="mt-1 rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500">
-                  <Trash2 size={14} />
+                <button type="button" onClick={() => removeItem(item.id)} className="mb-1 rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors" title="Eliminar ítem">
+                  <Trash2 size={16} />
                 </button>
               </div>
             ))}

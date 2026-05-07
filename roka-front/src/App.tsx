@@ -6,7 +6,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './components/dashboard/DashboardPage';
 import SolicitudesPage from './components/solicitudes/SolicitudesPage';
-import CotizacionesPage from './components/cotizaciones/CotizacionesPage';
+import SolicitudCotizacionTab from './components/cotizaciones/SolicitudCotizacionTab';
 import OrdenesPage from './components/ordenes/OrdenesPage';
 import ConfigPage from './pages/config/ConfigPage';
 import MaterialesPage from './components/materiales/MaterialesPage';
@@ -30,7 +30,7 @@ export default function App() {
                 <Route path="/solicitudes" element={<SolicitudesPage />} />
                 <Route path="/materiales" element={<MaterialesPage />} />
                 <Route path="/proveedores" element={<ProveedoresPage />} />
-                <Route path="/cotizaciones" element={<CotizacionesPage />} />
+                <Route path="/cotizaciones" element={<SolicitudCotizacionTab />} />
                 <Route path="/ordenes" element={<OrdenesPage />} />
                 <Route path="/proyectos" element={<ProyectosPage />} />
                 <Route path="/presupuestos" element={<PresupuestosPage />} />

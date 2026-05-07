@@ -39,9 +39,9 @@ export function registerOrdenesTools(server: McpServer, auth: AuthManager, clien
 
   server.tool(
     "crear_orden_compra",
-    "Genera una orden de compra a partir de una cotización aprobada. Compromete presupuesto automáticamente.",
+    "Genera una orden de compra a partir de una solicitud de cotización respondida. Compromete presupuesto automáticamente.",
     {
-      cotizacion_id: z.number().describe("ID de la cotización aprobada"),
+      solicitud_cotizacion_id: z.number().describe("ID de la solicitud de cotización respondida"),
       condiciones_pago: z.string().optional().describe("Condiciones de pago (Neto 30 días por defecto)"),
       folio: z.string().optional().describe("Folio personalizado (se genera automáticamente si no se especifica)"),
       descuento_tipo: z.enum(["none", "porcentaje", "monto"]).optional().describe("Tipo de descuento"),

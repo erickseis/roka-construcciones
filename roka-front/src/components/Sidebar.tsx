@@ -22,7 +22,7 @@ import { useAuth } from '../context/AuthContext';
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', to: '/' },
   { icon: FileText, label: 'Solicitudes de Materiales', to: '/solicitudes' },
-  { icon: DollarSign, label: 'Cotizaciones', to: '/cotizaciones' },
+  { icon: DollarSign, label: 'Solicitudes de Cotización', to: '/cotizaciones' },
   { icon: PackageCheck, label: 'Órdenes de Compra', to: '/ordenes' },
 ];
 
@@ -122,7 +122,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       </div>
 
       <div className="border-t border-slate-200 bg-slate-200/30 p-4 dark:border-[#1e293b] dark:bg-[#0b0e14]/40">
-        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-[#1e293b] dark:bg-[#141b2d]">
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-500/10 dark:text-amber-500">
             <User size={20} />
           </div>

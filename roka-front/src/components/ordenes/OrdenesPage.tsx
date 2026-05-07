@@ -10,7 +10,7 @@ import OCManualModal from './OCManualModal';
 import { useApi } from '@/hooks/useApi';
 import {
   getOrdenes, generarOrden, updateEstadoEntrega,
-  getCotizaciones, getOrden
+  getSolicitudesCotizacion, getOrden
 } from '@/lib/api';
 
 export default function OrdenesPage() {
@@ -22,7 +22,7 @@ export default function OrdenesPage() {
   const { data: ordenes, loading, refetch } = useApi(() => getOrdenes(), []);
 
   // Form state
-  const [cotizacionId, setCotizacionId] = useState('');
+  const [solicitudCotizacionId, setSolicitudCotizacionId] = useState('');
   const [condicionesPago, setCondicionesPago] = useState('Neto 30 días');
   const [folio, setFolio] = useState('');
   const [descuentoTipo, setDescuentoTipo] = useState<'none' | 'porcentaje' | 'monto'>('none');
@@ -33,11 +33,14 @@ export default function OrdenesPage() {
   const [observaciones, setObservaciones] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Approved cotizaciones available for OC
-  const { data: cotizaciones } = useApi(() => getCotizaciones({ estado: 'Aprobada' }), []);
+  // Solicitudes de cotización respondidas available for OC
+  const { data: solicitudesCotizacion } = useApi(() => getSolicitudesCotizacion({ estado: 'Respondida' }), []);
 
-  const selectedCotizacion = cotizaciones?.find((c: any) => c.id === Number(cotizacionId));
-  const subtotalBase = Number(selectedCotizacion?.total || 0);
+  const selectedSC = solicitudesCotizacion?.find((sc: any) => sc.id === Number(solicitudCotizacionId));
+  // Calculate subtotal from items with prices
+  const subtotalBase = selectedSC?.items?.reduce((sum: number, item: any) => {
+    return sum + (Number(item.precio_unitario || 0) * Number(item.cantidad_requerida || 0));
+  }, 0) || 0;
   const descuentoValorNum = Number(descuentoValor || 0);
   const descuentoMonto = descuentoTipo === 'porcentaje'
     ? (subtotalBase * descuentoValorNum) / 100
@@ -51,7 +54,7 @@ export default function OrdenesPage() {
     setSubmitting(true);
     try {
       await generarOrden({
-        cotizacion_id: Number(cotizacionId),
+        solicitud_cotizacion_id: Number(solicitudCotizacionId),
         condiciones_pago: condicionesPago,
         folio: folio.trim() || undefined,
         descuento_tipo: descuentoTipo,
@@ -62,7 +65,7 @@ export default function OrdenesPage() {
         observaciones: observaciones.trim() || undefined,
       });
       setShowForm(false);
-      setCotizacionId('');
+      setSolicitudCotizacionId('');
       setCondicionesPago('Neto 30 días');
       setFolio('');
       setDescuentoTipo('none');
@@ -110,10 +113,10 @@ export default function OrdenesPage() {
       ),
     },
     {
-      key: 'cotizacion_id',
-      header: 'Cotización',
+      key: 'solicitud_cotizacion_id',
+      header: 'Sol. Cotización',
       render: (row: any) => (
-        <span className="font-mono text-xs text-slate-500">COT-{String(row.cotizacion_id).padStart(3, '0')}</span>
+        <span className="font-mono text-xs text-slate-500">SC-{String(row.solicitud_cotizacion_id).padStart(3, '0')}</span>
       ),
     },
     { key: 'proveedor', header: 'Proveedor', sortable: true },
@@ -193,11 +196,11 @@ export default function OrdenesPage() {
         <p className="mb-1 text-xs font-bold uppercase tracking-widest text-emerald-600">Módulo 3</p>
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-slate-900">
+            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               Órdenes de Compra
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Genera y gestiona órdenes de compra a partir de cotizaciones aprobadas.
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+               Genera y gestiona órdenes de compra a partir de solicitudes de cotización respondidas.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -226,7 +229,7 @@ export default function OrdenesPage() {
           { label: 'Recibido Parcial', value: ordenes?.filter((o: any) => o.estado_entrega === 'Recibido parcial').length || 0, color: 'text-sky-600' },
           { label: 'Completadas', value: ordenes?.filter((o: any) => o.estado_entrega === 'Completado').length || 0, color: 'text-emerald-600' },
         ].map(stat => (
-          <div key={stat.label} className="rounded-xl bg-white p-4 shadow-sm border border-slate-100">
+          <div key={stat.label} className="rounded-xl bg-white p-4 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700">
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stat.label}</p>
             <p className={`text-2xl font-black ${stat.color}`}>{stat.value}</p>
           </div>
@@ -235,7 +238,7 @@ export default function OrdenesPage() {
 
       {/* Table */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <div className="rounded-xl bg-white p-6 shadow-sm">
+        <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-900 dark:border dark:border-slate-800">
           <DataTable
             columns={columns}
             data={ordenes || []}
@@ -243,7 +246,7 @@ export default function OrdenesPage() {
             searchable
             searchPlaceholder="Buscar por proveedor, proyecto..."
             emptyTitle="Sin órdenes"
-            emptyMessage="Genera una orden a partir de una cotización aprobada"
+             emptyMessage="Genera una orden a partir de una solicitud de cotización respondida"
           />
         </div>
       </motion.div>
@@ -253,25 +256,25 @@ export default function OrdenesPage() {
         isOpen={showForm}
         onClose={() => setShowForm(false)}
         title="Generar Orden de Compra"
-        subtitle="Selecciona una cotización aprobada para crear la OC"
+         subtitle="Selecciona una solicitud de cotización respondida para crear la OC"
         size="md"
       >
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
-              Cotización Aprobada
+              Solicitud de Cotización Respondida
             </label>
             <select
               required
-              value={cotizacionId}
-              onChange={e => setCotizacionId(e.target.value)}
-              title="Cotización aprobada previamente de la cual se generará la orden de compra, compromete el presupuesto del proyecto"
+              value={solicitudCotizacionId}
+              onChange={e => setSolicitudCotizacionId(e.target.value)}
+              title="Solicitud de cotización respondida de la cual se generará la orden de compra, compromete el presupuesto del proyecto"
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
             >
-              <option value="">Seleccionar cotización...</option>
-              {cotizaciones?.map((c: any) => (
-                <option key={c.id} value={c.id}>
-                  COT-{String(c.id).padStart(3, '0')} — {c.proveedor} — ${Number(c.total).toLocaleString()}
+              <option value="">Seleccionar solicitud de cotización...</option>
+              {solicitudesCotizacion?.map((sc: any) => (
+                <option key={sc.id} value={sc.id}>
+                  SC-{String(sc.id).padStart(3, '0')} — {sc.proveedor} — {sc.proyecto_nombre}
                 </option>
               ))}
             </select>
@@ -381,16 +384,16 @@ export default function OrdenesPage() {
             />
           </div>
 
-          {cotizacionId && cotizaciones && (
+          {solicitudCotizacionId && solicitudesCotizacion && (
             <div className="rounded-lg bg-emerald-50 p-4 border border-emerald-100">
               <p className="text-xs font-bold text-emerald-700 mb-1">Resumen</p>
               {(() => {
-                const cot = selectedCotizacion;
-                if (!cot) return null;
+                const sc = selectedSC;
+                if (!sc) return null;
                 return (
                   <div className="space-y-1 text-sm text-emerald-800">
-                    <p><span className="font-medium">Proveedor:</span> {cot.proveedor}</p>
-                    <p><span className="font-medium">Proyecto:</span> {cot.proyecto_nombre}</p>
+                    <p><span className="font-medium">Proveedor:</span> {sc.proveedor}</p>
+                    <p><span className="font-medium">Proyecto:</span> {sc.proyecto_nombre}</p>
                     <p><span className="font-medium">Subtotal base:</span> ${Number(subtotalBase).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</p>
                     <p><span className="font-medium">Descuento:</span> ${Math.max(0, descuentoMonto).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</p>
                     <p className="text-lg font-black mt-2">
@@ -412,7 +415,7 @@ export default function OrdenesPage() {
             </button>
             <button
               type="submit"
-              disabled={submitting || !cotizacionId}
+              disabled={submitting || !solicitudCotizacionId}
               className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 disabled:opacity-60"
             >
               <PackageCheck size={16} />
@@ -435,32 +438,32 @@ export default function OrdenesPage() {
             <FlowStepper currentStep={3} estado={showDetail.estado_entrega} tipo="orden" />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="rounded-lg bg-slate-50 p-3">
-                <p className="text-[10px] font-bold uppercase text-slate-400">Cotización</p>
-                <p className="text-sm font-bold text-slate-800">COT-{String(showDetail.cotizacion_id).padStart(3, '0')}</p>
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
+                <p className="text-[10px] font-bold uppercase text-slate-400">Solicitud de Cotización</p>
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">SC-{String(showDetail.solicitud_cotizacion_id).padStart(3, '0')}</p>
               </div>
-              <div className="rounded-lg bg-slate-50 p-3">
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Fecha Emisión</p>
-                <p className="text-sm font-bold text-slate-800">{new Date(showDetail.fecha_emision).toLocaleDateString('es-ES')}</p>
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{new Date(showDetail.fecha_emision).toLocaleDateString('es-ES')}</p>
               </div>
-              <div className="rounded-lg bg-slate-50 p-3">
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Condiciones de Pago</p>
-                <p className="text-sm font-bold text-slate-800">{showDetail.condiciones_pago}</p>
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{showDetail.condiciones_pago}</p>
               </div>
-              <div className="rounded-lg bg-slate-50 p-3">
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Estado Entrega</p>
                 <StatusBadge status={showDetail.estado_entrega} size="md" />
               </div>
             </div>
-            <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-4 text-center">
+            <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-4 text-center dark:bg-emerald-950/20 dark:border-emerald-900">
               <p className="text-[10px] font-bold uppercase text-emerald-600 mb-1">Total Orden de Compra</p>
-              <p className="text-3xl font-black text-emerald-700">
+              <p className="text-3xl font-black text-emerald-700 dark:text-emerald-400">
                 ${Number(showDetail.total_final ?? showDetail.total).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
               </p>
             </div>
-            <div className="rounded-lg bg-slate-50 p-3">
+            <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
               <p className="text-[10px] font-bold uppercase text-slate-400">Proyecto</p>
-              <p className="text-sm font-bold text-slate-800">{showDetail.proyecto_nombre}</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{showDetail.proyecto_nombre}</p>
             </div>
           </div>
         )}

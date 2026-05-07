@@ -91,8 +91,8 @@ export function Header({ onMenuClick }: HeaderProps) {
   };
 
   const getNotificationAccent = (type: string) => {
-    if (type === 'cotizacion.aprobada') return 'text-emerald-600';
-    if (type === 'cotizacion.rechazada') return 'text-red-600';
+    if (type === 'solicitud_cotizacion.respondida') return 'text-emerald-600';
+    if (type === 'solicitud_cotizacion.anulada') return 'text-red-600';
     if (type === 'orden.generada') return 'text-blue-600';
     if (type === 'presupuesto.sobreconsumo') return 'text-red-700';
     if (type === 'presupuesto.umbral') return 'text-amber-600';

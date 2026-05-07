@@ -32,22 +32,28 @@ export function MaterialsList() {
       {materials.map((item) => (
         <div 
           key={item.name}
-          className="flex items-center justify-between rounded-lg bg-slate-50 p-3 transition-colors hover:bg-slate-100"
+          className="flex items-center justify-between rounded-lg bg-slate-50 p-3 transition-colors hover:bg-slate-100 dark:bg-slate-800/50 dark:hover:bg-slate-800"
         >
           <div className="flex items-center gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded bg-white text-slate-400 shadow-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded bg-white text-slate-400 shadow-sm dark:bg-slate-900">
               <item.icon size={20} className={item.status === 'Aprobado' ? 'text-amber-600' : ''} />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-slate-900">{item.name}</h4>
-              <p className="text-[10px] font-medium uppercase text-slate-400">{item.details}</p>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">{item.name}</h4>
+              <p className="text-[10px] font-medium uppercase text-slate-400 dark:text-slate-500">{item.details}</p>
             </div>
           </div>
           <span className={cn(
             "flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-bold uppercase",
-            item.statusColor.split(' ').slice(0, 3).join(' ')
+            item.status === 'Aprobado' ? 'bg-green-50 text-green-700 border-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900/50' :
+            item.status === 'Cotizado' ? 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-900/50' :
+            'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
           )}>
-            <span className={cn("h-1 w-1 rounded-full", item.statusColor.split(' ').pop()?.replace('dot-', 'bg-'))}></span>
+            <span className={cn(
+              "h-1 w-1 rounded-full",
+              item.status === 'Aprobado' ? 'bg-green-500' :
+              item.status === 'Cotizado' ? 'bg-blue-500' : 'bg-slate-400'
+            )}></span>
             {item.status}
           </span>
         </div>

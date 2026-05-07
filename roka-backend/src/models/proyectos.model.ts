@@ -141,13 +141,13 @@ export async function getMetricasProyecto(proyectoId: number, db?: Queryable): P
   const { rows } = await conn.query(
     `SELECT
        COUNT(DISTINCT sm.id)::int AS total_solicitudes,
-       COUNT(DISTINCT c.id)::int AS total_cotizaciones,
+       COUNT(DISTINCT sc.id)::int AS total_cotizaciones,
        COUNT(DISTINCT oc.id)::int AS total_ordenes,
        COALESCE(SUM(oc.total), 0)::numeric AS gasto_total_oc
      FROM proyectos p
      LEFT JOIN solicitudes_material sm ON sm.proyecto_id = p.id
-     LEFT JOIN cotizaciones c ON c.solicitud_id = sm.id
-     LEFT JOIN ordenes_compra oc ON oc.cotizacion_id = c.id
+     LEFT JOIN solicitud_cotizacion sc ON sc.solicitud_id = sm.id
+     LEFT JOIN ordenes_compra oc ON oc.solicitud_cotizacion_id = sc.id
      WHERE p.id = $1`,
     [proyectoId]
   );

@@ -2,7 +2,7 @@ import { Queryable } from './index';
 
 export interface OrdenCompra {
   id: number;
-  cotizacion_id: number | null;
+  solicitud_cotizacion_id: number | null;
   proyecto_id: number | null;
   proveedor: string | null;
   proveedor_rut: string | null;
@@ -33,7 +33,7 @@ export interface OrdenCompra {
 }
 
 export interface OrdenCompraDetalle extends OrdenCompra {
-  cotizacion_total: number;
+  sc_total: number;
   solicitante: string;
   fecha_solicitud: string;
   solicitud_estado: string;
@@ -54,10 +54,12 @@ export interface OrdenCompraDetalle extends OrdenCompra {
 
 export interface OrdenItem {
   id: number;
-  cotizacion_id: number;
+  solicitud_cotizacion_detalle_id?: number;
   solicitud_item_id: number;
   precio_unitario: number;
   subtotal: number;
+  descuento_porcentaje?: number;
+  codigo_proveedor?: string;
   nombre_material?: string;
   cantidad_requerida?: number;
   unidad?: string;
@@ -65,7 +67,7 @@ export interface OrdenItem {
 }
 
 export interface GenerarOCInput {
-  cotizacion_id: number;
+  solicitud_cotizacion_id: number;
   condiciones_pago?: string;
   folio?: string;
   descuento_tipo?: string;
