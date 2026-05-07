@@ -9,7 +9,7 @@ import {
   Loader2,
   Trash2
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import { Modal } from '../ui/Modal';
 import { createSolicitud } from '@/lib/api';
 
@@ -149,14 +149,66 @@ export default function BulkImportModal({
   };
 
   const downloadTemplate = () => {
+    // Hoja de Datos
     const templateData = [
       { 'Material': 'Cemento Gris', 'Cantidad': 10, 'Unidad': 'Sacos', 'SKU': 'CEM-001' },
       { 'Material': 'Varilla 1/2', 'Cantidad': 50, 'Unidad': 'Piezas', 'SKU': 'VAR-002' },
-      { 'Material': 'Arena IT', 'Cantidad': 5.5, 'Unidad': 'm3', 'SKU': '' },
+      { 'Material': 'Arena de Río', 'Cantidad': 5.5, 'Unidad': 'm3', 'SKU': '' },
+      { 'Material': 'Grava 3/4', 'Cantidad': 3, 'Unidad': 'm3', 'SKU': '' },
     ];
+    
+    // Hoja de Instrucciones
+    const instructionData = [
+      { 'Campo': 'Material', 'Descripción': 'Nombre del material o insumo (Obligatorio)', 'Ejemplo': 'Cemento Gris' },
+      { 'Campo': 'Cantidad', 'Descripción': 'Cantidad requerida en formato numérico (Obligatorio)', 'Ejemplo': '10' },
+      { 'Campo': 'Unidad', 'Descripción': 'Unidad de medida (Opcional, por defecto: Unidades)', 'Ejemplo': 'Sacos' },
+      { 'Campo': 'SKU', 'Descripción': 'Código interno del material (Opcional, ayuda a vincular con el catálogo)', 'Ejemplo': 'CEM-001' },
+    ];
+
     const ws = XLSX.utils.json_to_sheet(templateData);
+    const wsIns = XLSX.utils.json_to_sheet(instructionData);
+
+    // Apply Styles to Headers (Datos)
+    const headerStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "F59E0B" } }, // Amber-500
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+
+    ['A1', 'B1', 'C1', 'D1'].forEach(cell => {
+      if (ws[cell]) ws[cell].s = headerStyle;
+    });
+
+    // Apply Styles to Headers (Instrucciones)
+    const insHeaderStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "0F172A" } }, // Slate-900
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+
+    ['A1', 'B1', 'C1'].forEach(cell => {
+      if (wsIns[cell]) wsIns[cell].s = insHeaderStyle;
+    });
+
+    // Configurar anchos de columna para la hoja principal
+    ws['!cols'] = [
+      { wch: 30 }, // Material
+      { wch: 10 }, // Cantidad
+      { wch: 15 }, // Unidad
+      { wch: 15 }, // SKU
+    ];
+
+    // Configurar anchos para instrucciones
+    wsIns['!cols'] = [
+      { wch: 15 },
+      { wch: 50 },
+      { wch: 20 },
+    ];
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
+    XLSX.utils.book_append_sheet(wb, ws, 'Datos para Importar');
+    XLSX.utils.book_append_sheet(wb, wsIns, 'Instrucciones');
+    
     XLSX.writeFile(wb, 'Plantilla_Solicitud_Materiales.xlsx');
   };
 
