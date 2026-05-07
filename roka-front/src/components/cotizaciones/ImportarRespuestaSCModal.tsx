@@ -319,7 +319,7 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
                           </div>
                         </td>
                         <td className="px-3 py-3 text-center text-slate-600 dark:text-slate-400">
-                          {scItem.cantidad_requerida}
+                          {Number(scItem.cantidad_requerida)}
                         </td>
                         <td className="px-3 py-3 text-center text-slate-500">
                           {scItem.unidad}
@@ -352,11 +352,13 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
                         <td className="px-3 py-2 text-right">
                           {hasMatch ? (
                             <input
-                              type="number"
-                              value={getItemPrice(provItem, provIdx)}
-                              onChange={(e) => handlePriceEdit(provIdx, parseFloat(e.target.value) || 0)}
-                              className="w-full max-w-[80px] text-right font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 focus:border-amber-500 focus:outline-none"
-                              min="0" step="1"
+                              type="text"
+                              value={new Intl.NumberFormat('es-CL').format(getItemPrice(provItem, provIdx))}
+                              onChange={(e) => {
+                                const numericValue = parseInt(e.target.value.replace(/\D/g, ''), 10);
+                                handlePriceEdit(provIdx, isNaN(numericValue) ? 0 : numericValue);
+                              }}
+                              className="w-full max-w-[90px] text-right font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 focus:border-amber-500 focus:outline-none"
                             />
                           ) : '-'}
                         </td>
