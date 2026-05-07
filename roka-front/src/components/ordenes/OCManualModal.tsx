@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
-import { createOrdenManual, getSolicitudes, getUnidadesMedida } from '@/lib/api';
-import { AlertCircle, Plus, Trash2 } from 'lucide-react';
+import { createOrdenManual, getSolicitudes, getUnidadesMedida, getProveedores } from '@/lib/api';
+import { AlertCircle, Plus, Trash2, Building2 } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import { getProyectosAdmin } from '@/lib/api';
+import CreatableSelect from 'react-select/creatable';
+import ProveedorModal from '../proveedores/ProveedorModal';
 
 interface OCIItem {
   id: number;
@@ -17,12 +19,13 @@ interface OCIItem {
 export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: boolean; onClose: () => void; onSuccess: () => void }) {
   const { data: proyectos } = useApi(() => getProyectosAdmin(), []);
   const { data: masterUnidades } = useApi(() => getUnidadesMedida(), []);
+  const { data: proveedoresList, refetch: refetchProveedores } = useApi(() => getProveedores(), []);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [proyectoId, setProyectoId] = useState('');
-  const [proveedor, setProveedor] = useState('');
-  const [proveedorRut, setProveedorRut] = useState('');
+  const [selectedProveedor, setSelectedProveedor] = useState<{ id: number | null; nombre: string; rut: string }>({ id: null, nombre: '', rut: '' });
+  const [showProveedorModal, setShowProveedorModal] = useState(false);
   const [items, setItems] = useState<OCIItem[]>([{ id: 1, nombre_material: '', cantidad: 0, unidad: 'Unidades', precio_unitario: 0, codigo: '' }]);
   const [condicionesPago, setCondicionesPago] = useState('Contado');
   const [plazoEntrega, setPlazoEntrega] = useState('');
@@ -72,7 +75,7 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
     setError(null);
 
     if (!proyectoId) { setError('Selecciona un proyecto'); return; }
-    if (!proveedor.trim()) { setError('Ingresa el nombre del proveedor'); return; }
+    if (!selectedProveedor.nombre.trim()) { setError('Ingresa el nombre del proveedor'); return; }
 
     const validItems = items.filter(i => i.nombre_material.trim() && i.cantidad > 0 && i.precio_unitario > 0);
     if (validItems.length === 0) { setError('Agrega al menos un ítem válido'); return; }
@@ -81,8 +84,8 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
     try {
       await createOrdenManual({
         proyecto_id: Number(proyectoId),
-        proveedor: proveedor.trim(),
-        proveedor_rut: proveedorRut || undefined,
+        proveedor: selectedProveedor.nombre.trim(),
+        proveedor_rut: selectedProveedor.rut || undefined,
         items: validItems,
         condiciones_pago: condicionesPago || undefined,
         plazo_entrega: plazoEntrega || undefined,
@@ -147,14 +150,68 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
 
         <div className="border-t border-slate-200 pt-4">
           <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Proveedor</p>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Nombre *</label>
-              <input type="text" value={proveedor} onChange={e => setProveedor(e.target.value)} placeholder="Nombre del proveedor" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400" />
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Nombre *</label>
+                <button type="button" onClick={() => setShowProveedorModal(true)}
+                  className="flex items-center gap-1 text-[10px] font-bold text-amber-600 hover:text-amber-700">
+                  <Building2 size={12} /> Nuevo proveedor
+                </button>
+              </div>
+              <CreatableSelect
+                isClearable
+                placeholder="Buscar proveedor del catálogo o escribir nuevo..."
+                options={proveedoresList?.map((p: any) => ({
+                  value: p.id,
+                  label: `${p.nombre}${p.rut ? ` (${p.rut})` : ''}`,
+                  proveedor: p,
+                })) || []}
+                value={selectedProveedor.id ? {
+                  value: selectedProveedor.id,
+                  label: selectedProveedor.nombre + (selectedProveedor.rut ? ` (${selectedProveedor.rut})` : ''),
+                } : selectedProveedor.nombre ? {
+                  value: selectedProveedor.nombre,
+                  label: selectedProveedor.nombre,
+                  isManual: true,
+                } : null}
+                onChange={(newValue: any, actionMeta) => {
+                  if (!newValue) {
+                    setSelectedProveedor({ id: null, nombre: '', rut: '' });
+                  } else if (newValue.isManual || (actionMeta.action === 'create-option')) {
+                    setSelectedProveedor({ id: null, nombre: newValue.value, rut: '' });
+                  } else if (newValue.proveedor) {
+                    const prov = newValue.proveedor;
+                    setSelectedProveedor({ id: prov.id, nombre: prov.nombre, rut: prov.rut || '' });
+                  }
+                }}
+                formatCreateLabel={(v) => `Usar ingreso manual: "${v}"`}
+                menuPortalTarget={document.body}
+                styles={{
+                  control: (base, state) => ({
+                    ...base,
+                    minHeight: '38px',
+                    borderRadius: '0.375rem',
+                    borderColor: state.isFocused ? '#fbbf24' : '#e2e8f0',
+                    boxShadow: state.isFocused ? '0 0 0 1px #fbbf24' : 'none',
+                    '&:hover': { borderColor: state.isFocused ? '#fbbf24' : '#cbd5e1' },
+                    fontSize: '0.875rem',
+                  }),
+                  menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                  menu: (base) => ({ ...base, fontSize: '0.875rem' }),
+                }}
+              />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">RUT</label>
-              <input type="text" value={proveedorRut} onChange={e => setProveedorRut(e.target.value)} placeholder="12.345.678-9" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400" />
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">RUT</label>
+              <input
+                type="text"
+                value={selectedProveedor.rut}
+                onChange={e => setSelectedProveedor(prev => ({ ...prev, rut: e.target.value }))}
+                placeholder={selectedProveedor.id ? 'Cargado desde catálogo' : '12.345.678-9'}
+                readOnly={!!selectedProveedor.id}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-amber-400 bg-slate-100"
+              />
             </div>
           </div>
         </div>
@@ -232,6 +289,16 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
         <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
           <strong>Constancia:</strong> Esta OC se crea sin respaldo de solicitud de materiales ni cotización previa.
         </div>
+
+        <ProveedorModal
+          isOpen={showProveedorModal}
+          onClose={() => setShowProveedorModal(false)}
+          onSave={async (nuevo: any) => {
+            await refetchProveedores();
+            setSelectedProveedor({ id: nuevo.id, nombre: nuevo.nombre, rut: nuevo.rut || '' });
+            setShowProveedorModal(false);
+          }}
+        />
 
         <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
           <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100">Cancelar</button>

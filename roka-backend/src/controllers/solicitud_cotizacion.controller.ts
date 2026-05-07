@@ -620,8 +620,8 @@ export async function confirmarImportacion(req: AuthRequest, res: Response) {
         await scModel.updateSCNumeroCov(solicitud_cotizacion_id, numero_cov, client);
       }
 
-      // Mark SC as Respondida
-      await scModel.updateSolicitudCotizacionEstado(solicitud_cotizacion_id, 'Respondida', client);
+      // Mark SC as RESPONDIDA
+      await scModel.updateSolicitudCotizacionEstado(solicitud_cotizacion_id, 'RESPONDIDA', client);
 
       await client.query('COMMIT');
 
