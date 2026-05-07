@@ -16,6 +16,10 @@ export interface Cotizacion {
   solicitante?: string;
   proyecto_nombre?: string;
   fecha_solicitud?: string;
+  numero_cov?: string | null;
+  imported_from_file?: boolean;
+  datos_importados?: Record<string, any> | null;
+  metodo_importacion?: string;
 }
 
 export interface CotizacionItem {
@@ -27,6 +31,8 @@ export interface CotizacionItem {
   nombre_material?: string;
   cantidad_requerida?: number;
   unidad?: string;
+  descuento_porcentaje?: number;
+  codigo_proveedor?: string | null;
 }
 
 export interface CreateCotizacionInput {
@@ -37,9 +43,15 @@ export interface CreateCotizacionInput {
   items: Array<{
     solicitud_item_id: number;
     precio_unitario: number;
+    descuento_porcentaje?: number;
+    codigo_proveedor?: string;
   }>;
   archivo_adjunto_path?: string;
   archivo_adjunto_nombre?: string;
+  numero_cov?: string;
+  imported_from_file?: boolean;
+  metodo_importacion?: 'manual' | 'pdf' | 'excel' | 'imagen';
+  datos_importados?: Record<string, any>;
 }
 
 export interface ValidatedCotizacionItem {

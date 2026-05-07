@@ -78,6 +78,7 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
                     <thead className="bg-slate-50">
                       <tr>
                         <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Material</th>
+                        <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Código</th>
                         <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Cantidad</th>
                         <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Unidad</th>
                       </tr>
@@ -86,6 +87,7 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
                       {data.items.map((item: any) => (
                         <tr key={item.id} className="border-t border-slate-100">
                           <td className="px-3 py-2 font-medium text-slate-800">{item.nombre_material}</td>
+                          <td className="px-3 py-2 font-mono text-xs text-slate-500">{item.codigo || '-'}</td>
                           <td className="px-3 py-2 text-right font-mono text-slate-600">{Number(item.cantidad_requerida).toLocaleString()}</td>
                           <td className="px-3 py-2 text-slate-500">{item.unidad}</td>
                         </tr>
@@ -156,7 +158,9 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
         solicitudId={data?.solicitud_id || 0}
         onSuccess={() => {
           setShowRegistrar(false);
-          handleEstado('Respondida');
+          // Backend already marks SC as Respondida, just refresh data
+          if (id) getSolicitudCotizacion(id).then(setData);
+          onSuccess();
         }}
       />
     </>

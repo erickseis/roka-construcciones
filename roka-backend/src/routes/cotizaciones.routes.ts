@@ -8,12 +8,22 @@ import {
   approve,
   reject,
   uploadArchivo,
+  importarArchivo,
+  confirmarImport,
 } from '../controllers/cotizaciones.controller';
 
 const router = Router();
 
 // GET /api/cotizaciones — Listar cotizaciones
-router.get('/', list);
+router.get('/', authMiddleware, list);
+
+// IMPORTAR routes (deben estar ANTES de /:id para evitar conflictos)
+
+// POST /api/cotizaciones/importar — Parse and validate file
+router.post('/importar', authMiddleware, upload.single('archivo_cotizacion'), importarArchivo);
+
+// POST /api/cotizaciones/importar/confirmar — Confirm and create cotización
+router.post('/importar/confirmar', authMiddleware, confirmarImport);
 
 // GET /api/cotizaciones/:id — Detalle con ítems cotizados
 router.get('/:id', getById);

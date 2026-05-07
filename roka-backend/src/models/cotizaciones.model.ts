@@ -75,12 +75,31 @@ export async function createCotizacion(data: {
   proveedor: string;
   total: number;
   created_by_usuario_id: number | null;
+  numero_cov?: string | null;
+  imported_from_file?: boolean;
+  metodo_importacion?: string;
+  datos_importados?: Record<string, any> | null;
+  archivo_adjunto_path?: string | null;
+  archivo_adjunto_nombre?: string | null;
 }, db?: Queryable): Promise<Cotizacion> {
   const conn = getDb(db);
   const { rows: [cotizacion] } = await conn.query(
-    `INSERT INTO cotizaciones (solicitud_id, solicitud_cotizacion_id, proveedor_id, proveedor, total, created_by_usuario_id)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [data.solicitud_id, data.solicitud_cotizacion_id, data.proveedor_id, data.proveedor, data.total, data.created_by_usuario_id]
+    `INSERT INTO cotizaciones (solicitud_id, solicitud_cotizacion_id, proveedor_id, proveedor, total, created_by_usuario_id, numero_cov, imported_from_file, metodo_importacion, datos_importados, archivo_adjunto_path, archivo_adjunto_nombre)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+    [
+      data.solicitud_id,
+      data.solicitud_cotizacion_id,
+      data.proveedor_id,
+      data.proveedor,
+      data.total,
+      data.created_by_usuario_id,
+      data.numero_cov || null,
+      data.imported_from_file || false,
+      data.metodo_importacion || 'manual',
+      data.datos_importados || null,
+      data.archivo_adjunto_path || null,
+      data.archivo_adjunto_nombre || null,
+    ]
   );
 
   return cotizacion;
@@ -91,12 +110,21 @@ export async function createCotizacionItem(data: {
   solicitud_item_id: number;
   precio_unitario: number;
   subtotal: number;
+  descuento_porcentaje?: number;
+  codigo_proveedor?: string | null;
 }, db?: Queryable): Promise<void> {
   const conn = getDb(db);
   await conn.query(
-    `INSERT INTO cotizacion_items (cotizacion_id, solicitud_item_id, precio_unitario, subtotal)
-     VALUES ($1, $2, $3, $4)`,
-    [data.cotizacion_id, data.solicitud_item_id, data.precio_unitario, data.subtotal]
+    `INSERT INTO cotizacion_items (cotizacion_id, solicitud_item_id, precio_unitario, subtotal, descuento_porcentaje, codigo_proveedor)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [
+      data.cotizacion_id,
+      data.solicitud_item_id,
+      data.precio_unitario,
+      data.subtotal,
+      data.descuento_porcentaje || 0,
+      data.codigo_proveedor || null,
+    ]
   );
 }
 

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
-import { createOrdenManual } from '@/lib/api';
+import { createOrdenManual, getSolicitudes } from '@/lib/api';
 import { AlertCircle, Plus, Trash2 } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import { getProyectosAdmin } from '@/lib/api';
@@ -27,6 +27,21 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
   const [plazoEntrega, setPlazoEntrega] = useState('');
   const [atencionA, setAtencionA] = useState('');
   const [observaciones, setObservaciones] = useState('');
+  const [solicitudId, setSolicitudId] = useState('');
+  const [codigoObra, setCodigoObra] = useState('');
+  const [solicitudes, setSolicitudes] = useState<any[]>([]);
+
+  // Fetch solicitudes when project changes
+  useEffect(() => {
+    if (!proyectoId) {
+      setSolicitudes([]);
+      setSolicitudId('');
+      return;
+    }
+    getSolicitudes({ proyecto_id: Number(proyectoId) })
+      .then(res => setSolicitudes(Array.isArray(res) ? res : (res as any)?.data || []))
+      .catch(() => setSolicitudes([]));
+  }, [proyectoId]);
 
   const addItem = () => {
     setItems([...items, { id: items.length + 1, nombre_material: '', cantidad: 0, unidad: 'Unidades', precio_unitario: 0, codigo: '' }]);
@@ -64,6 +79,8 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
         plazo_entrega: plazoEntrega || undefined,
         atencion_a: atencionA || undefined,
         observaciones: observaciones || undefined,
+        solicitud_id: solicitudId ? Number(solicitudId) : undefined,
+        codigo_obra: codigoObra.trim() || undefined,
       });
       onSuccess();
       onClose();
@@ -96,6 +113,26 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
           <div>
             <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Folio (opcional)</label>
             <input type="text" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400" disabled placeholder="Auto-generado" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Solicitud de Materiales</label>
+            <select value={solicitudId} onChange={e => setSolicitudId(e.target.value)} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400">
+              <option value="">Sin solicitud (opcional)</option>
+              {solicitudes.map((s: any) => (
+                <option key={s.id} value={s.id}>
+                  SM-{String(s.id).padStart(3, '0')} — {s.solicitante} ({s.estado})
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-[10px] text-slate-400">Vincula esta OC a una solicitud existente para trazabilidad.</p>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Código de Obra</label>
+            <input type="text" value={codigoObra} onChange={e => setCodigoObra(e.target.value)} placeholder="Ej: OB-2024-001" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400" />
+            <p className="mt-1 text-[10px] text-slate-400">Si no se especifica, se usa el N° de licitación del proyecto.</p>
           </div>
         </div>
 

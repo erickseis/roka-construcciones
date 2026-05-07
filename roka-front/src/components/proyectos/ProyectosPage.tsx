@@ -36,6 +36,7 @@ export default function ProyectosPage() {
     mandante: '',
     moneda: 'CLP',
     solicitante: '',
+    plazo_ejecucion_dias: '',
   });
 
   const [archivo_licitacion, setArchivo_licitacion] = useState<File | null>(null);
@@ -58,6 +59,7 @@ export default function ProyectosPage() {
       mandante: '',
       moneda: 'CLP',
       solicitante: '',
+      plazo_ejecucion_dias: '',
     });
     setArchivo_licitacion(null);
     setArchivo_materiales(null);
@@ -95,6 +97,7 @@ export default function ProyectosPage() {
       monto_referencial_licitacion: proyecto.monto_referencial_licitacion ? String(proyecto.monto_referencial_licitacion) : '',
       mandante: proyecto.mandante || '',
       moneda: proyecto.moneda || 'CLP',
+      plazo_ejecucion_dias: proyecto.plazo_ejecucion_dias ? String(proyecto.plazo_ejecucion_dias) : '',
     });
     setMostrarLicitacion(!!proyecto.numero_licitacion);
     setShowForm(true);
@@ -118,6 +121,7 @@ export default function ProyectosPage() {
       if (form.monto_referencial_licitacion) formData.append('monto_referencial_licitacion', form.monto_referencial_licitacion);
       if (form.mandante) formData.append('mandante', form.mandante);
       if (form.moneda) formData.append('moneda', form.moneda);
+      if (form.plazo_ejecucion_dias) formData.append('plazo_ejecucion_dias', form.plazo_ejecucion_dias);
       if (archivo_licitacion) formData.append('archivo_licitacion', archivo_licitacion);
       if (archivo_materiales) {
         formData.append('archivo_materiales', archivo_materiales);
@@ -436,6 +440,18 @@ export default function ProyectosPage() {
                       className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Plazo de ejecución (días)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={form.plazo_ejecucion_dias}
+                    onChange={(e) => setForm({ ...form, plazo_ejecucion_dias: e.target.value })}
+                    placeholder="Ej: 365"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                  />
                 </div>
 
                 <div>

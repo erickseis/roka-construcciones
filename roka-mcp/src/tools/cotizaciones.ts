@@ -144,11 +144,17 @@ export function registerCotizacionesTools(server: McpServer, client: ApiClient) 
       solicitud_cotizacion_id: z.number().optional().describe("ID de la solicitud de cotización (opcional, para vincular respuesta)"),
       proveedor_id: z.number().optional().describe("ID del proveedor del catálogo (opcional)"),
       proveedor: z.string().optional().describe("Nombre del proveedor (si no usa ID del catálogo)"),
+      numero_cov: z.string().optional().describe("Número de cotización de venta del proveedor"),
+      imported_from_file: z.boolean().optional().describe("Indica si fue importada desde archivo"),
+      metodo_importacion: z.enum(["manual", "pdf", "excel", "imagen"]).optional().describe("Método de creación"),
+      datos_importados: z.record(z.any()).optional().describe("Datos adicionales importados del archivo"),
       items: z
         .array(
           z.object({
             solicitud_item_id: z.number().describe("ID del ítem de la solicitud"),
             precio_unitario: z.number().describe("Precio unitario cotizado"),
+            descuento_porcentaje: z.number().optional().describe("Porcentaje de descuento por línea"),
+            codigo_proveedor: z.string().optional().describe("Código/SKU del proveedor"),
           })
         )
         .describe("Lista de ítems con su precio unitario cotizado"),
@@ -183,6 +189,56 @@ export function registerCotizacionesTools(server: McpServer, client: ApiClient) 
     },
     async ({ id }) => {
       const res = await client.patch(`cotizaciones/${id}/rechazar`);
+      return {
+        content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }],
+      };
+    }
+  );
+
+  // ==========================================
+  // Importación de Cotizaciones desde Archivos
+  // ==========================================
+
+  server.tool(
+    "importar_cotizacion_venta_desde_archivo",
+    "Importa una cotización de venta desde un archivo PDF, Excel o imagen del proveedor. Parsea el archivo con IA, extrae ítems y precios, y los valida contra la solicitud de cotización enviada al proveedor. Retorna una vista previa con matching de ítems para confirmación.",
+    {
+      archivo_path: z.string().describe("Ruta del archivo en el servidor (PDF, Excel o imagen)"),
+      solicitud_cotizacion_id: z.number().describe("ID de la solicitud de cotización a la cual vincular la respuesta"),
+    },
+    async ({ archivo_path, solicitud_cotizacion_id }) => {
+      const res = await client.post("cotizaciones/importar", {
+        archivo_path,
+        solicitud_cotizacion_id,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }],
+      };
+    }
+  );
+
+  server.tool(
+    "confirmar_importacion_cotizacion",
+    "Confirma la importación de una cotización de venta previamente validada. Crea la cotización con los datos del archivo importado, vincula los ítems a la solicitud de cotización, y marca la SC como Respondida.",
+    {
+      solicitud_id: z.number().describe("ID de la solicitud de materiales"),
+      solicitud_cotizacion_id: z.number().describe("ID de la solicitud de cotización"),
+      archivo_path: z.string().describe("Ruta del archivo importado"),
+      archivo_nombre: z.string().describe("Nombre del archivo importado"),
+      proveedor_id: z.number().optional().describe("ID del proveedor del catálogo (si se encontró match)"),
+      proveedor_nombre: z.string().describe("Nombre del proveedor"),
+      numero_cov: z.string().describe("Número de cotización de venta del proveedor"),
+      metodo_importacion: z.enum(["pdf", "excel", "imagen"]).describe("Método de importación"),
+      items: z.array(z.object({
+        solicitud_item_id: z.number().describe("ID del ítem de la solicitud"),
+        precio_unitario: z.number().describe("Precio unitario cotizado"),
+        descuento_porcentaje: z.number().optional().describe("Porcentaje de descuento"),
+        codigo_proveedor: z.string().optional().describe("Código del proveedor"),
+      })).describe("Lista de ítems confirmados"),
+      datos_importados: z.record(z.any()).optional().describe("Datos adicionales importados del archivo"),
+    },
+    async (args) => {
+      const res = await client.post("cotizaciones/importar/confirmar", args);
       return {
         content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }],
       };

@@ -50,6 +50,8 @@ export function registerOrdenesTools(server: McpServer, auth: AuthManager, clien
       condiciones_entrega: z.string().optional().describe("Condiciones de entrega"),
       atencion_a: z.string().optional().describe("Atención a (persona de contacto)"),
       observaciones: z.string().optional().describe("Observaciones adicionales"),
+      autorizado_por_usuario_id: z.number().optional().describe("ID del usuario que autoriza la OC"),
+      codigo_obra: z.string().optional().describe("Código de obra (si no se especifica, se usa el N° de licitación del proyecto)"),
     },
     async (args) => {
       const res = await client.post("ordenes", args);
@@ -139,7 +141,7 @@ Para ver la orden de compra:
 
   server.tool(
     "crear_orden_compra_manual",
-    "Crea una orden de compra manual/esporádica sin solicitud ni cotización previa. Para urgencias de terreno.",
+    "Crea una orden de compra manual/esporádica sin solicitud ni cotización previa. Para urgencias de terreno. Compromete presupuesto automáticamente si existe.",
     {
       proyecto_id: z.number().describe("ID del proyecto"),
       proveedor: z.string().describe("Nombre del proveedor"),
@@ -162,6 +164,8 @@ Para ver la orden de compra:
       descuento_tipo: z.enum(["none", "porcentaje", "monto"]).optional().describe("Tipo de descuento"),
       descuento_valor: z.number().optional().describe("Valor del descuento"),
       folio: z.string().optional().describe("Folio personalizado"),
+      solicitud_id: z.number().optional().describe("ID de solicitud de materiales para trazabilidad (opcional)"),
+      codigo_obra: z.string().optional().describe("Código de obra directo (si no se especifica, se usa el N° de licitación del proyecto)"),
     },
     async (args) => {
       const res = await client.post("ordenes/manual", args);

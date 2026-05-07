@@ -88,6 +88,7 @@ export interface SolicitudItem {
   cantidad_requerida: number;
   unidad: string;
   unidad_abreviatura?: string;
+  codigo?: string | null;
 }
 
 export interface SolicitudItemInput {
@@ -129,6 +130,8 @@ export interface CotizacionItem {
   unidad?: string;
   precio_unitario: number;
   subtotal: number;
+  descuento_porcentaje?: number;
+  codigo_proveedor?: string | null;
 }
 
 export interface CotizacionItemInput {
@@ -146,12 +149,95 @@ export interface Cotizacion {
   items?: CotizacionItem[];
   solicitud?: Solicitud;
   created_at: string;
+  numero_cov?: string | null;
+  imported_from_file?: boolean;
+  metodo_importacion?: string;
+  datos_importados?: any;
 }
 
 export interface CotizacionInput {
   solicitud_id: number;
   proveedor: string;
   items: CotizacionItemInput[];
+}
+
+// --- Importación de Cotizaciones ---
+
+export interface ParsedItem {
+  codigo: string;
+  descripcion: string;
+  cantidad: number;
+  unidad: string;
+  precio_neto_unitario: number;
+  descuento_porcentaje: number;
+  total_linea: number;
+}
+
+export interface ParsedQuotation {
+  proveedor_rut: string;
+  proveedor_nombre: string;
+  proveedor_direccion: string | null;
+  proveedor_telefono: string | null;
+  proveedor_correo: string | null;
+  numero_cov: string;
+  fecha: string;
+  vendedor: string | null;
+  validez: string | null;
+  items: ParsedItem[];
+  condicion_pago: string | null;
+  condicion_entrega: string | null;
+  subtotal_neto: number;
+  iva: number;
+  total: number;
+  observaciones: string | null;
+  descuento_global_porcentaje: number | null;
+  descuento_global_monto: number | null;
+}
+
+export interface ImportItemMatch {
+  parsed: ParsedItem;
+  solicitud_item: {
+    id: number;
+    solicitud_item_id: number;
+    nombre_material: string;
+    cantidad_requerida: number;
+    unidad: string;
+    codigo: string | null;
+  } | null;
+  match_tipo: 'exact_code' | 'similar_name' | 'none';
+  cantidad_ok: boolean;
+  warning: string | null;
+}
+
+export interface ImportPreviewResponse {
+  parsed: ParsedQuotation;
+  solicitud_cotizacion_id: number;
+  solicitud_id: number;
+  archivo_path: string;
+  archivo_nombre: string;
+  proveedor_catalogo: { id: number; nombre: string; rut: string } | null;
+  validacion: {
+    items_matched: ImportItemMatch[];
+    items_unmatched: ParsedItem[];
+    items_faltantes_en_sc: Array<{
+      id: number;
+      solicitud_item_id: number;
+      nombre_material: string;
+      cantidad_requerida: number;
+      unidad: string;
+      codigo: string | null;
+    }>;
+    resumen: {
+      total_items_archivo: number;
+      total_items_sc: number;
+      total_matched: number;
+      total_unmatched: number;
+      total_faltantes: number;
+      total_archivo: number;
+      diferencia: number;
+      warning: string | null;
+    };
+  };
 }
 
 // --- Órdenes de Compra ---

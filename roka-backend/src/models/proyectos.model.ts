@@ -19,6 +19,7 @@ export interface ProyectoRow {
   archivo_materiales_nombre: string | null;
   mandante: string | null;
   moneda: string | null;
+  plazo_ejecucion_dias: number | null;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -55,6 +56,7 @@ export interface CreateProyectoData {
   archivo_materiales_nombre?: string | null;
   mandante?: string | null;
   moneda?: string | null;
+  plazo_ejecucion_dias?: number | null;
 }
 
 export interface UpdateProyectoData {
@@ -74,6 +76,7 @@ export interface UpdateProyectoData {
   archivo_materiales_nombre?: string | null;
   mandante?: string | null;
   moneda?: string | null;
+  plazo_ejecucion_dias?: number | null;
 }
 
 export async function getAllProyectos(
@@ -160,8 +163,8 @@ export async function createProyecto(data: CreateProyectoData, db?: Queryable): 
        fecha_apertura_licitacion, monto_referencial_licitacion,
        archivo_licitacion_path, archivo_licitacion_nombre, 
        archivo_materiales_path, archivo_materiales_nombre,
-       mandante, moneda
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+       mandante, moneda, plazo_ejecucion_dias
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
      RETURNING *`,
     [
       data.nombre,
@@ -180,6 +183,7 @@ export async function createProyecto(data: CreateProyectoData, db?: Queryable): 
       data.archivo_materiales_nombre || null,
       data.mandante || null,
       data.moneda || 'CLP',
+      data.plazo_ejecucion_dias || null,
     ]
   );
   return rows[0];
@@ -204,11 +208,12 @@ export async function updateProyecto(id: number, data: UpdateProyectoData, db?: 
        archivo_licitacion_nombre = COALESCE($12, archivo_licitacion_nombre),
        archivo_materiales_path = COALESCE($13, archivo_materiales_path),
        archivo_materiales_nombre = COALESCE($14, archivo_materiales_nombre),
-       mandante = COALESCE($15, mandante),
-       moneda = COALESCE($16, moneda),
-       updated_at = NOW()
-     WHERE id = $17
-     RETURNING *`,
+mandante = COALESCE($15, mandante),
+        moneda = COALESCE($16, moneda),
+        plazo_ejecucion_dias = COALESCE($17, plazo_ejecucion_dias),
+        updated_at = NOW()
+      WHERE id = $18
+      RETURNING *`,
     [
       data.nombre || null,
       data.ubicacion || null,
@@ -226,6 +231,7 @@ export async function updateProyecto(id: number, data: UpdateProyectoData, db?: 
       data.archivo_materiales_nombre || null,
       data.mandante || null,
       data.moneda || null,
+      data.plazo_ejecucion_dias || null,
       id,
     ]
   );

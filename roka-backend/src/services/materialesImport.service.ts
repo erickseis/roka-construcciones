@@ -51,8 +51,8 @@ export async function importMaterialesFromExcel(proyectoId: number, solicitante:
     await client.query('BEGIN');
 
     const solicitudResult = await client.query(
-      `INSERT INTO solicitudes_material (proyecto_id, solicitante, fecha, estado)
-       VALUES ($1, $2, CURRENT_DATE, 'Pendiente')
+      `INSERT INTO solicitudes_material (proyecto_id, solicitante, fecha, estado, fecha_requerida)
+       VALUES ($1, $2, CURRENT_DATE, 'Pendiente', NULL)
        RETURNING *`,
       [proyectoId, solicitante]
     );

@@ -16,6 +16,7 @@ export interface Proyecto {
   archivo_materiales_nombre: string | null;
   mandante: string | null;
   moneda: string | null;
+  plazo_ejecucion_dias: number | null;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -54,4 +55,5 @@ export interface CreateProyectoInput {
   archivo_materiales_nombre?: string | null;
   mandante?: string | null;
   moneda?: string | null;
+  plazo_ejecucion_dias?: number | null;
 }

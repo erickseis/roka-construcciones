@@ -42,7 +42,7 @@ export async function getOrdenById(id: number): Promise<OrdenCompraDetalle | nul
   const { rows: [orden] } = await db.query(`
     SELECT oc.*,
            COALESCE(c.proveedor, oc.proveedor) AS proveedor,
-           c.proveedor_id, c.solicitud_id, c.total AS cotizacion_total,
+           c.proveedor_id, c.solicitud_id AS cotizacion_solicitud_id, c.total AS cotizacion_total,
            sm.solicitante, sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
            p.nombre AS proyecto_nombre, p.ubicacion AS proyecto_ubicacion,
            p.numero_licitacion AS proyecto_numero_licitacion,
@@ -55,13 +55,13 @@ export async function getOrdenById(id: number): Promise<OrdenCompraDetalle | nul
            pr.contacto_nombre AS proveedor_contacto_nombre,
            pr.contacto_telefono AS proveedor_contacto_telefono,
            pr.contacto_correo AS proveedor_contacto_correo,
-           CONCAT(u.nombre, ' ', u.apellido) AS autorizado_por_nombre
+           CONCAT(ua.nombre, ' ', ua.apellido) AS autorizado_por_nombre
     FROM ordenes_compra oc
     LEFT JOIN cotizaciones c ON c.id = oc.cotizacion_id
-    LEFT JOIN solicitudes_material sm ON sm.id = c.solicitud_id
+    LEFT JOIN solicitudes_material sm ON sm.id = COALESCE(oc.solicitud_id, c.solicitud_id)
     LEFT JOIN proyectos p ON p.id = COALESCE(sm.proyecto_id, oc.proyecto_id)
     LEFT JOIN proveedores pr ON pr.id = c.proveedor_id
-    LEFT JOIN usuarios u ON u.id = oc.created_by_usuario_id
+    LEFT JOIN usuarios ua ON ua.id = COALESCE(oc.autorizado_por_usuario_id, oc.created_by_usuario_id)
     WHERE oc.id = $1
   `, [id]);
 
@@ -137,6 +137,9 @@ export async function createOrden(data: {
   condiciones_pago: string;
   total: number;
   created_by_usuario_id: number | null;
+  autorizado_por_usuario_id?: number | null;
+  solicitud_id?: number | null;
+  codigo_obra?: string | null;
   folio: string | null;
   descuento_tipo: string;
   descuento_valor: number;
@@ -153,17 +156,21 @@ export async function createOrden(data: {
   const { rows: [orden] } = await conn.query(
     `INSERT INTO ordenes_compra (
         cotizacion_id, condiciones_pago, total, created_by_usuario_id,
+        autorizado_por_usuario_id, solicitud_id, codigo_obra,
         folio, descuento_tipo, descuento_valor, descuento_monto,
         subtotal_neto, impuesto_monto, total_final,
         plazo_entrega, condiciones_entrega, atencion_a, observaciones
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
      RETURNING *`,
     [
       data.cotizacion_id,
       data.condiciones_pago,
       data.total,
       data.created_by_usuario_id,
+      data.autorizado_por_usuario_id ?? null,
+      data.solicitud_id ?? null,
+      data.codigo_obra ?? null,
       data.folio,
       data.descuento_tipo,
       data.descuento_valor,

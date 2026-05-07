@@ -24,9 +24,11 @@ export interface OrdenCompra {
   observaciones: string | null;
   estado_entrega: string;
   created_by_usuario_id: number | null;
+  autorizado_por_usuario_id?: number | null;
+  solicitud_id?: number | null;
+  codigo_obra?: string | null;
   created_at: Date;
   updated_at: Date;
-  solicitud_id?: number;
   proyecto_nombre?: string;
 }
 
@@ -72,4 +74,6 @@ export interface GenerarOCInput {
   condiciones_entrega?: string;
   atencion_a?: string;
   observaciones?: string;
+  autorizado_por_usuario_id?: number | null;
+  codigo_obra?: string;
 }

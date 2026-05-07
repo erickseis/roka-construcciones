@@ -5,6 +5,7 @@ export interface Solicitud {
   proyecto_id: number;
   solicitante: string;
   fecha: string;
+  fecha_requerida?: string | null;
   estado: string;
   created_at: Date;
   updated_at: Date;
@@ -30,6 +31,7 @@ export interface CreateSolicitudInput {
   proyecto_id: number;
   solicitante: string;
   fecha?: string;
+  fecha_requerida?: string | null;
   items: Array<{
     material_id?: number;
     nombre_material?: string;

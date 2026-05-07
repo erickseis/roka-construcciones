@@ -30,15 +30,23 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowedMimes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv'];
-  const allowedExts = ['.pdf', '.xlsx', '.xls', '.csv'];
+  const allowedMimes = [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel',
+    'text/csv',
+    'image/png',
+    'image/jpeg',
+    'image/webp',
+  ];
+  const allowedExts = ['.pdf', '.xlsx', '.xls', '.csv', '.png', '.jpg', '.jpeg', '.webp'];
 
   const ext = path.extname(file.originalname).toLowerCase();
 
   if (allowedMimes.includes(file.mimetype) || allowedExts.includes(ext)) {
     cb(null, true);
   } else {
-    cb(new Error(`File type not allowed. Accepted: PDF, Excel, CSV`));
+    cb(new Error(`File type not allowed. Accepted: PDF, Excel, CSV, PNG, JPG, WEBP`));
   }
 };
 

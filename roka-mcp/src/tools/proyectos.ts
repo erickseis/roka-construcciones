@@ -52,6 +52,7 @@ server.tool(
       monto_referencial_licitacion: z.number().optional().describe("Monto de Adjudicación (obra)"),
       mandante: z.string().optional().describe("Mandante - fuente de financiamiento del proyecto"),
       moneda: z.string().optional().describe("Moneda del proyecto (CLP, USD, UF, etc)"),
+      plazo_ejecucion_dias: z.number().optional().describe("Plazo de ejecución en días corridos"),
     },
     async (args) => {
       const res = await client.post("proyectos", args);
@@ -93,6 +94,7 @@ server.tool(
       monto_referencial_licitacion: z.number().optional(),
       mandante: z.string().optional().describe("Mandante - fuente de financiamiento del proyecto"),
       moneda: z.string().optional().describe("Moneda del proyecto"),
+      plazo_ejecucion_dias: z.number().optional().describe("Plazo de ejecución en días corridos"),
     },
     async ({ id, ...body }) => {
       const res = await client.patch(`proyectos/${id}`, body);

@@ -5,6 +5,7 @@ export interface SolicitudRow {
   proyecto_id: number;
   solicitante: string;
   fecha: string;
+  fecha_requerida?: string | null;
   estado: string;
   created_at: Date;
   updated_at: Date;
@@ -31,6 +32,7 @@ export interface CreateSolicitudData {
   proyecto_id: number;
   solicitante: string;
   fecha?: string;
+  fecha_requerida?: string | null;
 }
 
 export interface CreateSolicitudItemData {
@@ -104,10 +106,10 @@ export async function getSolicitudItems(solicitudId: number, db?: Queryable): Pr
 export async function createSolicitud(data: CreateSolicitudData, db?: Queryable): Promise<SolicitudRow> {
   const conn = getDb(db);
   const { rows } = await conn.query(
-    `INSERT INTO solicitudes_material (proyecto_id, solicitante, fecha)
-     VALUES ($1, $2, $3)
+    `INSERT INTO solicitudes_material (proyecto_id, solicitante, fecha, fecha_requerida)
+     VALUES ($1, $2, $3, $4)
      RETURNING *`,
-    [data.proyecto_id, data.solicitante, data.fecha || new Date().toISOString().split('T')[0]]
+    [data.proyecto_id, data.solicitante, data.fecha || new Date().toISOString().split('T')[0], data.fecha_requerida || null]
   );
   return rows[0];
 }

@@ -44,7 +44,7 @@ export async function getById(req: Request, res: Response) {
 }
 
 export async function create(req: Request, res: Response) {
-  const { proyecto_id, solicitante, fecha, items } = req.body;
+  const { proyecto_id, solicitante, fecha, fecha_requerida, items } = req.body;
 
   if (!proyecto_id || !solicitante || !items || items.length === 0) {
     return res
@@ -57,6 +57,7 @@ export async function create(req: Request, res: Response) {
       proyecto_id: Number(proyecto_id),
       solicitante,
       fecha: fecha || undefined,
+      fecha_requerida: fecha_requerida || null,
       items,
     });
 

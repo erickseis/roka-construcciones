@@ -197,12 +197,49 @@ export const rechazarCotizacion = (id: number) =>
 export const subirArchivoCotizacion = (id: number, file: File) => {
   const formData = new FormData();
   formData.append('archivo_cotizacion', file);
-  return fetchApi<any>(`/cotizaciones/${id}/archivo`, {
+  const token = localStorage.getItem('roka_token');
+  const headers: HeadersInit = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  return fetch(`${API_BASE}/cotizaciones/${id}/archivo`, {
     method: 'PATCH',
     body: formData,
-    headers: {},
+    headers,
+  }).then(async res => {
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(error.error || `Error ${res.status}`);
+    }
+    return res.json();
   });
 };
+
+// ---- Importar Cotización desde Archivo ----
+export const importarCotizacionArchivo = (file: File, solicitudCotizacionId: number): Promise<any> => {
+  const formData = new FormData();
+  formData.append('archivo_cotizacion', file);
+  formData.append('solicitud_cotizacion_id', String(solicitudCotizacionId));
+  
+  const token = localStorage.getItem('roka_token');
+  const headers: HeadersInit = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  // Don't set Content-Type for FormData - browser sets it with boundary
+  
+  return fetch(`${API_BASE}/cotizaciones/importar`, {
+    method: 'POST',
+    body: formData,
+    headers,
+  }).then(async res => {
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(error.error || `Error ${res.status}`);
+    }
+    return res.json();
+  });
+};
+
+export const confirmImportCotizacion = (data: any): Promise<any> =>
+  fetchApi('/cotizaciones/importar/confirmar', { method: 'POST', body: JSON.stringify(data) });
 
 // ---- Solicitudes de Cotización (envío a proveedor, sin precios) ----
 export const getSolicitudesCotizacion = (params?: { solicitud_id?: number; estado?: string; proveedor?: string; proyecto_id?: number }) => {
@@ -276,6 +313,8 @@ export const createOrdenManual = (data: {
   descuento_tipo?: 'none' | 'porcentaje' | 'monto';
   descuento_valor?: number;
   folio?: string;
+  solicitud_id?: number;
+  codigo_obra?: string;
 }) =>
   fetchApi<any>('/ordenes/manual', { method: 'POST', body: JSON.stringify(data) });
 

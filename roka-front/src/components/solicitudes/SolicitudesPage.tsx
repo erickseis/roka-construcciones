@@ -42,6 +42,7 @@ export default function SolicitudesPage() {
   const [form, setForm] = useState({
     proyecto_id: '',
     solicitante: '',
+    fecha_requerida: '',
     items: [{ material_id: null as number | null, nombre_material: '', cantidad_requerida: '', unidad: 'Unidades', codigo: '' }],
   });
   const [submitting, setSubmitting] = useState(false);
@@ -71,6 +72,7 @@ export default function SolicitudesPage() {
       await createSolicitud({
         proyecto_id: Number(form.proyecto_id),
         solicitante: form.solicitante,
+        fecha_requerida: form.fecha_requerida || null,
         items: form.items.map(i => ({
           material_id: i.material_id,
           nombre_material: i.nombre_material,
@@ -83,6 +85,7 @@ export default function SolicitudesPage() {
       setForm({
         proyecto_id: '',
         solicitante: '',
+        fecha_requerida: '',
         items: [{ material_id: null, nombre_material: '', cantidad_requerida: '', unidad: 'Unidades', codigo: '' }],
       });
       refetch();
@@ -357,6 +360,19 @@ export default function SolicitudesPage() {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Fecha requerida en terreno</label>
+              <input
+                type="date"
+                value={form.fecha_requerida}
+                onChange={e => setForm({ ...form, fecha_requerida: e.target.value })}
+                title="Fecha en que se necesita el material físicamente en terreno"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+              />
+            </div>
+          </div>
+
           {/* Items */}
           <div>
             <div className="mb-3 flex items-center justify-between">
@@ -514,6 +530,13 @@ export default function SolicitudesPage() {
                 <StatusBadge status={showDetail.estado} size="md" />
               </div>
             </div>
+
+            {showDetail.fecha_requerida && (
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
+                <p className="text-[10px] font-bold uppercase text-amber-600">Fecha requerida en terreno</p>
+                <p className="text-sm font-bold text-amber-800">{new Date(showDetail.fecha_requerida + 'T12:00:00').toLocaleDateString('es-ES')}</p>
+              </div>
+            )}
 
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-2">Ítems de la solicitud</p>
             <div className="rounded-lg border border-slate-200 overflow-x-auto">

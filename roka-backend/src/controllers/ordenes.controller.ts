@@ -119,6 +119,8 @@ function buildOCHtml(orden: any, items: any[], pdfUrl?: string): string {
   const descuentoValor = Number(orden.descuento_valor ?? 0);
   const impuesto = Number(orden.impuesto_monto ?? subtotalNeto * 0.19);
   const totalFinal = Number(orden.total_final ?? subtotalNeto + impuesto);
+  // GAP-8: Use codigo_obra if present, fallback to proyecto_numero_licitacion
+  const codigoObra = orden.codigo_obra || orden.proyecto_numero_licitacion || '-';
 
   let descuentoDetalle = 'Sin descuento';
   if (descuentoTipo === 'porcentaje') descuentoDetalle = descuentoValor.toFixed(2) + '%';
@@ -221,7 +223,7 @@ ${pdfUrl ? `<div class="download-bar" style="position:sticky;top:0;z-index:999;b
               <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Encargado</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(atencion)}</td></tr>
               <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Forma de Pago</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.condiciones_pago || 'Crédito 45 días')}</td></tr>
               <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Emitida por</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.autorizado_por_nombre) || '-'}</td></tr>
-              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Cód. Obra</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(orden.proyecto_numero_licitacion) || '-'}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Cód. Obra</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(codigoObra)}</td></tr>
               <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Fecha Autorización</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${fmtDate(orden.updated_at || orden.fecha_emision)}</td></tr>
               <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Moneda</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">PESO CHILENO</td></tr>
               <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Nro. Solic. Mat.</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${numeroSolicitud}</td></tr>
@@ -371,6 +373,22 @@ export async function create(req: AuthRequest, res: Response) {
   }
 }
 
+export async function createManual(req: AuthRequest, res: Response) {
+  try {
+    // Pass autorizado_por_usuario_id from request body if provided, otherwise use logged-in user
+    const input = { ...req.body };
+    if (!input.autorizado_por_usuario_id && req.user?.id) {
+      input.autorizado_por_usuario_id = req.user.id;
+    }
+    const result = await crearOCManual(input, req.user?.id || null);
+    res.status(201).json(result);
+  } catch (error: any) {
+    const statusCode = error.statusCode || 500;
+    console.error('Error al crear OC manual:', error);
+    res.status(statusCode).json({ error: error.message || 'Error al crear la orden de compra manual' });
+  }
+}
+
 export async function updateEntrega(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
@@ -488,16 +506,5 @@ export async function generarPdfLink(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error('Error al generar link de PDF:', error);
     res.status(500).json({ error: 'Error al generar PDF de orden de compra' });
-  }
-}
-
-export async function createManual(req: AuthRequest, res: Response) {
-  try {
-    const result = await crearOCManual(req.body, req.user?.id || null);
-    res.status(201).json(result);
-  } catch (error: any) {
-    const statusCode = error.statusCode || 500;
-    console.error('Error al crear OC manual:', error);
-    res.status(statusCode).json({ error: error.message || 'Error al crear la orden de compra manual' });
   }
 }

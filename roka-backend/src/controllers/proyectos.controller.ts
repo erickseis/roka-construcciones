@@ -53,7 +53,7 @@ export async function create(req: Request, res: Response) {
     nombre, ubicacion, estado, fecha_inicio, fecha_fin,
     responsable_usuario_id, numero_licitacion, descripcion_licitacion,
     fecha_apertura_licitacion, monto_referencial_licitacion,
-    mandante, moneda, procesar_materiales,
+    mandante, moneda, procesar_materiales, plazo_ejecucion_dias,
   } = req.body;
 
   if (!nombre) {
@@ -87,6 +87,7 @@ export async function create(req: Request, res: Response) {
       archivo_materiales_nombre,
       mandante: mandante || null,
       moneda: moneda || 'CLP',
+      plazo_ejecucion_dias: plazo_ejecucion_dias ? Number(plazo_ejecucion_dias) : null,
     });
 
     if (procesar_materiales === 'true' && archivo_materiales_path) {
@@ -115,7 +116,7 @@ export async function update(req: Request, res: Response) {
     nombre, ubicacion, estado, fecha_inicio, fecha_fin,
     responsable_usuario_id, numero_licitacion, descripcion_licitacion,
     fecha_apertura_licitacion, monto_referencial_licitacion,
-    mandante, moneda,
+    mandante, moneda, plazo_ejecucion_dias,
   } = req.body;
 
   try {
@@ -136,6 +137,7 @@ export async function update(req: Request, res: Response) {
       monto_referencial_licitacion: monto_referencial_licitacion ? Number(monto_referencial_licitacion) : null,
       mandante: mandante || null,
       moneda: moneda || null,
+      plazo_ejecucion_dias: plazo_ejecucion_dias ? Number(plazo_ejecucion_dias) : null,
     };
 
     // Only include archivo fields if files were uploaded

@@ -43,6 +43,7 @@ export function registerSolicitudesTools(server: McpServer, client: ApiClient) {
       proyecto_id: z.number().describe("ID del proyecto"),
       solicitante: z.string().describe("Nombre del solicitante"),
       fecha: z.string().optional().describe("Fecha de la solicitud (YYYY-MM-DD)"),
+      fecha_requerida: z.string().optional().describe("Fecha en que se necesita el material en terreno (YYYY-MM-DD)"),
       items: z
         .array(
           z.object({

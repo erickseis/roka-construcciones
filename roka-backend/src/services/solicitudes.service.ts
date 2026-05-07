@@ -5,6 +5,7 @@ export interface CreateSolicitudInput {
   proyecto_id: number;
   solicitante: string;
   fecha?: string;
+  fecha_requerida?: string | null;
   items: Array<{
     material_id?: number;
     nombre_material?: string;
@@ -19,6 +20,7 @@ export interface SolicitudConItems {
   proyecto_id: number;
   solicitante: string;
   fecha: string;
+  fecha_requerida?: string | null;
   estado: string;
   created_at: Date;
   updated_at: Date;
@@ -37,6 +39,7 @@ export async function crearSolicitudConItems(input: CreateSolicitudInput): Promi
         proyecto_id: input.proyecto_id,
         solicitante: input.solicitante,
         fecha: input.fecha || new Date().toISOString().split('T')[0],
+        fecha_requerida: input.fecha_requerida || null,
       },
       db
     );

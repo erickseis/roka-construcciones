@@ -13,7 +13,19 @@ import {
 } from '../lib/notifications';
 
 export async function crearCotizacion(input: CreateCotizacionInput, usuarioId: number | null) {
-  const { solicitud_id, solicitud_cotizacion_id, proveedor_id, proveedor, items } = input;
+  const { 
+    solicitud_id, 
+    solicitud_cotizacion_id, 
+    proveedor_id, 
+    proveedor, 
+    items,
+    archivo_adjunto_path,
+    archivo_adjunto_nombre,
+    numero_cov,
+    imported_from_file,
+    metodo_importacion,
+    datos_importados,
+  } = input;
 
   if (!solicitud_id || (!proveedor_id && !proveedor) || !items || items.length === 0) {
     throw Object.assign(new Error('Faltan campos requeridos'), { statusCode: 400 });
@@ -69,16 +81,25 @@ export async function crearCotizacion(input: CreateCotizacionInput, usuarioId: n
 
     // Calcular total y construir validatedItems en memoria
     let total = 0;
-    const validatedItems: { solicitud_item_id: number; precio_unitario: number; subtotal: number }[] = [];
+    const validatedItems: Array<{
+      solicitud_item_id: number;
+      precio_unitario: number;
+      subtotal: number;
+      descuento_porcentaje?: number;
+      codigo_proveedor?: string;
+    }> = [];
     const solItemMap = new Map(solItems.map(r => [r.id, r]));
     for (const item of items) {
       const solItem = solItemMap.get(item.solicitud_item_id)!;
-      const subtotal = parseFloat(solItem.cantidad_requerida) * parseFloat(item.precio_unitario);
+      const descuento = item.descuento_porcentaje || 0;
+      const subtotal = solItem.cantidad_requerida * item.precio_unitario * (1 - descuento / 100);
       total += subtotal;
       validatedItems.push({
         solicitud_item_id: item.solicitud_item_id,
         precio_unitario: item.precio_unitario,
         subtotal,
+        descuento_porcentaje: item.descuento_porcentaje,
+        codigo_proveedor: item.codigo_proveedor,
       });
     }
 
@@ -87,28 +108,36 @@ export async function crearCotizacion(input: CreateCotizacionInput, usuarioId: n
         solicitud_id,
         solicitud_cotizacion_id: solicitud_cotizacion_id || null,
         proveedor_id: proveedor_id || null,
-        proveedor: nombreProveedor,
+        proveedor: nombreProveedor || 'Proveedor sin nombre',
         total,
         created_by_usuario_id: usuarioId,
+        numero_cov: numero_cov || null,
+        imported_from_file: imported_from_file || false,
+        metodo_importacion: metodo_importacion || 'manual',
+        datos_importados: datos_importados || null,
+        archivo_adjunto_path: archivo_adjunto_path || null,
+        archivo_adjunto_nombre: archivo_adjunto_nombre || null,
       },
       client
     );
 
-    // Multi-row INSERT cotizacion_items con chunking
+    // Multi-row INSERT cotizacion_items con chunking (incluyendo nuevos campos)
     for (let i = 0; i < validatedItems.length; i += 500) {
       const chunk = validatedItems.slice(i, i + 500);
       const placeholders = chunk.map((_, j) => {
-        const base = j * 4;
-        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`;
+        const base = j * 6;
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`;
       });
       const values = chunk.flatMap(vi => [
         cotizacion.id,
         vi.solicitud_item_id,
         vi.precio_unitario,
         vi.subtotal,
+        vi.descuento_porcentaje || 0,
+        vi.codigo_proveedor || null,
       ]);
       await client.query(
-        `INSERT INTO cotizacion_items (cotizacion_id, solicitud_item_id, precio_unitario, subtotal)
+        `INSERT INTO cotizacion_items (cotizacion_id, solicitud_item_id, precio_unitario, subtotal, descuento_porcentaje, codigo_proveedor)
          VALUES ${placeholders.join(', ')}`,
         values
       );
