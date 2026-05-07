@@ -20,6 +20,7 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
   const { data: proyectos } = useApi(() => getProyectosAdmin(), []);
   const { data: masterUnidades } = useApi(() => getUnidadesMedida(), []);
   const { data: proveedoresList, refetch: refetchProveedores } = useApi(() => getProveedores(), []);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

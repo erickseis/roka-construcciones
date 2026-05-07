@@ -373,7 +373,110 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
+      {/* Solicitudes Urgentes */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="rounded-xl bg-white p-6 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Solicitudes por Fecha de Entrega</h3>
+            <p className="text-xs text-slate-400">Ordenadas por fecha más próxima a vencer</p>
+          </div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50">
+            <AlertTriangle size={20} className="text-red-500" />
+          </div>
+        </div>
 
+        {(!stats?.solicitudes_urgentes || stats.solicitudes_urgentes.length === 0) ? (
+          <div className="py-8 text-center text-sm text-slate-500">
+            ✓ No hay solicitudes pendientes con fecha de entrega próxima
+          </div>
+        ) : (
+          <div className="max-h-64 overflow-y-auto">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-white dark:bg-slate-800/50">
+                <tr className="border-b border-slate-100 dark:border-slate-700">
+                  <th className="py-2 text-left text-xs font-bold uppercase text-slate-400">Folio</th>
+                  <th className="py-2 text-left text-xs font-bold uppercase text-slate-400">Proyecto</th>
+                  <th className="py-2 text-left text-xs font-bold uppercase text-slate-400">Solicitante</th>
+                  <th className="py-2 text-center text-xs font-bold uppercase text-slate-400">Ítems</th>
+                  <th className="py-2 text-left text-xs font-bold uppercase text-slate-400">Fecha Requerida</th>
+                  <th className="py-2 text-center text-xs font-bold uppercase text-slate-400">Días Restantes</th>
+                  <th className="py-2 text-center text-xs font-bold uppercase text-slate-400">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.solicitudes_urgentes.map((sol: any) => {
+                  const diasRestantes = sol.dias_restantes;
+                  let diasBadgeClass = '';
+                  let diasBadgeText = '';
+
+                  if (diasRestantes === null) {
+                    diasBadgeClass = 'bg-slate-100 text-slate-500';
+                    diasBadgeText = '-';
+                  } else if (diasRestantes < 0) {
+                    diasBadgeClass = 'bg-red-100 text-red-700 font-bold';
+                    diasBadgeText = `Vencida hace ${Math.abs(diasRestantes)} día${Math.abs(diasRestantes) > 1 ? 's' : ''}`;
+                  } else if (diasRestantes === 0) {
+                    diasBadgeClass = 'bg-amber-100 text-amber-700 font-bold';
+                    diasBadgeText = 'HOY';
+                  } else if (diasRestantes >= 1 && diasRestantes <= 3) {
+                    diasBadgeClass = 'bg-orange-100 text-orange-700';
+                    diasBadgeText = `${diasRestantes} día${diasRestantes > 1 ? 's' : ''}`;
+                  } else if (diasRestantes >= 4 && diasRestantes <= 7) {
+                    diasBadgeClass = 'bg-yellow-100 text-yellow-700';
+                    diasBadgeText = `${diasRestantes} días`;
+                  } else {
+                    diasBadgeClass = 'bg-emerald-50 text-emerald-600';
+                    diasBadgeText = `${diasRestantes} días`;
+                  }
+
+                  const estadoClass = sol.estado === 'Pendiente' 
+                    ? 'bg-amber-100 text-amber-700' 
+                    : 'bg-blue-100 text-blue-700';
+
+                  return (
+                    <tr key={sol.id} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/20">
+                      <td className="py-2.5 text-slate-600 dark:text-slate-300 font-medium">
+                        SOL-{String(sol.id).padStart(3, '0')}
+                      </td>
+                      <td className="py-2.5 text-slate-600 dark:text-slate-300 max-w-[150px] truncate" title={sol.proyecto_nombre}>
+                        {sol.proyecto_nombre}
+                      </td>
+                      <td className="py-2.5 text-slate-600 dark:text-slate-300">
+                        {sol.solicitante}
+                      </td>
+                      <td className="py-2.5 text-center">
+                        <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-medium dark:bg-slate-700 dark:text-slate-300">
+                          {sol.total_items}
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-slate-600 dark:text-slate-300">
+                        {sol.fecha_requerida 
+                          ? new Date(sol.fecha_requerida).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' })
+                          : '-'}
+                      </td>
+                      <td className="py-2.5 text-center">
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs ${diasBadgeClass}`}>
+                          {diasBadgeText}
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-center">
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs ${estadoClass}`}>
+                          {sol.estado}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </motion.div>
     </div>
   );
 }

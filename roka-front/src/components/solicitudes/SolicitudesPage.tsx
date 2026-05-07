@@ -561,7 +561,7 @@ export default function SolicitudesPage() {
                             menu: (base) => ({
                               ...base,
                               fontSize: '0.875rem',
-                              backgroundColor: '#1e293b', // slate-800 for dark mode menu
+                              backgroundColor: '#1e293b',
                               color: '#f8fafc'
                             }),
                             option: (base, state) => ({
@@ -608,8 +608,8 @@ export default function SolicitudesPage() {
                            <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Unidad</label>
                            <select
                             value={item.unidad}
-                            onChange={e => updateItem(idx, 'unidad', e.target.value)}
-                            className="w-full h-[38px] rounded-md border border-slate-200 bg-white px-2 py-1 text-sm outline-none focus:border-amber-400 transition-colors dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-amber-500/50 dark:focus:bg-slate-800"
+                             onChange={e => updateItem(idx, 'unidad', e.target.value)}
+                             className="w-full h-[38px] rounded-md border border-slate-200 bg-white px-2 py-1 text-sm outline-none focus:border-amber-400 transition-colors dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-amber-500/50 dark:focus:bg-slate-800"
                           >
                             {masterUnidades?.map((u: any) => (
                               <option key={u.id} value={u.abreviatura}>{u.abreviatura}</option>
