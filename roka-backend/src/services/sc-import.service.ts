@@ -185,7 +185,8 @@ REGLAS DE MATCHING ESTRICTAS:
    - "none": Materiales completamente distintos (ej. Tornillo vs Barra, Malla vs Cemento). NO asignes solicitud_item_id.
 4. Un mismo "solicitud_item_id" no puede ser asignado a más de un ítem extraído.
 5. Extrae: precio unitario, cantidad, unidad, código proveedor, subtotal línea, descuento.
-6. Identifica a nivel global: número COV (cotización), nombre proveedor, RUT, monto total, condiciones pago, plazo entrega.`;
+6. FORMATO NUMÉRICO (CHILE): El punto (.) es separador de miles y la coma (,) es separador decimal. Convierte los montos a formato numérico válido: $4.500 debe ser 4500 (entero) y 72,5 debe ser 72.5 (decimal).
+7. Identifica a nivel global: número COV (cotización), nombre proveedor, RUT, monto total, condiciones pago, plazo entrega.`;
 
   // Prepare image content for the model
   let content: any[];
