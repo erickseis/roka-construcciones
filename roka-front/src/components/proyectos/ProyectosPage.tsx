@@ -404,7 +404,7 @@ export default function ProyectosPage() {
             {mostrarLicitacion && (
               <div className="mt-4 space-y-4">
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Número de Licitación</label>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Número de Licitación <sup className='text-slate-500'>(Opcional)</sup></label>
                   <input
                     type="text"
                     value={form.numero_licitacion}

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus, Eye, Send, Trash2 } from 'lucide-react';
+import { Plus, Eye, Send, Trash2, FileDown, Upload } from 'lucide-react';
 import { DataTable } from '../ui/DataTable';
 import { StatusBadge } from '../ui/StatusBadge';
 import { useApi } from '@/hooks/useApi';
-import { getSolicitudesCotizacion, changeSolicitudCotizacionEstado, deleteSolicitudCotizacion, getSolicitudes } from '@/lib/api';
+import { getSolicitudesCotizacion, changeSolicitudCotizacionEstado, deleteSolicitudCotizacion, getSolicitudes, descargarSolicitudCotizacionPdf, getSolicitudCotizacion } from '@/lib/api';
 import SolicitudCotizacionModal from './SolicitudCotizacionModal';
 import SolicitudCotizacionDetailModal from './SolicitudCotizacionDetailModal';
+import ImportarRespuestaSCModal from './ImportarRespuestaSCModal';
 import { Clock, AlertTriangle } from 'lucide-react';
 
 const estadoColor: Record<string, string> = {
@@ -20,6 +21,8 @@ export default function SolicitudCotizacionTab() {
   const [showForm, setShowForm] = useState(false);
   const [initialSolicitudId, setInitialSolicitudId] = useState<string | undefined>(undefined);
   const [detailId, setDetailId] = useState<number | null>(null);
+  const [importData, setImportData] = useState<any>(null);
+  const [showImport, setShowImport] = useState(false);
   
   const { data: list, loading, refetch } = useApi(() => getSolicitudesCotizacion(), []);
   // Cargar solicitudes de materiales pendientes para procesar
@@ -48,6 +51,16 @@ export default function SolicitudCotizacionTab() {
       refetch();
       refetchPendientes();
     } catch { alert('Error al eliminar'); }
+  };
+
+  const handleOpenImport = async (id: number) => {
+    try {
+      const data = await getSolicitudCotizacion(id);
+      setImportData(data);
+      setShowImport(true);
+    } catch (err: any) {
+      alert(err.message || 'Error al cargar datos de la cotización');
+    }
   };
 
   const columns = [
@@ -79,7 +92,17 @@ export default function SolicitudCotizacionTab() {
             className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600" title="Ver detalle">
             <Eye size={14} />
           </button>
-          {row.estado === 'Borrador' && (
+          <button onClick={(e) => { e.stopPropagation(); descargarSolicitudCotizacionPdf(row.id); }}
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600" title="Descargar PDF">
+            <FileDown size={14} />
+          </button>
+          {row.estado?.toUpperCase() === 'ENVIADA' && (
+            <button onClick={(e) => { e.stopPropagation(); handleOpenImport(row.id); }}
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600" title="Cargar respuesta del vendedor">
+              <Upload size={14} />
+            </button>
+          )}
+          {row.estado?.toUpperCase() === 'BORRADOR' && (
             <>
               <button onClick={(e) => { e.stopPropagation(); handleEstado(row.id, 'Enviada'); }}
                 className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600" title="Marcar como Enviada">
@@ -185,7 +208,7 @@ export default function SolicitudCotizacionTab() {
       <div className="mb-6 grid grid-cols-4 gap-4">
         {[
           { label: 'Borrador', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'BORRADOR').length || 0, color: 'text-slate-500' },
-          { label: 'Enviadas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'ENVIADA').length || 0, color: 'text-blue-600' },
+          { label: 'Enviadas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'ENVIADA').length || 0, color: 'text-emerald-600' },
           { label: 'Respondidas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'RESPONDIDA').length || 0, color: 'text-emerald-600' },
           { label: 'Anuladas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'ANULADA').length || 0, color: 'text-red-600' },
         ].map(stat => (
@@ -220,9 +243,26 @@ export default function SolicitudCotizacionTab() {
 
       <SolicitudCotizacionDetailModal
         id={detailId}
-        isOpen={detailId !== null}
+        isOpen={!!detailId}
         onClose={() => setDetailId(null)}
-        onSuccess={() => refetch()}
+        onSuccess={() => {
+          refetch();
+          refetchPendientes();
+        }}
+      />
+
+      <ImportarRespuestaSCModal
+        isOpen={showImport}
+        onClose={() => { setShowImport(false); setImportData(null); }}
+        solicitudCotizacionId={importData?.id || 0}
+        scItems={importData?.items || []}
+        solicitudData={importData}
+        onSuccess={() => {
+          setShowImport(false);
+          setImportData(null);
+          refetch();
+          refetchPendientes();
+        }}
       />
     </>
   );

@@ -37,12 +37,20 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
     if (!proyectoId) {
       setSolicitudes([]);
       setSolicitudId('');
+      setCodigoObra('');
       return;
+    }
+    // Auto-cargar código de obra desde el proyecto seleccionado
+    const proyecto = proyectos?.find((p: any) => p.id === Number(proyectoId));
+    if (proyecto?.numero_obra) {
+      setCodigoObra(proyecto.numero_obra);
+    } else {
+      setCodigoObra('');
     }
     getSolicitudes({ proyecto_id: Number(proyectoId) })
       .then(res => setSolicitudes(Array.isArray(res) ? res : (res as any)?.data || []))
       .catch(() => setSolicitudes([]));
-  }, [proyectoId]);
+  }, [proyectoId, proyectos]);
 
   const addItem = () => {
     setItems([...items, { id: items.length + 1, nombre_material: '', cantidad: 0, unidad: 'Unidades', precio_unitario: 0, codigo: '' }]);
@@ -132,8 +140,8 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
           </div>
           <div>
             <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Código de Obra</label>
-            <input type="text" value={codigoObra} onChange={e => setCodigoObra(e.target.value)} placeholder="Ej: OB-2024-001" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400" />
-            <p className="mt-1 text-[10px] text-slate-400">Si no se especifica, se usa el N° de licitación del proyecto.</p>
+            <input type="text" value={codigoObra} onChange={e => setCodigoObra(e.target.value)} placeholder="Se auto-carga al seleccionar proyecto" className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-amber-400 bg-slate-100" readOnly />
+            <p className="mt-1 text-[10px] text-slate-400">Se auto-carga desde el N° de obra del proyecto.</p>
           </div>
         </div>
 

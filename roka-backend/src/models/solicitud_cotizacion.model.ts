@@ -4,7 +4,7 @@ import { SolicitudCotizacion, SolicitudCotizacionDetalle, SolicitudCotizacionFil
 export async function getAllSolicitudesCotizacion(filters: SolicitudCotizacionFilters): Promise<SolicitudCotizacion[]> {
   const db = getDb();
   let query = `
-    SELECT sc.*, sm.solicitante, p.nombre AS proyecto_nombre,
+    SELECT sc.*, sm.solicitante, p.nombre AS proyecto_nombre, p.numero_obra,
            sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
            (SELECT COUNT(*) FROM solicitud_cotizacion_detalle WHERE solicitud_cotizacion_id = sc.id) AS total_items
     FROM solicitud_cotizacion sc
@@ -40,7 +40,7 @@ export async function getAllSolicitudesCotizacion(filters: SolicitudCotizacionFi
 export async function getSolicitudCotizacionById(id: number): Promise<(SolicitudCotizacion & { total_items?: number }) | null> {
   const db = getDb();
   const { rows: [sc] } = await db.query(`
-    SELECT sc.*, sm.solicitante, p.nombre AS proyecto_nombre,
+    SELECT sc.*, sm.solicitante, p.nombre AS proyecto_nombre, p.numero_obra,
            sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
            (SELECT COUNT(*) FROM solicitud_cotizacion_detalle WHERE solicitud_cotizacion_id = sc.id) AS total_items
     FROM solicitud_cotizacion sc
@@ -120,25 +120,31 @@ export async function deleteSolicitudCotizacion(id: number, db?: Queryable): Pro
   const conn = getDb(db);
   
   // Obtenemos el solicitud_id antes de borrar
-  const { rows: [sc] } = await conn.query('SELECT solicitud_id FROM solicitud_cotizacion WHERE id = $1', [id]);
+  const { rows: [sc] } = await conn.query('SELECT solicitud_id, estado FROM solicitud_cotizacion WHERE id = $1', [id]);
   if (!sc) return false;
 
+  // Permitir eliminar en cualquier estado excepto 'Respondida' (que ya tiene precios)
+  const estadoLower = (sc.estado || '').toLowerCase();
+  if (estadoLower === 'respondida') {
+    return false;
+  }
+
   const { rowCount } = await conn.query(
-    `DELETE FROM solicitud_cotizacion WHERE id = $1 AND (estado = 'Borrador' OR estado = 'Anulada' OR estado = 'ANULADA')`,
+    `DELETE FROM solicitud_cotizacion WHERE id = $1`,
     [id]
   );
 
   if ((rowCount || 0) > 0) {
-    // Verificar si quedan cotizaciones para esta solicitud
+    // Verificar si quedan cotizaciones activas para esta solicitud
     const { rows: [{ count }] } = await conn.query(
-      'SELECT COUNT(*) as count FROM solicitud_cotizacion WHERE solicitud_id = $1',
+      `SELECT COUNT(*) as count FROM solicitud_cotizacion WHERE solicitud_id = $1 AND LOWER(estado) NOT IN ('anulada')`,
       [sc.solicitud_id]
     );
 
     if (Number(count) === 0) {
-      // Si no quedan, volver a estado Pendiente
+      // Si no quedan cotizaciones activas, volver a estado Pendiente
       await conn.query(
-        "UPDATE solicitudes_material SET estado = 'Pendiente' WHERE id = $1",
+        "UPDATE solicitudes_material SET estado = 'Pendiente', updated_at = NOW() WHERE id = $1 AND estado != 'Anulada'",
         [sc.solicitud_id]
       );
     }
