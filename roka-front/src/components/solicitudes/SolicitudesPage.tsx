@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus, FileText, Eye, Trash2, Upload, Download, Send, PackageCheck } from 'lucide-react';
+import { Plus, FileText, Eye, Trash2, Upload, Download, Send, PackageCheck, Ban } from 'lucide-react';
 import * as XLSX from 'xlsx-js-style';
 import { DataTable } from '../ui/DataTable';
 import { StatusBadge } from '../ui/StatusBadge';
@@ -199,20 +199,23 @@ export default function SolicitudesPage() {
               }
             }}
             className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+            title="Ver detalle"
           >
             <Eye size={14} />
           </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); handleDelete(row.id, row.estado); }}
-            className={`rounded-lg p-1.5 transition-colors ${
-              row.estado === 'Anulada' 
-                ? 'text-red-600 hover:bg-red-100' 
-                : 'text-slate-400 hover:bg-red-50 hover:text-red-500'
-            }`}
-            title={row.estado === 'Anulada' ? 'Eliminar permanentemente' : 'Anular solicitud'}
-          >
-            <Trash2 size={14} />
-          </button>
+          {row.estado !== 'Aprobado' && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDelete(row.id, row.estado); }}
+              className={`rounded-lg p-1.5 transition-colors ${
+                row.estado === 'Anulada' 
+                  ? 'text-red-600 hover:bg-red-100' 
+                  : 'text-slate-400 hover:bg-amber-50 hover:text-amber-500'
+              }`}
+              title={row.estado === 'Anulada' ? 'Eliminar permanentemente' : 'Anular solicitud'}
+            >
+              {row.estado === 'Anulada' ? <Trash2 size={14} /> : <Ban size={14} />}
+            </button>
+          )}
         </div>
       ),
     },
@@ -532,10 +535,24 @@ export default function SolicitudesPage() {
                               borderRadius: '0.375rem',
                               borderColor: state.isFocused ? '#fbbf24' : '#e2e8f0',
                               boxShadow: state.isFocused ? '0 0 0 1px #fbbf24' : 'none',
+                              backgroundColor: 'inherit',
+                              color: 'inherit',
                               '&:hover': {
                                 borderColor: state.isFocused ? '#fbbf24' : '#cbd5e1'
                               },
                               fontSize: '0.875rem'
+                            }),
+                            singleValue: (base) => ({
+                              ...base,
+                              color: 'inherit'
+                            }),
+                            placeholder: (base) => ({
+                              ...base,
+                              color: '#94a3b8'
+                            }),
+                            input: (base) => ({
+                              ...base,
+                              color: 'inherit'
                             }),
                             menuPortal: (base) => ({
                               ...base,
@@ -543,7 +560,17 @@ export default function SolicitudesPage() {
                             }),
                             menu: (base) => ({
                               ...base,
-                              fontSize: '0.875rem'
+                              fontSize: '0.875rem',
+                              backgroundColor: '#1e293b', // slate-800 for dark mode menu
+                              color: '#f8fafc'
+                            }),
+                            option: (base, state) => ({
+                              ...base,
+                              backgroundColor: state.isSelected ? '#f59e0b' : state.isFocused ? '#334155' : 'transparent',
+                              color: state.isSelected ? 'white' : '#f8fafc',
+                              '&:active': {
+                                backgroundColor: '#f59e0b'
+                              }
                             })
                           }}
                         />
@@ -558,7 +585,7 @@ export default function SolicitudesPage() {
                             placeholder="Opcional"
                             value={item.codigo}
                             onChange={e => updateItem(idx, 'codigo', e.target.value)}
-                            className="w-full h-[38px] rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-mono outline-none focus:border-amber-400 focus:bg-white transition-colors"
+                            className="w-full h-[38px] rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-mono outline-none focus:border-amber-400 focus:bg-white transition-colors dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-amber-500/50 dark:focus:bg-slate-800 dark:placeholder-slate-600"
                           />
                         </div>
 
@@ -572,7 +599,7 @@ export default function SolicitudesPage() {
                             step="0.01"
                             value={item.cantidad_requerida}
                             onChange={e => updateItem(idx, 'cantidad_requerida', e.target.value)}
-                            className="w-full h-[38px] rounded-md border border-slate-200 bg-white px-2 py-1 text-sm outline-none focus:border-amber-400 transition-colors"
+                            className="w-full h-[38px] rounded-md border border-slate-200 bg-white px-2 py-1 text-sm outline-none focus:border-amber-400 transition-colors dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-amber-500/50 dark:focus:bg-slate-800"
                           />
                         </div>
 
@@ -582,7 +609,7 @@ export default function SolicitudesPage() {
                            <select
                             value={item.unidad}
                             onChange={e => updateItem(idx, 'unidad', e.target.value)}
-                            className="w-full h-[38px] rounded-md border border-slate-200 bg-white px-2 py-1 text-sm outline-none focus:border-amber-400 transition-colors"
+                            className="w-full h-[38px] rounded-md border border-slate-200 bg-white px-2 py-1 text-sm outline-none focus:border-amber-400 transition-colors dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-amber-500/50 dark:focus:bg-slate-800"
                           >
                             {masterUnidades?.map((u: any) => (
                               <option key={u.id} value={u.abreviatura}>{u.abreviatura}</option>

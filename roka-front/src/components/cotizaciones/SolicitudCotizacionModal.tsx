@@ -10,11 +10,12 @@ interface ItemAsignacion {
   nombre_material: string;
   cantidad_requerida: number;
   unidad: string;
+  codigo?: string;
   proveedor_id: number | '';
   proveedor_nombre: string;
 }
 
-export default function SolicitudCotizacionModal({ isOpen, onClose, onSuccess }: { isOpen: boolean; onClose: () => void; onSuccess: () => void }) {
+export default function SolicitudCotizacionModal({ isOpen, onClose, onSuccess, initialSolicitudId }: { isOpen: boolean; onClose: () => void; onSuccess: () => void; initialSolicitudId?: string }) {
   const [solicitudes, setSolicitudes] = useState<any[]>([]);
   const [solicitudId, setSolicitudId] = useState('');
   const [items, setItems] = useState<ItemAsignacion[]>([]);
@@ -26,7 +27,7 @@ export default function SolicitudCotizacionModal({ isOpen, onClose, onSuccess }:
 
   useEffect(() => {
     if (!isOpen) return;
-    setSolicitudId('');
+    setSolicitudId(initialSolicitudId || '');
     setItems([]);
     setError(null);
     Promise.all([
@@ -35,8 +36,11 @@ export default function SolicitudCotizacionModal({ isOpen, onClose, onSuccess }:
     ]).then(([sols, provs]) => {
       setSolicitudes(sols?.filter((s: any) => s.estado !== 'Aprobado') || []);
       setProveedores(provs || []);
+      if (initialSolicitudId) {
+        handleSolicitudChange(initialSolicitudId);
+      }
     });
-  }, [isOpen]);
+  }, [isOpen, initialSolicitudId]);
 
   const handleSolicitudChange = async (id: string) => {
     setSolicitudId(id);
@@ -50,6 +54,7 @@ export default function SolicitudCotizacionModal({ isOpen, onClose, onSuccess }:
         nombre_material: i.nombre_material,
         cantidad_requerida: i.cantidad_requerida,
         unidad: i.unidad,
+        codigo: i.codigo || i.material_sku || '',
         proveedor_id: '' as const,
         proveedor_nombre: '',
       })));
@@ -206,6 +211,7 @@ export default function SolicitudCotizacionModal({ isOpen, onClose, onSuccess }:
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Material</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Código</th>
                     <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Cant.</th>
                     <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Unidad</th>
                     <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Proveedor</th>
@@ -215,6 +221,7 @@ export default function SolicitudCotizacionModal({ isOpen, onClose, onSuccess }:
                   {items.map((item, idx) => (
                     <tr key={item.solicitud_item_id} className="border-t border-slate-100">
                       <td className="px-3 py-2 font-medium text-slate-800">{item.nombre_material}</td>
+                      <td className="px-3 py-2 font-mono text-xs text-slate-500">{item.codigo || '-'}</td>
                       <td className="px-3 py-2 text-right font-mono text-slate-600">{Number(item.cantidad_requerida).toLocaleString()}</td>
                       <td className="px-3 py-2 text-slate-500">{item.unidad}</td>
                       <td className="px-3 py-2 min-w-[200px]">

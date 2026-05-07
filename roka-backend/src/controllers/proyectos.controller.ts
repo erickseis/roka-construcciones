@@ -50,7 +50,7 @@ export async function getById(req: Request, res: Response) {
 
 export async function create(req: Request, res: Response) {
   const {
-    nombre, ubicacion, estado, fecha_inicio, fecha_fin,
+    nombre, numero_obra, ubicacion, estado, fecha_inicio, fecha_fin,
     responsable_usuario_id, numero_licitacion, descripcion_licitacion,
     fecha_apertura_licitacion, monto_referencial_licitacion,
     mandante, moneda, procesar_materiales, plazo_ejecucion_dias,
@@ -58,6 +58,10 @@ export async function create(req: Request, res: Response) {
 
   if (!nombre) {
     return res.status(400).json({ error: 'El nombre del proyecto es requerido' });
+  }
+
+  if (!numero_obra) {
+    return res.status(400).json({ error: 'El número de obra es requerido' });
   }
 
   try {
@@ -72,6 +76,7 @@ export async function create(req: Request, res: Response) {
 
     const created = await proyectoModel.createProyecto({
       nombre,
+      numero_obra: numero_obra || null,
       ubicacion: ubicacion || null,
       estado: estado || 'Planificacion',
       fecha_inicio: fecha_inicio || null,
@@ -113,7 +118,7 @@ export async function update(req: Request, res: Response) {
   }
 
   const {
-    nombre, ubicacion, estado, fecha_inicio, fecha_fin,
+    nombre, numero_obra, ubicacion, estado, fecha_inicio, fecha_fin,
     responsable_usuario_id, numero_licitacion, descripcion_licitacion,
     fecha_apertura_licitacion, monto_referencial_licitacion,
     mandante, moneda, plazo_ejecucion_dias,
@@ -126,6 +131,7 @@ export async function update(req: Request, res: Response) {
 
     const data: Record<string, any> = {
       nombre: nombre || null,
+      numero_obra: numero_obra || null,
       ubicacion: ubicacion || null,
       estado: estado || null,
       fecha_inicio: fecha_inicio || null,

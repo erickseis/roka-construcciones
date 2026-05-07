@@ -20,6 +20,7 @@ export interface ProyectoRow {
   mandante: string | null;
   moneda: string | null;
   plazo_ejecucion_dias: number | null;
+  numero_obra: string | null;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -41,6 +42,7 @@ export interface MetricasProyecto {
 
 export interface CreateProyectoData {
   nombre: string;
+  numero_obra?: string | null;
   ubicacion?: string | null;
   estado?: string;
   fecha_inicio?: string | null;
@@ -61,6 +63,7 @@ export interface CreateProyectoData {
 
 export interface UpdateProyectoData {
   nombre?: string | null;
+  numero_obra?: string | null;
   ubicacion?: string | null;
   estado?: string | null;
   fecha_inicio?: string | null;
@@ -158,16 +161,17 @@ export async function createProyecto(data: CreateProyectoData, db?: Queryable): 
   const conn = getDb(db);
   const { rows } = await conn.query(
     `INSERT INTO proyectos (
-       nombre, ubicacion, estado, fecha_inicio, fecha_fin,
+       nombre, numero_obra, ubicacion, estado, fecha_inicio, fecha_fin,
        responsable_usuario_id, numero_licitacion, descripcion_licitacion,
        fecha_apertura_licitacion, monto_referencial_licitacion,
        archivo_licitacion_path, archivo_licitacion_nombre, 
        archivo_materiales_path, archivo_materiales_nombre,
        mandante, moneda, plazo_ejecucion_dias
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
      RETURNING *`,
     [
       data.nombre,
+      data.numero_obra || null,
       data.ubicacion || null,
       data.estado || 'Planificacion',
       data.fecha_inicio || null,
@@ -195,27 +199,29 @@ export async function updateProyecto(id: number, data: UpdateProyectoData, db?: 
     `UPDATE proyectos
      SET
        nombre = COALESCE($1, nombre),
-       ubicacion = COALESCE($2, ubicacion),
-       estado = COALESCE($3, estado),
-       fecha_inicio = COALESCE($4, fecha_inicio),
-       fecha_fin = COALESCE($5, fecha_fin),
-       responsable_usuario_id = COALESCE($6, responsable_usuario_id),
-       numero_licitacion = COALESCE($7, numero_licitacion),
-       descripcion_licitacion = COALESCE($8, descripcion_licitacion),
-       fecha_apertura_licitacion = COALESCE($9, fecha_apertura_licitacion),
-       monto_referencial_licitacion = COALESCE($10, monto_referencial_licitacion),
-       archivo_licitacion_path = COALESCE($11, archivo_licitacion_path),
-       archivo_licitacion_nombre = COALESCE($12, archivo_licitacion_nombre),
-       archivo_materiales_path = COALESCE($13, archivo_materiales_path),
-       archivo_materiales_nombre = COALESCE($14, archivo_materiales_nombre),
-mandante = COALESCE($15, mandante),
-        moneda = COALESCE($16, moneda),
-        plazo_ejecucion_dias = COALESCE($17, plazo_ejecucion_dias),
-        updated_at = NOW()
-      WHERE id = $18
-      RETURNING *`,
+       numero_obra = COALESCE($2, numero_obra),
+       ubicacion = COALESCE($3, ubicacion),
+       estado = COALESCE($4, estado),
+       fecha_inicio = COALESCE($5, fecha_inicio),
+       fecha_fin = COALESCE($6, fecha_fin),
+       responsable_usuario_id = COALESCE($7, responsable_usuario_id),
+       numero_licitacion = COALESCE($8, numero_licitacion),
+       descripcion_licitacion = COALESCE($9, descripcion_licitacion),
+       fecha_apertura_licitacion = COALESCE($10, fecha_apertura_licitacion),
+       monto_referencial_licitacion = COALESCE($11, monto_referencial_licitacion),
+       archivo_licitacion_path = COALESCE($12, archivo_licitacion_path),
+       archivo_licitacion_nombre = COALESCE($13, archivo_licitacion_nombre),
+       archivo_materiales_path = COALESCE($14, archivo_materiales_path),
+       archivo_materiales_nombre = COALESCE($15, archivo_materiales_nombre),
+       mandante = COALESCE($16, mandante),
+       moneda = COALESCE($17, moneda),
+       plazo_ejecucion_dias = COALESCE($18, plazo_ejecucion_dias),
+       updated_at = NOW()
+     WHERE id = $19
+     RETURNING *`,
     [
       data.nombre || null,
+      data.numero_obra || null,
       data.ubicacion || null,
       data.estado || null,
       data.fecha_inicio || null,

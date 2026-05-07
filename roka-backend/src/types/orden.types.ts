@@ -39,6 +39,7 @@ export interface OrdenCompraDetalle extends OrdenCompra {
   solicitud_estado: string;
   proyecto_ubicacion: string | null;
   proyecto_numero_licitacion: string | null;
+  proyecto_numero_obra?: string | null;
   proyecto_descripcion_licitacion: string | null;
   proveedor_rut: string | null;
   proveedor_razon_social: string | null;

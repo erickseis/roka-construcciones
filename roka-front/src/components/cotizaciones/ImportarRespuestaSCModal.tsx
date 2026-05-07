@@ -311,7 +311,12 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
                       <tr key={idx} className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${!hasMatch ? 'bg-slate-50/50 dark:bg-slate-800/20' : ''}`}>
                         {/* Solicitud Column */}
                         <td className="px-3 py-3 text-slate-800 dark:text-slate-200 font-medium">
-                          {scItem.nombre_material}
+                          <div className="flex flex-col">
+                            <span>{scItem.nombre_material}</span>
+                            {scItem.codigo && (
+                              <span className="text-[10px] font-mono text-slate-500 mt-0.5">Cód: {scItem.codigo}</span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-3 py-3 text-center text-slate-600 dark:text-slate-400">
                           {scItem.cantidad_requerida}

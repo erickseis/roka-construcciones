@@ -24,6 +24,7 @@ export default function ProyectosPage() {
 
   const [form, setForm] = useState({
     nombre: '',
+    numero_obra: '',
     ubicacion: '',
     estado: 'Planificación',
     fecha_inicio: '',
@@ -47,6 +48,7 @@ export default function ProyectosPage() {
   const resetForm = () => {
     setForm({
       nombre: '',
+      numero_obra: '',
       ubicacion: '',
       estado: 'Planificación',
       fecha_inicio: '',
@@ -86,6 +88,7 @@ export default function ProyectosPage() {
     setEditing(proyecto);
     setForm({
       nombre: proyecto.nombre || '',
+      numero_obra: proyecto.numero_obra || '',
       ubicacion: proyecto.ubicacion || '',
       estado: proyecto.estado || 'Planificación',
       fecha_inicio: proyecto.fecha_inicio ? String(proyecto.fecha_inicio).slice(0, 10) : '',
@@ -99,7 +102,7 @@ export default function ProyectosPage() {
       moneda: proyecto.moneda || 'CLP',
       plazo_ejecucion_dias: proyecto.plazo_ejecucion_dias ? String(proyecto.plazo_ejecucion_dias) : '',
     });
-    setMostrarLicitacion(!!proyecto.numero_licitacion);
+    setMostrarLicitacion(!!proyecto.numero_licitacion || !!proyecto.mandante);
     setShowForm(true);
   };
 
@@ -110,6 +113,7 @@ export default function ProyectosPage() {
     try {
       const formData = new FormData();
       formData.append('nombre', form.nombre);
+      formData.append('numero_obra', form.numero_obra);
       if (form.ubicacion) formData.append('ubicacion', form.ubicacion);
       formData.append('estado', form.estado);
       if (form.fecha_inicio) formData.append('fecha_inicio', form.fecha_inicio);
@@ -169,6 +173,16 @@ export default function ProyectosPage() {
       render: (row: any) => <span className="font-mono text-xs font-bold text-amber-600">PRY-{String(row.id).padStart(3, '0')}</span>,
     },
     { key: 'nombre', header: 'Proyecto', sortable: true },
+    {
+      key: 'numero_obra',
+      header: 'N° Obra',
+      sortable: true,
+      render: (row: any) => row.numero_obra ? (
+        <span className="font-mono text-xs font-bold text-slate-700">{row.numero_obra}</span>
+      ) : (
+        <span className="text-[10px] text-slate-400">—</span>
+      ),
+    },
     { key: 'ubicacion', header: 'Ubicación', sortable: true },
     {
       key: 'estado',
@@ -295,6 +309,21 @@ export default function ProyectosPage() {
               value={form.nombre}
               onChange={(e) => setForm({ ...form, nombre: e.target.value })}
               title="Nombre identificatorio del proyecto de obra"
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
+              Número de Obra <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={form.numero_obra}
+              onChange={(e) => setForm({ ...form, numero_obra: e.target.value })}
+              placeholder="Ej: OBRA-2024-001"
+              title="Código identificatorio obligatorio de la obra. Se usa como referencia en órdenes de compra y documentos oficiales."
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
             />
           </div>

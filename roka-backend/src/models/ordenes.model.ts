@@ -46,6 +46,7 @@ export async function getOrdenById(id: number): Promise<OrdenCompraDetalle | nul
            sm.solicitante, sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
            p.nombre AS proyecto_nombre, p.ubicacion AS proyecto_ubicacion,
            p.numero_licitacion AS proyecto_numero_licitacion,
+           p.numero_obra AS proyecto_numero_obra,
            p.descripcion_licitacion AS proyecto_descripcion_licitacion,
            COALESCE(pr.rut, oc.proveedor_rut) AS proveedor_rut,
            pr.razon_social AS proveedor_razon_social,

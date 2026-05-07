@@ -5,7 +5,8 @@ export async function getAllSolicitudesCotizacion(filters: SolicitudCotizacionFi
   const db = getDb();
   let query = `
     SELECT sc.*, sm.solicitante, p.nombre AS proyecto_nombre,
-           sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado
+           sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
+           (SELECT COUNT(*) FROM solicitud_cotizacion_detalle WHERE solicitud_cotizacion_id = sc.id) AS total_items
     FROM solicitud_cotizacion sc
     JOIN solicitudes_material sm ON sm.id = sc.solicitud_id
     JOIN proyectos p ON p.id = sm.proyecto_id
@@ -53,7 +54,7 @@ export async function getSolicitudCotizacionById(id: number): Promise<(Solicitud
 export async function getSolicitudCotizacionDetalle(scId: number): Promise<SolicitudCotizacionDetalle[]> {
   const db = getDb();
   const { rows } = await db.query(`
-    SELECT scd.*, si.nombre_material, si.cantidad_requerida, si.unidad
+    SELECT scd.*, si.nombre_material, si.cantidad_requerida, si.unidad, si.codigo
     FROM solicitud_cotizacion_detalle scd
     JOIN solicitud_items si ON si.id = scd.solicitud_item_id
     WHERE scd.solicitud_cotizacion_id = $1
@@ -117,11 +118,34 @@ export async function updateSolicitudCotizacionEstado(id: number, estado: string
 
 export async function deleteSolicitudCotizacion(id: number, db?: Queryable): Promise<boolean> {
   const conn = getDb(db);
+  
+  // Obtenemos el solicitud_id antes de borrar
+  const { rows: [sc] } = await conn.query('SELECT solicitud_id FROM solicitud_cotizacion WHERE id = $1', [id]);
+  if (!sc) return false;
+
   const { rowCount } = await conn.query(
-    `DELETE FROM solicitud_cotizacion WHERE id = $1 AND estado = 'Borrador'`,
+    `DELETE FROM solicitud_cotizacion WHERE id = $1 AND (estado = 'Borrador' OR estado = 'Anulada' OR estado = 'ANULADA')`,
     [id]
   );
-  return (rowCount || 0) > 0;
+
+  if ((rowCount || 0) > 0) {
+    // Verificar si quedan cotizaciones para esta solicitud
+    const { rows: [{ count }] } = await conn.query(
+      'SELECT COUNT(*) as count FROM solicitud_cotizacion WHERE solicitud_id = $1',
+      [sc.solicitud_id]
+    );
+
+    if (Number(count) === 0) {
+      // Si no quedan, volver a estado Pendiente
+      await conn.query(
+        "UPDATE solicitudes_material SET estado = 'Pendiente' WHERE id = $1",
+        [sc.solicitud_id]
+      );
+    }
+    return true;
+  }
+  
+  return false;
 }
 
 export async function checkAllItemsCovered(solicitudId: number, db?: Queryable): Promise<boolean> {

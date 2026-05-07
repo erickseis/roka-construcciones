@@ -119,8 +119,8 @@ function buildOCHtml(orden: any, items: any[], pdfUrl?: string): string {
   const descuentoValor = Number(orden.descuento_valor ?? 0);
   const impuesto = Number(orden.impuesto_monto ?? subtotalNeto * 0.19);
   const totalFinal = Number(orden.total_final ?? subtotalNeto + impuesto);
-  // GAP-8: Use codigo_obra if present, fallback to proyecto_numero_licitacion
-  const codigoObra = orden.codigo_obra || orden.proyecto_numero_licitacion || '-';
+  // GAP-8: Use codigo_obra if present, fallback to proyecto_numero_obra, then proyecto_numero_licitacion
+  const codigoObra = orden.codigo_obra || orden.proyecto_numero_obra || orden.proyecto_numero_licitacion || '-';
 
   let descuentoDetalle = 'Sin descuento';
   if (descuentoTipo === 'porcentaje') descuentoDetalle = descuentoValor.toFixed(2) + '%';
