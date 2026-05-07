@@ -14,6 +14,8 @@ export async function getSolicitudesMensual(
   const { rows: [result] } = await conn.query(`
     SELECT
       COUNT(*) FILTER (WHERE estado = 'Pendiente')::int AS pendientes,
+      COUNT(*) FILTER (WHERE estado = 'Cotizando')::int AS cotizando,
+      COUNT(*) FILTER (WHERE estado = 'Aprobado')::int AS aprobadas,
       COUNT(*) FILTER (WHERE estado IN ('Cotizando', 'Aprobado'))::int AS atendidas,
       COUNT(*)::int AS total
     FROM solicitudes_material
@@ -97,6 +99,8 @@ export async function getResumen(
     conn.query(`
       SELECT
         COUNT(*) FILTER (WHERE estado = 'Pendiente')::int AS pendientes,
+        COUNT(*) FILTER (WHERE estado = 'Cotizando')::int AS cotizando,
+        COUNT(*) FILTER (WHERE estado = 'Aprobado')::int AS aprobadas,
         COUNT(*) FILTER (WHERE estado IN ('Cotizando', 'Aprobado'))::int AS atendidas,
         COUNT(*)::int AS total
       FROM solicitudes_material

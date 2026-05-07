@@ -14,7 +14,8 @@ export default function DashboardPage() {
 
   const solicitudesPie = stats ? [
     { name: 'Pendientes', value: stats.solicitudes_mensual.pendientes },
-    { name: 'Atendidas', value: stats.solicitudes_mensual.atendidas },
+    { name: 'Cotizando', value: stats.solicitudes_mensual.cotizando },
+    { name: 'Aprobadas', value: stats.solicitudes_mensual.aprobadas },
   ] : [];
 
   const gastoBarData = stats?.gasto_por_proyecto?.map((item: any) => ({
@@ -60,22 +61,22 @@ export default function DashboardPage() {
       <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           {
-            label: 'Solicitudes Pendientes',
+            label: 'Pendientes por Cotizar',
             value: stats?.solicitudes_mensual?.pendientes ?? 0,
             icon: <FileText size={20} />,
             color: 'text-amber-600',
             bg: 'bg-amber-50',
             iconBg: 'bg-amber-100',
-            title: 'Cantidad de solicitudes de materiales que aún están pendientes de cotización este mes',
+            title: 'Solicitudes de materiales que aún no tienen cotizaciones enviadas a proveedores. Son el punto de partida para crear solicitudes de cotización.',
           },
           {
-            label: 'Solicitudes Atendidas',
-            value: stats?.solicitudes_mensual?.atendidas ?? 0,
-            icon: <TrendingUp size={20} />,
-            color: 'text-emerald-600',
-            bg: 'bg-emerald-50',
-            iconBg: 'bg-emerald-100',
-            title: 'Cantidad de solicitudes que ya tienen al menos una cotización aprobada u orden de compra generada este mes',
+            label: 'En Cotización',
+            value: stats?.solicitudes_mensual?.cotizando ?? 0,
+            icon: <PackageCheck size={20} />,
+            color: 'text-blue-600',
+            bg: 'bg-blue-50',
+            iconBg: 'bg-blue-100',
+            title: 'Solicitudes con cotizaciones ya enviadas a proveedores, esperando respuesta de precios para generar órdenes de compra.',
           },
           {
             label: 'Promedio Conversión',
@@ -130,7 +131,7 @@ export default function DashboardPage() {
           className="col-span-1 lg:col-span-5 rounded-xl bg-white p-6 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700"
         >
           <h3 className="mb-1 text-lg font-bold text-slate-900 dark:text-white">Solicitudes del Mes</h3>
-          <p className="mb-6 text-xs text-slate-400">Pendientes vs. Atendidas</p>
+          <p className="mb-6 text-xs text-slate-400">Por estado: Pendientes, Cotizando, Aprobadas</p>
 
           <div className="flex items-center justify-center">
             <div className="relative">
@@ -164,14 +165,18 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="mt-4 flex justify-center gap-6">
+          <div className="mt-4 flex justify-center gap-4">
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-sm bg-amber-500" />
-              <span className="text-[10px] font-bold uppercase text-slate-500" title="Solicitudes que aún no han sido cotizadas ni aprobadas">Pendientes</span>
+              <span className="text-[10px] font-bold uppercase text-slate-500">Pendientes</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-sm bg-blue-500" />
-              <span className="text-[10px] font-bold uppercase text-slate-500" title="Solicitudes que ya tienen cotización aprobada u orden de compra">Atendidas</span>
+              <span className="text-[10px] font-bold uppercase text-slate-500">Cotizando</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-sm bg-emerald-500" />
+              <span className="text-[10px] font-bold uppercase text-slate-500">Aprobadas</span>
             </div>
           </div>
         </motion.div>
@@ -204,10 +209,10 @@ export default function DashboardPage() {
                 />
                 <Tooltip
                   cursor={{ fill: theme === 'dark' ? '#1e293b' : '#f1f5f9' }}
-                  contentStyle={{ 
-                    borderRadius: '8px', 
-                    border: 'none', 
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)', 
+                  contentStyle={{
+                    borderRadius: '8px',
+                    border: 'none',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                     fontSize: '12px',
                     backgroundColor: theme === 'dark' ? '#0f172a' : '#ffffff',
                     color: theme === 'dark' ? '#f8fafc' : '#0f172a'
@@ -220,60 +225,17 @@ export default function DashboardPage() {
           </div>
         </motion.div>
       </div>
-
-      {/* Conversion Time Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        title="Métricas de eficiencia del proceso de compras: tiempo que demora cada solicitud en convertirse en orden de compra"
-        className="rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-white shadow-lg"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-bold">Tiempo de Conversión</h3>
-            <p className="text-xs text-slate-400">Desde solicitud de material hasta orden de compra</p>
-          </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/20">
-            <Clock size={24} className="text-amber-400" />
-          </div>
-        </div>
-
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <div className="text-center" title="Tiempo mínimo en días que tomó completar el ciclo solicitud → orden de compra">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Mínimo</p>
-            <p className="mt-1 text-3xl font-black text-blue-400">
-              {stats?.tiempo_conversion?.min_dias ?? 0}
-              <span className="text-sm font-medium text-slate-500 dark:text-slate-400"> días</span>
-            </p>
-          </div>
-          <div className="text-center border-x border-slate-700" title="Tiempo promedio en días del ciclo completo solicitud → orden de compra">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">Promedio</p>
-            <p className="mt-1 text-3xl font-black text-amber-400">
-              {stats?.tiempo_conversion?.promedio_dias ?? 0}
-              <span className="text-sm font-medium text-slate-500 dark:text-slate-400"> días</span>
-            </p>
-          </div>
-          <div className="text-center" title="Tiempo máximo en días que tomó completar el ciclo solicitud → orden de compra">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Máximo</p>
-            <p className="mt-1 text-3xl font-black text-red-400">
-              {stats?.tiempo_conversion?.max_dias ?? 0}
-              <span className="text-sm font-medium text-slate-500 dark:text-slate-400"> días</span>
-            </p>
-          </div>
-        </div>
-      </motion.div>
-
       {/* Solicitudes Urgentes */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
+        title="Lista de solicitudes de materiales pendientes ordenadas por fecha de entrega más próxima a vencer, con código de color según urgencia"
         className="rounded-xl bg-white p-6 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700"
       >
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Solicitudes por Fecha de Entrega</h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Solicitudes de Materiales por Fecha de Entrega</h3>
             <p className="text-xs text-slate-400">Ordenadas por fecha más próxima a vencer</p>
           </div>
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50">
@@ -325,8 +287,8 @@ export default function DashboardPage() {
                     diasBadgeText = `${diasRestantes} días`;
                   }
 
-                  const estadoClass = sol.estado === 'Pendiente' 
-                    ? 'bg-amber-100 text-amber-700' 
+                  const estadoClass = sol.estado === 'Pendiente'
+                    ? 'bg-amber-100 text-amber-700'
                     : 'bg-blue-100 text-blue-700';
 
                   return (
@@ -346,7 +308,7 @@ export default function DashboardPage() {
                         </span>
                       </td>
                       <td className="py-2.5 text-slate-600 dark:text-slate-300">
-                        {sol.fecha_requerida 
+                        {sol.fecha_requerida
                           ? new Date(sol.fecha_requerida).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' })
                           : '-'}
                       </td>
@@ -368,6 +330,50 @@ export default function DashboardPage() {
           </div>
         )}
       </motion.div>
+      {/* Conversion Time Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        title="Métricas de eficiencia del proceso de compras: tiempo que demora cada solicitud en convertirse en orden de compra"
+        className="mt-4 rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-white shadow-lg"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold">Tiempo de Conversión</h3>
+            <p className="text-xs text-slate-400">Desde solicitud de material hasta orden de compra</p>
+          </div>
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/20">
+            <Clock size={24} className="text-amber-400" />
+          </div>
+        </div>
+
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="text-center" title="Tiempo mínimo en días que tomó completar el ciclo solicitud → orden de compra">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Mínimo</p>
+            <p className="mt-1 text-3xl font-black text-blue-400">
+              {stats?.tiempo_conversion?.min_dias ?? 0}
+              <span className="text-sm font-medium text-slate-500 dark:text-slate-400"> días</span>
+            </p>
+          </div>
+          <div className="text-center border-x border-slate-700" title="Tiempo promedio en días del ciclo completo solicitud → orden de compra">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">Promedio</p>
+            <p className="mt-1 text-3xl font-black text-amber-400">
+              {stats?.tiempo_conversion?.promedio_dias ?? 0}
+              <span className="text-sm font-medium text-slate-500 dark:text-slate-400"> días</span>
+            </p>
+          </div>
+          <div className="text-center" title="Tiempo máximo en días que tomó completar el ciclo solicitud → orden de compra">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Máximo</p>
+            <p className="mt-1 text-3xl font-black text-red-400">
+              {stats?.tiempo_conversion?.max_dias ?? 0}
+              <span className="text-sm font-medium text-slate-500 dark:text-slate-400"> días</span>
+            </p>
+          </div>
+        </div>
+      </motion.div>
+
+
     </div>
   );
 }

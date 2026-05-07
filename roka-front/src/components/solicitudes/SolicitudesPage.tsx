@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus, FileText, Eye, Trash2, Upload, Download } from 'lucide-react';
+import { Plus, FileText, Eye, Trash2, Upload, Download, Send, PackageCheck } from 'lucide-react';
 import * as XLSX from 'xlsx-js-style';
 import { DataTable } from '../ui/DataTable';
 import { StatusBadge } from '../ui/StatusBadge';
@@ -33,6 +33,19 @@ export default function SolicitudesPage() {
   const [showAnuladas, setShowAnuladas] = useState(false);
   const { data: solicitudes, loading, refetch } = useApi(() => getSolicitudes(showAnuladas ? { estado: 'Anulada' } : {}), [showAnuladas]);
   const { data: proyectos } = useApi(() => getProyectos(), []);
+
+  // Sort: Pendiente first, then Cotizando, then Aprobado, then others
+  const sortedSolicitudes = React.useMemo(() => {
+    if (!solicitudes) return [];
+    const order: Record<string, number> = { 'Pendiente': 0, 'Cotizando': 1, 'Aprobado': 2 };
+    return [...solicitudes].sort((a: any, b: any) => {
+      const orderA = order[a.estado] ?? 3;
+      const orderB = order[b.estado] ?? 3;
+      if (orderA !== orderB) return orderA - orderB;
+      // Within same status, sort by date descending (newest first)
+      return new Date(b.created_at || b.fecha).getTime() - new Date(a.created_at || a.fecha).getTime();
+    });
+  }, [solicitudes]);
   const { data: masterMateriales, refetch: refetchMateriales } = useApi(() => getMaterialesMaster(), []);
   const { data: masterUnidades } = useApi(() => getUnidadesMedida(), []);
   
@@ -340,13 +353,20 @@ export default function SolicitudesPage() {
       {/* Stats Row */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: 'Pendientes', value: solicitudes?.filter((s: any) => s.estado === 'Pendiente').length || 0, color: 'text-amber-600' },
-          { label: 'Cotizando', value: solicitudes?.filter((s: any) => s.estado === 'Cotizando').length || 0, color: 'text-blue-600' },
-          { label: 'Aprobadas', value: solicitudes?.filter((s: any) => s.estado === 'Aprobado').length || 0, color: 'text-emerald-600' },
+          { label: 'Pendientes por Cotizar', value: solicitudes?.filter((s: any) => s.estado === 'Pendiente').length || 0, color: 'text-amber-600', bg: 'bg-amber-50', iconBg: 'bg-amber-100', icon: <FileText size={18} />, title: 'Solicitudes de materiales que aún no tienen cotizaciones enviadas a proveedores. Necesitan crear solicitudes de cotización.' },
+          { label: 'En Cotización', value: solicitudes?.filter((s: any) => s.estado === 'Cotizando').length || 0, color: 'text-blue-600', bg: 'bg-blue-50', iconBg: 'bg-blue-100', icon: <Send size={18} />, title: 'Solicitudes con cotizaciones ya enviadas a proveedores, esperando respuesta de precios' },
+          { label: 'Aprobadas / Con OC', value: solicitudes?.filter((s: any) => s.estado === 'Aprobado').length || 0, color: 'text-emerald-600', bg: 'bg-emerald-50', iconBg: 'bg-emerald-100', icon: <PackageCheck size={18} />, title: 'Solicitudes con cotización aprobada u orden de compra generada' },
         ].map(stat => (
-          <div key={stat.label} className="rounded-xl bg-white p-4 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stat.label}</p>
-            <p className={`text-xl font-black ${stat.color}`}>{stat.value}</p>
+          <div key={stat.label} title={stat.title} className="rounded-xl bg-white p-4 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stat.label}</p>
+                <p className={`text-xl font-black ${stat.color}`}>{stat.value}</p>
+              </div>
+              <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${stat.iconBg} ${stat.color}`}>
+                {stat.icon}
+              </div>
+            </div>
           </div>
         ))}
       </div>
@@ -354,9 +374,12 @@ export default function SolicitudesPage() {
       {/* Table */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-[#111827]/40 dark:border dark:border-slate-800">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            Ordenadas por prioridad: Pendientes → En Cotización → Aprobadas
+          </p>
           <DataTable
             columns={columns}
-            data={solicitudes || []}
+            data={sortedSolicitudes}
             loading={loading}
             searchable
             searchPlaceholder="Buscar por proyecto, solicitante..."
@@ -421,7 +444,11 @@ export default function SolicitudesPage() {
           <div>
             <div className="mb-3 flex items-center justify-between">
               <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Materiales</label>
-              <button type="button" onClick={addItem} className="flex items-center gap-1 text-xs font-bold text-amber-600 hover:text-amber-700">
+              <button 
+                type="button" 
+                onClick={addItem} 
+                className="flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-600 shadow-sm border border-amber-100 transition-all hover:bg-amber-100 hover:shadow-md active:scale-95 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400 dark:hover:bg-amber-500/20"
+              >
                 <Plus size={14} /> Agregar ítem
               </button>
             </div>
@@ -448,10 +475,10 @@ export default function SolicitudesPage() {
                           <button
                             type="button"
                             onClick={() => setIsMaterialModalOpen(true)}
-                            className="text-[10px] font-bold text-amber-600 hover:underline"
+                            className="flex items-center gap-1 rounded-md bg-amber-50/50 px-2 py-0.5 text-[10px] font-bold text-amber-600 border border-amber-100/50 transition-all hover:bg-amber-100 hover:text-amber-700 dark:bg-amber-500/5 dark:border-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/10"
                             title="Registrar nuevo material en el catálogo"
                           >
-                            + Nuevo en catálogo
+                            <Plus size={10} /> Nuevo en catálogo
                           </button>
                         </div>
                         <CreatableSelect

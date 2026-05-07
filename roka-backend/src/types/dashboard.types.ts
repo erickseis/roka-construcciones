@@ -1,5 +1,7 @@
 export interface DashboardSolicitudesMensual {
   pendientes: number;
+  cotizando: number;
+  aprobadas: number;
   atendidas: number;
   total: number;
 }

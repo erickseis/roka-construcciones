@@ -194,7 +194,7 @@ export default function SolicitudCotizacionModal({ isOpen, onClose, onSuccess }:
               <button
                 type="button"
                 onClick={() => setShowProveedorModal(true)}
-                className="flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1.5 text-[10px] font-bold text-amber-700 hover:bg-amber-200 transition-all shadow-sm active:scale-95"
+                className="flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-[10px] font-bold text-amber-600 shadow-sm border border-amber-100 transition-all hover:bg-amber-100 hover:shadow-md active:scale-95 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400 dark:hover:bg-amber-500/20"
               >
                 <Plus size={14} />
                 Registrar nuevo proveedor
