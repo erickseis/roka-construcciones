@@ -20,6 +20,10 @@ export interface Proyecto {
   archivo_licitacion_nombre?: string;
   updated_at?: string;
   created_at: string;
+  presupuesto_total?: number;
+  presupuesto_comprometido?: number;
+  presupuesto_disponible?: number;
+  presupuesto_porcentaje_uso?: number;
 }
 
 export interface ProyectoInput {

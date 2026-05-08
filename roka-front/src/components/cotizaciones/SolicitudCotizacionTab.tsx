@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus, Eye, Send, Trash2, FileDown, Upload } from 'lucide-react';
+import { Plus, Eye, Send, Trash2, FileDown, Upload, ShoppingCart, FileText } from 'lucide-react';
 import { DataTable } from '../ui/DataTable';
 import { StatusBadge } from '../ui/StatusBadge';
 import { useApi } from '@/hooks/useApi';
-import { getSolicitudesCotizacion, changeSolicitudCotizacionEstado, deleteSolicitudCotizacion, getSolicitudes, descargarSolicitudCotizacionPdf, getSolicitudCotizacion } from '@/lib/api';
+import { getSolicitudesCotizacion, changeSolicitudCotizacionEstado, deleteSolicitudCotizacion, getSolicitudes, descargarSolicitudCotizacionPdf, getSolicitudCotizacion, getOrden } from '@/lib/api';
 import SolicitudCotizacionModal from './SolicitudCotizacionModal';
 import SolicitudCotizacionDetailModal from './SolicitudCotizacionDetailModal';
 import ImportarRespuestaSCModal from './ImportarRespuestaSCModal';
+import { CrearOCModal } from '../ordenes/CrearOCModal';
+import OCPreviewModal from '../ordenes/OCPreviewModal';
 import { Clock, AlertTriangle } from 'lucide-react';
 
 const estadoColor: Record<string, string> = {
@@ -23,7 +25,23 @@ export default function SolicitudCotizacionTab() {
   const [detailId, setDetailId] = useState<number | null>(null);
   const [importData, setImportData] = useState<any>(null);
   const [showImport, setShowImport] = useState(false);
-  
+  const [crearOCFromSC, setCrearOCFromSC] = useState<number | null>(null);
+  const [ocPreview, setOcPreview] = useState<any | null>(null);
+  const [loadingOc, setLoadingOc] = useState(false);
+  const [mostrarAnuladas, setMostrarAnuladas] = useState(false);
+
+  const handlePreviewOC = async (id: number) => {
+    setLoadingOc(true);
+    try {
+      const data = await getOrden(id);
+      setOcPreview(data);
+    } catch (err: any) {
+      alert(err.message || 'Error al cargar orden de compra');
+    } finally {
+      setLoadingOc(false);
+    }
+  };
+
   const { data: list, loading, refetch } = useApi(() => getSolicitudesCotizacion(), []);
   // Cargar solicitudes de materiales pendientes para procesar
   const { data: solicitudesPendientes, loading: loadingPendientes, refetch: refetchPendientes } = useApi(() => getSolicitudes({ estado: 'Pendiente' }), []);
@@ -100,6 +118,18 @@ export default function SolicitudCotizacionTab() {
             <button onClick={(e) => { e.stopPropagation(); handleOpenImport(row.id); }}
               className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600" title="Cargar respuesta del vendedor">
               <Upload size={14} />
+            </button>
+          )}
+          {row.estado?.toUpperCase() === 'RESPONDIDA' && !row.orden_id && (
+            <button onClick={(e) => { e.stopPropagation(); setCrearOCFromSC(row.id); }}
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600" title="Crear Orden de Compra">
+              <ShoppingCart size={14} />
+            </button>
+          )}
+          {row.estado?.toUpperCase() === 'RESPONDIDA' && row.orden_id && (
+            <button onClick={(e) => { e.stopPropagation(); handlePreviewOC(row.orden_id); }}
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600" title="Ver Orden de Compra">
+              <FileText size={14} />
             </button>
           )}
           {row.estado?.toUpperCase() === 'BORRADOR' && (
@@ -207,14 +237,23 @@ export default function SolicitudCotizacionTab() {
       {/* Stats */}
       <div className="mb-6 grid grid-cols-4 gap-4">
         {[
-          { label: 'Borrador', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'BORRADOR').length || 0, color: 'text-slate-500' },
-          { label: 'Enviadas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'ENVIADA').length || 0, color: 'text-emerald-600' },
-          { label: 'Respondidas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'RESPONDIDA').length || 0, color: 'text-emerald-600' },
-          { label: 'Anuladas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'ANULADA').length || 0, color: 'text-red-600' },
+          { label: 'Borrador', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'BORRADOR').length || 0, color: 'text-slate-500', toggle: false },
+          { label: 'Enviadas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'ENVIADA').length || 0, color: 'text-emerald-600', toggle: false },
+          { label: 'Respondidas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'RESPONDIDA').length || 0, color: 'text-emerald-600', toggle: false },
+          { label: 'Anuladas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'ANULADA').length || 0, color: 'text-red-600', toggle: true },
         ].map(stat => (
-          <div key={stat.label} className="rounded-xl bg-white p-4 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700">
+          <div
+            key={stat.label}
+            onClick={stat.toggle ? () => setMostrarAnuladas(v => !v) : undefined}
+            className={`rounded-xl bg-white p-4 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700 ${
+              stat.toggle ? 'cursor-pointer hover:border-red-200 hover:shadow-md transition-all' : ''
+            } ${stat.toggle && mostrarAnuladas ? 'border-red-300 ring-1 ring-red-200' : ''}`}
+          >
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stat.label}</p>
             <p className={`text-2xl font-black ${stat.color}`}>{stat.value}</p>
+            {stat.toggle && (
+              <p className="text-[10px] text-slate-400 mt-0.5">{mostrarAnuladas ? '▲ Ocultar' : '▼ Mostrar'}</p>
+            )}
           </div>
         ))}
       </div>
@@ -222,9 +261,22 @@ export default function SolicitudCotizacionTab() {
       {/* Table */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-[#111827]/40 dark:border dark:border-slate-800">
+          <div className="flex justify-end mb-3">
+            <button
+              onClick={() => setMostrarAnuladas(v => !v)}
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
+                mostrarAnuladas
+                  ? 'border-red-300 bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
+                  : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
+              }`}
+            >
+              <span className={`inline-block w-2 h-2 rounded-full ${mostrarAnuladas ? 'bg-red-500' : 'bg-slate-300'}`} />
+              {mostrarAnuladas ? 'Ocultar Anuladas' : 'Mostrar Anuladas'}
+            </button>
+          </div>
           <DataTable
             columns={columns}
-            data={list || []}
+            data={(list || []).filter((c: any) => mostrarAnuladas || c.estado?.toUpperCase() !== 'ANULADA')}
             loading={loading}
             searchable
             searchPlaceholder="Buscar por proveedor, proyecto..."
@@ -263,6 +315,19 @@ export default function SolicitudCotizacionTab() {
           refetch();
           refetchPendientes();
         }}
+      />
+
+      <CrearOCModal
+        isOpen={!!crearOCFromSC}
+        onClose={() => setCrearOCFromSC(null)}
+        onSuccess={() => { setCrearOCFromSC(null); refetch(); refetchPendientes(); }}
+        initialSolicitudCotizacionId={crearOCFromSC || undefined}
+      />
+
+      <OCPreviewModal
+        isOpen={!!ocPreview}
+        onClose={() => setOcPreview(null)}
+        orden={ocPreview}
       />
     </>
   );

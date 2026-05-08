@@ -17,6 +17,7 @@ import {
   NotificationInput,
   resolveRecipientUserIds,
 } from '../lib/notifications';
+import { isEventEnabled, sendEmail, getUserEmailById, buildSolicitudAprobadaHtml } from '../lib/email';
 
 const IVA_RATE = 0.19;
 
@@ -196,6 +197,27 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
       if (ordenConFolio) orden = ordenConFolio;
     }
 
+    // 4b. Insertar items desde solicitud_cotizacion_detalle a orden_compra_items
+    const { rows: scItems } = await client.query(
+      `SELECT scd.*, si.nombre_material, si.cantidad_requerida, si.unidad, si.codigo
+       FROM solicitud_cotizacion_detalle scd
+       JOIN solicitud_items si ON si.id = scd.solicitud_item_id
+       WHERE scd.solicitud_cotizacion_id = $1 AND scd.precio_unitario IS NOT NULL`,
+      [solicitud_cotizacion_id]
+    );
+
+    for (const item of scItems) {
+      const cant = Number(item.cantidad_requerida);
+      const punit = Number(item.precio_unitario);
+      const desc = item.descuento_porcentaje > 0 ? 1 - item.descuento_porcentaje / 100 : 1;
+      const sub = Math.round(punit * cant * desc * 100) / 100;
+      await client.query(
+        `INSERT INTO orden_compra_items (orden_compra_id, nombre_material, cantidad, unidad, precio_unitario, subtotal, codigo)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [orden.id, item.nombre_material, cant, item.unidad, punit, sub, item.codigo_proveedor || item.codigo]
+      );
+    }
+
     // 5. Comprometer monto en presupuesto del proyecto y categoria (opcional)
     if (presupuesto) {
       await commitPresupuesto(presupuesto.id, montoCompromiso, client);
@@ -234,10 +256,10 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
       usuario_destino_id: uid,
       tipo: 'orden.generada',
       titulo: 'Orden de compra generada',
-      mensaje: `${actorName} generó la orden ${orden.folio} desde SC-${String(sc.id).padStart(3, '0')} por $${montoCompromiso.toLocaleString('es-CL')}.`,
+      mensaje: `${actorName} generó la orden ${orden.folio} desde SC-${String(sc.id).padStart(3, '0')}: Subtotal $${subtotalNeto.toLocaleString('es-CL')} + IVA 19% $${impuestoMonto.toLocaleString('es-CL')} = Total $${totalFinal.toLocaleString('es-CL')}.`,
       entidad_tipo: 'orden',
       entidad_id: orden.id,
-      payload: { solicitud_cotizacion_id: sc.id, total: montoCompromiso, folio: orden.folio },
+      payload: { solicitud_cotizacion_id: sc.id, subtotal: subtotalNeto, impuesto: impuestoMonto, total: totalFinal, folio: orden.folio },
       enviado_por_usuario_id: actorId,
     }));
 
@@ -281,6 +303,25 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
       }
     }
 
+    // Notificación de solicitud aprobada
+    const solicitudFolio = `SOL-${String(sc.solicitud_id).padStart(3, '0')}`;
+    notifications.push(
+      ...recipients.map(uid => ({
+        usuario_destino_id: uid,
+        tipo: 'solicitud.aprobada',
+        titulo: 'Solicitud de materiales aprobada',
+        mensaje: `${actorName} generó una OC desde SC-${String(sc.id).padStart(3, '0')}, aprobando la solicitud ${solicitudFolio} del proyecto ${sc.proyecto_nombre}.`,
+        entidad_tipo: 'solicitud' as const,
+        entidad_id: sc.solicitud_id,
+        payload: {
+          estado: 'Aprobado',
+          proyecto_nombre: sc.proyecto_nombre,
+          orden_id: orden.id,
+        },
+        enviado_por_usuario_id: actorId,
+      }))
+    );
+
     await createNotifications(notifications, client);
 
     // 7. Actualizar estado de la solicitud original a 'Aprobado'
@@ -292,9 +333,39 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
 
     await client.query('COMMIT');
 
+    // Fire-and-forget: email notificación solicitud aprobada
+    isEventEnabled('solicitud.aprobada').then(async (enabled) => {
+      if (!enabled || !sc.solicitud_id) return;
+      const { rows: [sol] } = await pool.query(
+        'SELECT created_by_usuario_id FROM solicitudes_material WHERE id = $1',
+        [sc.solicitud_id]
+      );
+      if (!sol?.created_by_usuario_id) return;
+      const correo = await getUserEmailById(sol.created_by_usuario_id);
+      if (!correo) return;
+      const html = buildSolicitudAprobadaHtml({
+        solicitudId: sc.solicitud_id,
+        proyectoNombre: sc.proyecto_nombre,
+        ordenNumero: orden.folio || `OC-${String(orden.id).padStart(3, '0')}`,
+        proveedorNombre: sc.proveedor,
+        total: totalFinal,
+      });
+      sendEmail({
+        to: correo,
+        subject: `Solicitud aprobada: SOL-${String(sc.solicitud_id).padStart(3, '0')}`,
+        html,
+        eventoCodigo: 'solicitud.aprobada',
+        entidadTipo: 'solicitud',
+        entidadId: sc.solicitud_id,
+      }).catch(console.error);
+    }).catch(console.error);
+
     return {
-      message: 'Orden de compra generada exitosamente',
+      message: `Orden de compra generada exitosamente: Subtotal $${subtotalNeto.toLocaleString('es-CL')} + IVA 19% $${impuestoMonto.toLocaleString('es-CL')} = Total $${totalFinal.toLocaleString('es-CL')}`,
       orden_compra: orden,
+      subtotal_neto: subtotalNeto,
+      impuesto: impuestoMonto,
+      total_final: totalFinal,
     };
   } catch (error: any) {
     await client.query('ROLLBACK');

@@ -214,6 +214,32 @@ export default function ProyectosPage() {
       ),
     },
     {
+      key: 'presupuesto_total',
+      header: 'Presupuesto',
+      sortable: true,
+      render: (row: any) => {
+        const total = Number(row.presupuesto_total ?? 0);
+        const pct = Number(row.presupuesto_porcentaje_uso ?? 0);
+        const disp = Number(row.presupuesto_disponible ?? 0);
+        if (!total) return <span className="text-[10px] text-slate-400">—</span>;
+        const barColor = pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500';
+        return (
+          <div className="min-w-[130px]">
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="font-bold text-slate-700">{pct.toFixed(1)}%</span>
+              <span className="text-slate-400">disp. ${disp.toLocaleString('es-CL')}</span>
+            </div>
+            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+              <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+            </div>
+            <div className="mt-0.5 text-[9px] text-slate-400">
+              ${total.toLocaleString('es-CL')}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
       key: 'actions',
       header: '',
       className: 'w-24',

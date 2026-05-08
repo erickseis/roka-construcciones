@@ -3,6 +3,7 @@ import { Modal } from '../ui/Modal';
 import { Upload, Check, AlertCircle, Loader2, AlertTriangle, FileText, Building2 } from 'lucide-react';
 import { importarRespuestaSC, confirmarImportacionSC } from '@/lib/api';
 import { showAlert, showToast } from '@/lib/alerts';
+import { formatCLP } from '@/lib/utils';
 
 interface Props {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<any>(null);
   const [editedPrices, setEditedPrices] = useState<EditedPrices>({});
+  const [localInputs, setLocalInputs] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -107,14 +109,6 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
     setEditedPrices(prev => ({ ...prev, [index]: value }));
   };
 
-  const formatCLP = (value: number | null | undefined): string => {
-    if (value === null || value === undefined) return '-';
-    return new Intl.NumberFormat('es-CL', {
-      style: 'currency', currency: 'CLP',
-      minimumFractionDigits: 0, maximumFractionDigits: 0,
-    }).format(value);
-  };
-
   const getItemPrice = (item: any, index: number): number => {
     return editedPrices[index] !== undefined ? editedPrices[index] : (item.precio_unitario || 0);
   };
@@ -124,6 +118,8 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
     setFile(null);
     setPreview(null);
     setError(null);
+    setEditedPrices({});
+    setLocalInputs({});
     onClose();
   };
 
@@ -353,10 +349,15 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
                           {hasMatch ? (
                             <input
                               type="text"
-                              value={new Intl.NumberFormat('es-CL').format(getItemPrice(provItem, provIdx))}
-                              onChange={(e) => {
-                                const numericValue = parseInt(e.target.value.replace(/\D/g, ''), 10);
-                                handlePriceEdit(provIdx, isNaN(numericValue) ? 0 : numericValue);
+                              value={localInputs[provIdx] !== undefined ? localInputs[provIdx] : formatCLP(getItemPrice(provItem, provIdx), false)}
+                              onChange={(e) => setLocalInputs(prev => ({ ...prev, [provIdx]: e.target.value }))}
+                              onBlur={() => {
+                                if (localInputs[provIdx] !== undefined) {
+                                  const val = localInputs[provIdx].replace(/\./g, '').replace(',', '.');
+                                  const parsed = parseFloat(val);
+                                  if (!isNaN(parsed)) handlePriceEdit(provIdx, parsed);
+                                  setLocalInputs(prev => { const next = {...prev}; delete next[provIdx]; return next; });
+                                }
                               }}
                               className="w-full max-w-[90px] text-right font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 focus:border-amber-500 focus:outline-none"
                             />
@@ -397,7 +398,20 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
                             </div>
                           </td>
                           <td className="px-3 py-2 text-right font-mono text-slate-600">
-                            {formatCLP(provItem.precio_unitario)}
+                            <input
+                              type="text"
+                              value={localInputs[provIdx] !== undefined ? localInputs[provIdx] : formatCLP(getItemPrice(provItem, provIdx), false)}
+                              onChange={(e) => setLocalInputs(prev => ({ ...prev, [provIdx]: e.target.value }))}
+                              onBlur={() => {
+                                if (localInputs[provIdx] !== undefined) {
+                                  const val = localInputs[provIdx].replace(/\./g, '').replace(',', '.');
+                                  const parsed = parseFloat(val);
+                                  if (!isNaN(parsed)) handlePriceEdit(provIdx, parsed);
+                                  setLocalInputs(prev => { const next = {...prev}; delete next[provIdx]; return next; });
+                                }
+                              }}
+                              className="w-full max-w-[90px] text-right font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 focus:border-amber-500 focus:outline-none"
+                            />
                           </td>
                           <td className="px-3 py-2 text-center text-slate-500">
                             {provItem.descuento_porcentaje ? `${provItem.descuento_porcentaje}%` : '-'}

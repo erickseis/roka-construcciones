@@ -14,6 +14,7 @@ import materialesRouter from './routes/materiales.routes';
 import proveedoresRouter from './routes/proveedores.routes';
 import solicitudCotizacionRouter from './routes/solicitud_cotizacion.routes';
 import chatRouter from './routes/chat.routes';
+import emailConfigRouter from './routes/email-config.routes';
 
 // const CORS_ORIGIN =
 // process.env.CORS_ORIGIN || 'http://localhost:3000' || 'http://localhost:4173';
@@ -38,6 +39,7 @@ export function createRokaApp(): express.Application {
   app.use('/api/proveedores', proveedoresRouter);
   app.use('/api/solicitud-cotizacion', solicitudCotizacionRouter);
   app.use('/api/chat', chatRouter);
+  app.use('/api/config/email', emailConfigRouter);
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

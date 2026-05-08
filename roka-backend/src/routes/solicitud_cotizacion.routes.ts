@@ -13,6 +13,7 @@ import {
   generarPdfLink,
   importarArchivo,
   confirmarImportacion,
+  enviarProveedor,
 } from '../controllers/solicitud_cotizacion.controller';
 
 const router = Router();
@@ -31,5 +32,8 @@ router.get('/:id/pdf-link', generarPdfLink);
 // Importar respuesta de cotización desde archivo
 router.post('/importar', authMiddleware, upload.single('archivo_sc'), importarArchivo);
 router.post('/importar/confirmar', authMiddleware, confirmarImportacion);
+
+// Enviar SC al proveedor por email
+router.post('/:id/enviar-proveedor', authMiddleware, enviarProveedor);
 
 export default router;

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import ReactDOM from 'react-dom';
 import { X, Printer } from 'lucide-react';
+import { formatCLP } from '@/lib/utils';
 
 const EMPRESA = {
   nombre: 'Constructora Roka SpA',
@@ -18,8 +18,7 @@ const ROKA_LOGO_SVG = (
   </svg>
 );
 
-const fmtMoney = (value: number) =>
-  `$ ${Number(value || 0).toLocaleString('es-CL', { minimumFractionDigits: 2 })}`;
+const fmtMoney = (value: number | null | undefined) => formatCLP(Number(value || 0));
 
 const fmtDate = (input?: string) => {
   if (!input) return '-';
@@ -188,6 +187,10 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
                   <td style={headerValueStyle}>{orden?.plazo_entrega || '-'}</td>
                 </tr>
                 <tr>
+                  <td style={headerLabelStyle}>Cód. Obra</td>
+                  <td style={headerValueStyle}>{orden?.proyecto_numero_licitacion || '-'}</td>
+                </tr>
+                <tr>
                   <td style={headerLabelStyle}>Obra</td>
                   <td style={headerValueStyle}>{orden?.proyecto_nombre || '-'}</td>
                 </tr>
@@ -210,10 +213,6 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
                 <tr>
                   <td style={headerLabelStyle}>Emitida por</td>
                   <td style={headerValueStyle}>{orden?.autorizado_por_nombre || '-'}</td>
-                </tr>
-                <tr>
-                  <td style={headerLabelStyle}>Cód. Obra</td>
-                  <td style={headerValueStyle}>{orden?.proyecto_numero_licitacion || '-'}</td>
                 </tr>
                 <tr>
                   <td style={headerLabelStyle}>Fecha Autorización</td>
@@ -246,9 +245,9 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
         </thead>
         <tbody>
           {items.map((item: any, index: number) => {
-            const cantidad = Number(item?.cantidad_requerida || 0);
+            const cantidad = Number(item?.cantidad_requerida ?? item?.cantidad_extraida ?? 0);
             const unitario = Number(item?.precio_unitario || 0);
-            const subtotal = Number(item?.subtotal ?? cantidad * unitario);
+            const subtotal = cantidad * unitario;
             return (
               <tr key={item?.id ?? index}>
                 <td style={{ border: '1px solid #e2e8f0', padding: '5px', fontSize: '9px', textAlign: 'center' }}>{index + 1}</td>
@@ -349,28 +348,28 @@ const OCPreviewModal: React.FC<OCPreviewModalProps> = ({ isOpen, onClose, orden 
 
   useEffect(() => {
     if (!isOpen) return;
-
-    const style = document.createElement('style');
-    style.id = 'oc-print-styles';
-    style.textContent = `
-      @media print {
-        body > *:not(#oc-print-portal) { display: none !important; }
-        #oc-print-portal { display: block !important; }
-        @page { margin: 0; size: A4 portrait; }
-      }
-      #oc-print-portal { display: none; }
-    `;
-    document.head.appendChild(style);
-
-    return () => {
-      document.getElementById('oc-print-styles')?.remove();
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
     setAtencion(orden?.atencion_a || orden?.proveedor_contacto_nombre || '');
   }, [isOpen, orden]);
+
+  const handlePrint = () => {
+    const apiBase = import.meta.env.VITE_API_URL + '/roka/api';
+    const token = localStorage.getItem('token') || '';
+    const url = `${apiBase}/ordenes/${orden.id}/html`;
+
+    // Abrir ventana en blanco y hacer fetch con el token de autenticación
+    const win = window.open('', '_blank');
+    if (!win) { alert('El navegador bloqueó la ventana emergente. Permite ventanas emergentes para este sitio.'); return; }
+
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.text())
+      .then(html => {
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+        win.addEventListener('load', () => { win.focus(); win.print(); });
+      })
+      .catch(() => { win.close(); alert('Error al generar el documento para imprimir.'); });
+  };
 
   if (!isOpen || !orden) return null;
 
@@ -395,7 +394,7 @@ const OCPreviewModal: React.FC<OCPreviewModalProps> = ({ isOpen, onClose, orden 
               />
             </div>
             <button
-              onClick={() => window.print()}
+              onClick={handlePrint}
               className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white shadow-md hover:bg-amber-600 transition-colors"
             >
               <Printer size={15} />
@@ -417,12 +416,6 @@ const OCPreviewModal: React.FC<OCPreviewModalProps> = ({ isOpen, onClose, orden 
         </div>
       </div>
 
-      {ReactDOM.createPortal(
-        <div id="oc-print-portal">
-          <OCDoc orden={orden} atencionManual={atencion} />
-        </div>,
-        document.body
-      )}
     </>
   );
 };

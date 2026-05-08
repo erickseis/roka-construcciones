@@ -10,6 +10,7 @@ import {
   exportarHtml,
   exportarPdf,
   generarPdfLink,
+  enviarProveedor,
 } from '../controllers/ordenes.controller';
 
 const router = Router();
@@ -32,10 +33,16 @@ router.patch('/:id/entrega', updateEntrega);
 // GET /api/ordenes/:id/exportar — Exportar OC como HTML
 router.get('/:id/exportar', exportarHtml);
 
+// GET /api/ordenes/:id/html — Alias de /exportar
+router.get('/:id/html', exportarHtml);
+
 // GET /api/ordenes/:id/descargar — Exportar OC como PDF (server-side via puppeteer)
 router.get('/:id/descargar', exportarPdf);
 
 // GET /api/ordenes/:id/pdf-link — Genera PDF y devuelve URL descargable
 router.get('/:id/pdf-link', generarPdfLink);
+
+// POST /api/ordenes/:id/enviar-proveedor — Enviar OC al proveedor por email
+router.post('/:id/enviar-proveedor', authMiddleware, enviarProveedor);
 
 export default router;

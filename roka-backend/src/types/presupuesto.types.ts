@@ -9,6 +9,7 @@ export interface PresupuestoProyecto {
   updated_at: Date;
   proyecto_nombre?: string;
   proyecto_estado?: string;
+  gasto_total?: number;
   porcentaje_uso?: number;
   monto_disponible?: number;
 }

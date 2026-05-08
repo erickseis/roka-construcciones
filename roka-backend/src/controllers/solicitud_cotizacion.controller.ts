@@ -8,6 +8,7 @@ import * as scModel from '../models/solicitud_cotizacion.model';
 import { crearSolicitudCotizacion, crearBatchSolicitudesCotizacion, cambiarEstadoSolicitudCotizacion } from '../services/solicitud_cotizacion.service';
 import { getDb } from '../types';
 import puppeteer from 'puppeteer-core';
+import { isEventEnabled, sendEmail, buildSCProveedorHtml, buildCotizacionCreadaHtml, getUserEmailsByRoles } from '../lib/email';
 
 function detectChromePath(): string | undefined {
   if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
@@ -337,6 +338,30 @@ export async function create(req: AuthRequest, res: Response) {
   try {
     const sc = await crearSolicitudCotizacion(req.body, req.user?.id || null);
     res.status(201).json(sc);
+
+    // Fire-and-forget: email notification
+    isEventEnabled('cotizacion.creada').then(async (enabled) => {
+      if (!enabled) return;
+      const destinatarios = await getUserEmailsByRoles(['Adquisiciones']);
+      if (!destinatarios.length) return;
+      const detalles = await scModel.getSolicitudCotizacionDetalle(sc.id);
+      const html = buildCotizacionCreadaHtml({
+        scId: sc.id,
+        proveedorNombre: (sc as any).proveedor || 'Proveedor',
+        solicitudId: (sc as any).solicitud_id,
+        proyectoNombre: undefined,
+        itemCount: detalles.length,
+      });
+      const folio = `SC-${String(sc.id).padStart(3, '0')}`;
+      sendEmail({
+        to: destinatarios,
+        subject: `Nueva solicitud de cotización: ${folio}`,
+        html,
+        eventoCodigo: 'cotizacion.creada',
+        entidadTipo: 'solicitud_cotizacion',
+        entidadId: sc.id,
+      }).catch(console.error);
+    }).catch(console.error);
   } catch (error: any) {
     const statusCode = error.statusCode || 500;
     console.error('Error al crear solicitud de cotización:', error);
@@ -621,7 +646,7 @@ export async function confirmarImportacion(req: AuthRequest, res: Response) {
       }
 
       // Mark SC as RESPONDIDA
-      await scModel.updateSolicitudCotizacionEstado(solicitud_cotizacion_id, 'RESPONDIDA', client);
+      await scModel.updateSolicitudCotizacionEstado(solicitud_cotizacion_id, 'Respondida', client);
 
       await client.query('COMMIT');
 
@@ -640,4 +665,64 @@ export async function confirmarImportacion(req: AuthRequest, res: Response) {
     const statusCode = error.statusCode || 500;
     res.status(statusCode).json({ error: error.message || 'Error al confirmar importación' });
   }
+}
+
+export async function enviarProveedor(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
+
+    const habilitado = await isEventEnabled('sc.envio_proveedor');
+    if (!habilitado) {
+      return res.status(403).json({ error: 'El envío de SC a proveedor no está habilitado en la configuración' });
+    }
+
+    const sc = await scModel.getSolicitudCotizacionById(id);
+    if (!sc) return res.status(404).json({ error: 'Solicitud de cotización no encontrada' });
+
+    let emailDestino: string | null = null;
+    if (sc.proveedor_id) {
+      const db = getDb();
+      const { rows: [prov] } = await db.query(
+        'SELECT correo, contacto_correo FROM proveedores WHERE id = $1',
+        [sc.proveedor_id]
+      );
+      emailDestino = prov?.correo || prov?.contacto_correo || null;
+    }
+
+    if (!emailDestino) {
+      return res.status(400).json({ error: 'El proveedor no tiene correo registrado' });
+    }
+
+    const items = await scModel.getSolicitudCotizacionDetalle(id);
+    const folio = `SC-${String(id).padStart(3, '0')}`;
+
+    const html = buildSCProveedorHtml({
+      id,
+      proveedor: (sc as any).proveedor || 'Proveedor',
+      proyectoNombre: (sc as any).proyecto_nombre,
+      observaciones: sc.observaciones || undefined,
+      items: items.map((i: any) => ({
+        codigo: i.codigo || undefined,
+        descripcion: i.nombre_material || i.descripcion || '-',
+        cantidad: i.cantidad_requerida || i.cantidad || 0,
+        unidad: i.unidad || undefined,
+      })),
+    });
+
+    await sendEmail({
+      to: emailDestino,
+      subject: `Solicitud de Cotización ${folio} — ROKA Construcciones`,
+      html,
+      eventoCodigo: 'sc.envio_proveedor',
+      entidadTipo: 'solicitud_cotizacion',
+      entidadId: id,
+    });
+
+    res.json({ ok: true, enviado_a: emailDestino });
+  } catch (err: any) {
+    console.error('Error al enviar SC al proveedor:', err);
+    res.status(500).json({ error: err.message || 'Error al enviar SC al proveedor' });
+  }
+}
 }

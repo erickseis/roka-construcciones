@@ -7,10 +7,11 @@ import { Modal } from '../ui/Modal';
 import FlowStepper from '../ui/FlowStepper';
 import OCPreviewModal from './OCPreviewModal';
 import OCManualModal from './OCManualModal';
+import { CrearOCModal } from './CrearOCModal';
 import { useApi } from '@/hooks/useApi';
+import { formatCLP } from '@/lib/utils';
 import {
-  getOrdenes, generarOrden, updateEstadoEntrega,
-  getSolicitudesCotizacion, getOrden
+  getOrdenes, updateEstadoEntrega, getOrden
 } from '@/lib/api';
 
 export default function OrdenesPage() {
@@ -20,67 +21,6 @@ export default function OrdenesPage() {
   const [ocPreview, setOcPreview] = useState<any | null>(null);
   const [loadingOc, setLoadingOc] = useState(false);
   const { data: ordenes, loading, refetch } = useApi(() => getOrdenes(), []);
-
-  // Form state
-  const [solicitudCotizacionId, setSolicitudCotizacionId] = useState('');
-  const [condicionesPago, setCondicionesPago] = useState('Neto 30 días');
-  const [folio, setFolio] = useState('');
-  const [descuentoTipo, setDescuentoTipo] = useState<'none' | 'porcentaje' | 'monto'>('none');
-  const [descuentoValor, setDescuentoValor] = useState('0');
-  const [plazoEntrega, setPlazoEntrega] = useState('Inmediata');
-  const [condicionesEntrega, setCondicionesEntrega] = useState('Puesto en obra');
-  const [atencionA, setAtencionA] = useState('');
-  const [observaciones, setObservaciones] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  // Solicitudes de cotización respondidas available for OC
-  const { data: solicitudesCotizacion } = useApi(() => getSolicitudesCotizacion({ estado: 'Respondida' }), []);
-
-  const selectedSC = solicitudesCotizacion?.find((sc: any) => sc.id === Number(solicitudCotizacionId));
-  // Calculate subtotal from items with prices
-  const subtotalBase = selectedSC?.items?.reduce((sum: number, item: any) => {
-    return sum + (Number(item.precio_unitario || 0) * Number(item.cantidad_requerida || 0));
-  }, 0) || 0;
-  const descuentoValorNum = Number(descuentoValor || 0);
-  const descuentoMonto = descuentoTipo === 'porcentaje'
-    ? (subtotalBase * descuentoValorNum) / 100
-    : descuentoTipo === 'monto'
-      ? descuentoValorNum
-      : 0;
-  const subtotalNetoEstimado = Math.max(0, subtotalBase - descuentoMonto);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      await generarOrden({
-        solicitud_cotizacion_id: Number(solicitudCotizacionId),
-        condiciones_pago: condicionesPago,
-        folio: folio.trim() || undefined,
-        descuento_tipo: descuentoTipo,
-        descuento_valor: descuentoTipo === 'none' ? 0 : descuentoValorNum,
-        plazo_entrega: plazoEntrega.trim() || undefined,
-        condiciones_entrega: condicionesEntrega.trim() || undefined,
-        atencion_a: atencionA.trim() || undefined,
-        observaciones: observaciones.trim() || undefined,
-      });
-      setShowForm(false);
-      setSolicitudCotizacionId('');
-      setCondicionesPago('Neto 30 días');
-      setFolio('');
-      setDescuentoTipo('none');
-      setDescuentoValor('0');
-      setPlazoEntrega('Inmediata');
-      setCondicionesEntrega('Puesto en obra');
-      setAtencionA('');
-      setObservaciones('');
-      refetch();
-    } catch (err: any) {
-      alert(err.message || 'Error al generar orden de compra');
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const handleUpdateEntrega = async (id: number, estado: string) => {
     try {
@@ -133,7 +73,7 @@ export default function OrdenesPage() {
       sortable: true,
       render: (row: any) => (
         <span className="font-mono text-sm font-bold text-slate-800">
-          ${Number(row.total_final ?? row.total).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+          {formatCLP(Number(row.total_final ?? row.total))}
         </span>
       ),
     },
@@ -187,8 +127,6 @@ export default function OrdenesPage() {
     },
   ];
 
-  const condicionesOpciones = ['Neto 30 días', 'Neto 60 días', 'Contado', 'Contra entrega', '50% anticipo'];
-
   return (
     <div>
       {/* Page Header */}
@@ -200,17 +138,17 @@ export default function OrdenesPage() {
               Órdenes de Compra
             </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-               Genera y gestiona órdenes de compra a partir de solicitudes de cotización respondidas.
+              Genera y gestiona órdenes de compra a partir de solicitudes de cotización respondidas.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            <button
+            {/* <button
               onClick={() => setShowForm(true)}
               className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 hover:shadow-emerald-600/30 active:scale-[0.98]"
             >
               <Plus size={18} />
               Generar OC
-            </button>
+            </button> */}
             <button
               onClick={() => setShowManualForm(true)}
               className="flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-600 hover:shadow-orange-500/30 active:scale-[0.98]"
@@ -246,184 +184,17 @@ export default function OrdenesPage() {
             searchable
             searchPlaceholder="Buscar por proveedor, proyecto..."
             emptyTitle="Sin órdenes"
-             emptyMessage="Genera una orden a partir de una solicitud de cotización respondida"
+            emptyMessage="Genera una orden a partir de una solicitud de cotización respondida"
           />
         </div>
       </motion.div>
 
       {/* Generate OC Modal */}
-      <Modal
+      <CrearOCModal
         isOpen={showForm}
         onClose={() => setShowForm(false)}
-        title="Generar Orden de Compra"
-         subtitle="Selecciona una solicitud de cotización respondida para crear la OC"
-        size="md"
-      >
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
-              Solicitud de Cotización Respondida
-            </label>
-            <select
-              required
-              value={solicitudCotizacionId}
-              onChange={e => setSolicitudCotizacionId(e.target.value)}
-              title="Solicitud de cotización respondida de la cual se generará la orden de compra, compromete el presupuesto del proyecto"
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-            >
-              <option value="">Seleccionar solicitud de cotización...</option>
-              {solicitudesCotizacion?.map((sc: any) => (
-                <option key={sc.id} value={sc.id}>
-                  SC-{String(sc.id).padStart(3, '0')} — {sc.proveedor} — {sc.proyecto_nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
-              Condiciones de Pago
-            </label>
-            <select
-              value={condicionesPago}
-              onChange={e => setCondicionesPago(e.target.value)}
-              title="Términos de pago acordados con el proveedor para la orden de compra"
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-            >
-              {condicionesOpciones.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
-                Folio (opcional)
-              </label>
-              <input
-                value={folio}
-                onChange={e => setFolio(e.target.value)}
-                placeholder="Si queda vacío se autogenera"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
-                Plazo de Entrega
-              </label>
-              <input
-                value={plazoEntrega}
-                onChange={e => setPlazoEntrega(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
-              Condiciones de Entrega
-            </label>
-            <input
-              value={condicionesEntrega}
-              onChange={e => setCondicionesEntrega(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
-                Tipo de Descuento
-              </label>
-              <select
-                value={descuentoTipo}
-                onChange={e => setDescuentoTipo(e.target.value as 'none' | 'porcentaje' | 'monto')}
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-              >
-                <option value="none">Sin descuento</option>
-                <option value="porcentaje">Porcentaje (%)</option>
-                <option value="monto">Monto fijo ($)</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
-                Valor de Descuento
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                disabled={descuentoTipo === 'none'}
-                value={descuentoValor}
-                onChange={e => setDescuentoValor(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
-              A la atención de
-            </label>
-            <input
-              value={atencionA}
-              onChange={e => setAtencionA(e.target.value)}
-              placeholder="Contacto del proveedor"
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
-              Observaciones
-            </label>
-            <textarea
-              value={observaciones}
-              onChange={e => setObservaciones(e.target.value)}
-              rows={2}
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-            />
-          </div>
-
-          {solicitudCotizacionId && solicitudesCotizacion && (
-            <div className="rounded-lg bg-emerald-50 p-4 border border-emerald-100">
-              <p className="text-xs font-bold text-emerald-700 mb-1">Resumen</p>
-              {(() => {
-                const sc = selectedSC;
-                if (!sc) return null;
-                return (
-                  <div className="space-y-1 text-sm text-emerald-800">
-                    <p><span className="font-medium">Proveedor:</span> {sc.proveedor}</p>
-                    <p><span className="font-medium">Proyecto:</span> {sc.proyecto_nombre}</p>
-                    <p><span className="font-medium">Subtotal base:</span> ${Number(subtotalBase).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</p>
-                    <p><span className="font-medium">Descuento:</span> ${Math.max(0, descuentoMonto).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</p>
-                    <p className="text-lg font-black mt-2">
-                      Neto comprometido: ${Number(subtotalNetoEstimado).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                );
-              })()}
-            </div>
-          )}
-
-          <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
-            <button
-              type="button"
-              onClick={() => setShowForm(false)}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={submitting || !solicitudCotizacionId}
-              className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 disabled:opacity-60"
-            >
-              <PackageCheck size={16} />
-              {submitting ? 'Generando...' : 'Generar Orden de Compra'}
-            </button>
-          </div>
-        </form>
-      </Modal>
+        onSuccess={() => { setShowForm(false); refetch(); }}
+      />
 
       {/* Detail Modal */}
       <Modal
@@ -458,7 +229,7 @@ export default function OrdenesPage() {
             <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-4 text-center dark:bg-emerald-950/20 dark:border-emerald-900">
               <p className="text-[10px] font-bold uppercase text-emerald-600 mb-1">Total Orden de Compra</p>
               <p className="text-3xl font-black text-emerald-700 dark:text-emerald-400">
-                ${Number(showDetail.total_final ?? showDetail.total).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                {formatCLP(Number(showDetail.total_final ?? showDetail.total))}
               </p>
             </div>
             <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">

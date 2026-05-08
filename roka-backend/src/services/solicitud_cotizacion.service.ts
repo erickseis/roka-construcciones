@@ -7,6 +7,12 @@ import {
   checkAllItemsCovered,
   updateSolicitudEstadoIfPendiente,
 } from '../models/solicitud_cotizacion.model';
+import {
+  createNotifications,
+  resolveRecipientUserIds,
+  getActorDisplayName,
+  NotificationInput,
+} from '../lib/notifications';
 
 export async function crearSolicitudCotizacion(input: CreateSolicitudCotizacionInput, usuarioId: number | null) {
   const { solicitud_id, proveedor_id, proveedor, solicitud_item_ids, observaciones } = input;
@@ -28,7 +34,7 @@ export async function crearSolicitudCotizacion(input: CreateSolicitudCotizacionI
       throw Object.assign(new Error('Solicitud de materiales no encontrada'), { statusCode: 404 });
     }
 
-    let nombreProveedor = proveedor;
+    let nombreProveedor: string = proveedor || '';
     if (proveedor_id && !proveedor) {
       const { rows: [prov] } = await client.query(
         'SELECT nombre FROM proveedores WHERE id = $1',
@@ -69,6 +75,49 @@ export async function crearSolicitudCotizacion(input: CreateSolicitudCotizacionI
     }
 
     await client.query('COMMIT');
+
+    // Notificar si la solicitud pasó a Cotizando
+    if (solicitud.estado === 'Pendiente') {
+      try {
+        const allCovered = await checkAllItemsCovered(solicitud_id);
+        if (allCovered) {
+          const actorName = usuarioId ? await getActorDisplayName(usuarioId) : 'Sistema';
+          const { rows: [solicitudUpdated] } = await pool.query(
+            'SELECT sm.*, p.nombre AS proyecto_nombre FROM solicitudes_material sm JOIN proyectos p ON p.id = sm.proyecto_id WHERE sm.id = $1',
+            [solicitud_id]
+          );
+          const proyectoNombre = solicitudUpdated?.proyecto_nombre || 'Proyecto';
+          const solicitudFolio = `SOL-${String(solicitud_id).padStart(3, '0')}`;
+
+          const recipients = await resolveRecipientUserIds({
+            creatorUserId: solicitud.created_by_usuario_id || null,
+            roleNames: ['Director de Obra', 'Adquisiciones'],
+            excludeUserId: usuarioId,
+          });
+
+          if (recipients.length > 0) {
+            const notifications: NotificationInput[] = recipients.map(uid => ({
+              usuario_destino_id: uid,
+              tipo: 'solicitud.cotizando',
+              titulo: 'Solicitud en cotización',
+              mensaje: `${actorName} envió cotizaciones para todos los ítems de la solicitud ${solicitudFolio} del proyecto ${proyectoNombre}. La solicitud ahora está en cotización.`,
+              entidad_tipo: 'solicitud',
+              entidad_id: solicitud_id,
+              payload: {
+                estado: 'Cotizando',
+                proyecto_nombre: proyectoNombre,
+              },
+              enviado_por_usuario_id: usuarioId,
+            }));
+
+            await createNotifications(notifications);
+          }
+        }
+      } catch (notifError) {
+        console.error('Error al enviar notificación de solicitud en cotización:', notifError);
+      }
+    }
+
     return sc;
   } catch (error: any) {
     await client.query('ROLLBACK');
@@ -155,6 +204,49 @@ export async function crearBatchSolicitudesCotizacion(input: BatchCreateSolicitu
     }
 
     await client.query('COMMIT');
+
+    // Notificar si la solicitud pasó a Cotizando
+    if (solicitud.estado === 'Pendiente') {
+      try {
+        const allCovered = await checkAllItemsCovered(solicitud_id);
+        if (allCovered) {
+          const actorName = usuarioId ? await getActorDisplayName(usuarioId) : 'Sistema';
+          const { rows: [solicitudUpdated] } = await pool.query(
+            'SELECT sm.*, p.nombre AS proyecto_nombre FROM solicitudes_material sm JOIN proyectos p ON p.id = sm.proyecto_id WHERE sm.id = $1',
+            [solicitud_id]
+          );
+          const proyectoNombre = solicitudUpdated?.proyecto_nombre || 'Proyecto';
+          const solicitudFolio = `SOL-${String(solicitud_id).padStart(3, '0')}`;
+
+          const recipients = await resolveRecipientUserIds({
+            creatorUserId: solicitud.created_by_usuario_id || null,
+            roleNames: ['Director de Obra', 'Adquisiciones'],
+            excludeUserId: usuarioId,
+          });
+
+          if (recipients.length > 0) {
+            const notifications: NotificationInput[] = recipients.map(uid => ({
+              usuario_destino_id: uid,
+              tipo: 'solicitud.cotizando',
+              titulo: 'Solicitud en cotización',
+              mensaje: `${actorName} envió cotizaciones para todos los ítems de la solicitud ${solicitudFolio} del proyecto ${proyectoNombre}. La solicitud ahora está en cotización.`,
+              entidad_tipo: 'solicitud',
+              entidad_id: solicitud_id,
+              payload: {
+                estado: 'Cotizando',
+                proyecto_nombre: proyectoNombre,
+              },
+              enviado_por_usuario_id: usuarioId,
+            }));
+
+            await createNotifications(notifications);
+          }
+        }
+      } catch (notifError) {
+        console.error('Error al enviar notificación de solicitud en cotización:', notifError);
+      }
+    }
+
     return results;
   } catch (error: any) {
     await client.query('ROLLBACK');

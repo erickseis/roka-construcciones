@@ -88,9 +88,14 @@ export async function getAllProyectos(
 ): Promise<ProyectoRow[]> {
   const conn = getDb(db);
   let query = `
-    SELECT p.*, CONCAT(u.nombre, ' ', u.apellido) AS responsable_nombre
+    SELECT p.*, CONCAT(u.nombre, ' ', u.apellido) AS responsable_nombre,
+           COALESCE(pp.monto_total, 0) AS presupuesto_total,
+           COALESCE(pp.monto_comprometido, 0) AS presupuesto_comprometido,
+           COALESCE(pp.monto_total - pp.monto_comprometido, 0) AS presupuesto_disponible,
+           COALESCE(ROUND((pp.monto_comprometido / NULLIF(pp.monto_total, 0)) * 100, 2), 0) AS presupuesto_porcentaje_uso
     FROM proyectos p
     LEFT JOIN usuarios u ON u.id = p.responsable_usuario_id
+    LEFT JOIN presupuestos_proyecto pp ON pp.proyecto_id = p.id
     WHERE 1=1
   `;
   const params: any[] = [];

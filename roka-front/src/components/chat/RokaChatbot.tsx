@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../context/PermissionsContext';
 import './RokaChatbot.css';
 
 interface Message {
@@ -9,17 +10,44 @@ interface Message {
   time: string;
 }
 
-const QUICK_ACTIONS = [
-  { label: '📋 Solicitudes pendientes', query: '¿Cuántas solicitudes hay pendientes?' },
-  { label: '💲 Gasto total OC', query: '¿Cuál es el gasto total en órdenes de compra?' },
-  { label: '📊 Proyectos activos', query: 'Muéstrame el resumen de proyectos activos' },
-  { label: '⏱ Tiempo conversión', query: '¿Cuál es el tiempo de conversión promedio?' },
-];
+const QUICK_ACTIONS_BY_ROLE: Record<number, Array<{ label: string; query: string }>> = {
+  1: [ // Admin — todas las acciones
+    { label: '📋 Solicitudes pendientes', query: '¿Cuántas solicitudes hay pendientes?' },
+    { label: '💲 Gasto total OC', query: '¿Cuál es el gasto total en órdenes de compra?' },
+    { label: '📊 Proyectos activos', query: 'Muéstrame el resumen de proyectos activos' },
+    { label: '⏱ Tiempo conversión', query: '¿Cuál es el tiempo de conversión promedio?' },
+    { label: '🚨 Alertas de presupuesto', query: '¿Hay alertas de presupuesto activas?' },
+    { label: '📦 Últimas OC', query: '¿Cuáles son las últimas órdenes de compra?' },
+  ],
+  2: [ // Director de Obra — operaciones + proyectos
+    { label: '📋 Solicitudes pendientes', query: '¿Cuántas solicitudes hay pendientes?' },
+    { label: '💲 Gasto por proyecto', query: '¿Cuál es el gasto por proyecto?' },
+    { label: '📊 Proyectos activos', query: 'Muéstrame el resumen de proyectos activos' },
+    { label: '⏱ Tiempo conversión', query: '¿Cuál es el tiempo de conversión promedio?' },
+    { label: '🏗 Estado de presupuestos', query: '¿Cómo va el estado de los presupuestos?' },
+    { label: '🤝 Proveedores frecuentes', query: '¿Quiénes son los proveedores registrados?' },
+  ],
+  3: [ // Adquisiciones — compras + proveedores
+    { label: '📋 Solicitudes pendientes', query: '¿Cuántas solicitudes hay pendientes?' },
+    { label: '🤝 Proveedores disponibles', query: '¿Qué proveedores están registrados?' },
+    { label: '📄 Cotizaciones por responder', query: '¿Hay solicitudes de cotización enviadas?' },
+    { label: '💲 Gasto total OC', query: '¿Cuál es el gasto total en órdenes de compra?' },
+    { label: '📦 Últimas OC', query: '¿Cuáles son las últimas órdenes de compra?' },
+    { label: '⏱ Tiempo conversión', query: '¿Cuál es el tiempo de conversión promedio?' },
+  ],
+  4: [ // Bodega — materiales + entregas
+    { label: '📦 Materiales en catálogo', query: '¿Cuántos materiales hay en el catálogo?' },
+    { label: '📋 Solicitudes con fecha', query: '¿Cuáles son las solicitudes con fecha próxima?' },
+    { label: '📄 Últimas órdenes de compra', query: '¿Cuáles son las últimas OC registradas?' },
+    { label: '🚚 Estado de entregas', query: '¿Cómo están las entregas de las OC?' },
+  ],
+};
 
 const API_URL = import.meta.env.VITE_API_URL+ '/roka/api';
 
 export function RokaChatbot() {
   const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
@@ -27,6 +55,10 @@ export function RokaChatbot() {
   const [hasUnread, setHasUnread] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isInitialized = useRef(false);
+
+  const token = localStorage.getItem('roka_token');
+  const rolId = user?.rol_id ?? 0;
+  const quickActions = QUICK_ACTIONS_BY_ROLE[rolId] || QUICK_ACTIONS_BY_ROLE[1];
 
   // Solo inicializar una vez al cargar el componente
   useEffect(() => {
@@ -72,7 +104,10 @@ export function RokaChatbot() {
     try {
       const response = await fetch(`${API_URL}/chat/complete`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ message: text }),
       });
 
@@ -240,7 +275,7 @@ export function RokaChatbot() {
 
         {!isTyping && messages.length < 5 && (
           <div className="quick-actions">
-            {QUICK_ACTIONS.map(action => (
+            {quickActions.map(action => (
               <div key={action.label} className="quick-chip" onClick={() => handleSend(action.query)}>
                 {action.label}
               </div>

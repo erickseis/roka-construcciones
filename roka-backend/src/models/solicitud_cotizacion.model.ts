@@ -6,7 +6,8 @@ export async function getAllSolicitudesCotizacion(filters: SolicitudCotizacionFi
   let query = `
     SELECT sc.*, sm.solicitante, p.nombre AS proyecto_nombre, p.numero_obra,
            sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
-           (SELECT COUNT(*) FROM solicitud_cotizacion_detalle WHERE solicitud_cotizacion_id = sc.id) AS total_items
+           (SELECT COUNT(*) FROM solicitud_cotizacion_detalle WHERE solicitud_cotizacion_id = sc.id) AS total_items,
+           (SELECT oc.id FROM ordenes_compra oc WHERE oc.solicitud_cotizacion_id = sc.id LIMIT 1) AS orden_id
     FROM solicitud_cotizacion sc
     JOIN solicitudes_material sm ON sm.id = sc.solicitud_id
     JOIN proyectos p ON p.id = sm.proyecto_id
@@ -42,7 +43,8 @@ export async function getSolicitudCotizacionById(id: number): Promise<(Solicitud
   const { rows: [sc] } = await db.query(`
     SELECT sc.*, sm.solicitante, p.nombre AS proyecto_nombre, p.numero_obra,
            sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
-           (SELECT COUNT(*) FROM solicitud_cotizacion_detalle WHERE solicitud_cotizacion_id = sc.id) AS total_items
+           (SELECT COUNT(*) FROM solicitud_cotizacion_detalle WHERE solicitud_cotizacion_id = sc.id) AS total_items,
+           (SELECT oc.id FROM ordenes_compra oc WHERE oc.solicitud_cotizacion_id = sc.id LIMIT 1) AS orden_id
     FROM solicitud_cotizacion sc
     JOIN solicitudes_material sm ON sm.id = sc.solicitud_id
     JOIN proyectos p ON p.id = sm.proyecto_id

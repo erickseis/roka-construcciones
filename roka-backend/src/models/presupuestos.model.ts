@@ -6,10 +6,20 @@ const PRESUPUESTO_SELECT = `
     pp.*,
     p.nombre AS proyecto_nombre,
     p.estado AS proyecto_estado,
-    COALESCE((pp.monto_comprometido / NULLIF(pp.monto_total, 0)) * 100, 0)::numeric(8,2) AS porcentaje_uso,
-    (pp.monto_total - pp.monto_comprometido)::numeric AS monto_disponible
+    COALESCE(oc_agg.gasto_total, 0)::numeric AS gasto_total,
+    COALESCE((COALESCE(oc_agg.gasto_total, 0) / NULLIF(pp.monto_total, 0)) * 100, 0)::numeric(8,2) AS porcentaje_uso,
+    (pp.monto_total - COALESCE(oc_agg.gasto_total, 0))::numeric AS monto_disponible
   FROM presupuestos_proyecto pp
   JOIN proyectos p ON p.id = pp.proyecto_id
+  LEFT JOIN (
+    SELECT p2.id AS proyecto_id,
+           COALESCE(SUM(oc.total), 0) AS gasto_total
+    FROM proyectos p2
+    LEFT JOIN solicitudes_material sm ON sm.proyecto_id = p2.id
+    LEFT JOIN solicitud_cotizacion sc ON sc.solicitud_id = sm.id AND sc.estado = 'Respondida'
+    LEFT JOIN ordenes_compra oc ON oc.solicitud_cotizacion_id = sc.id
+    GROUP BY p2.id
+  ) oc_agg ON oc_agg.proyecto_id = p.id
 `;
 
 const CATEGORIA_SELECT = `
@@ -57,6 +67,12 @@ export async function getCategoriasByPresupuesto(presupuestoId: number): Promise
 export async function getPresupuestoById(id: number): Promise<PresupuestoProyecto | null> {
   const db = getDb();
   const { rows: [row] } = await db.query('SELECT * FROM presupuestos_proyecto WHERE id = $1', [id]);
+  return row || null;
+}
+
+export async function getCategoriaById(id: number): Promise<PresupuestoCategoria | null> {
+  const db = getDb();
+  const { rows: [row] } = await db.query('SELECT * FROM presupuesto_categorias WHERE id = $1', [id]);
   return row || null;
 }
 
@@ -148,6 +164,12 @@ export async function updatePresupuesto(id: number, data: {
   const nextMontoTotal = typeof data.monto_total !== 'undefined' ? Number(data.monto_total) : Number(current.monto_total);
   if (nextMontoTotal < Number(current.monto_comprometido)) {
     throw new Error('El monto total no puede ser menor al comprometido actual');
+  }
+
+  const { rows: sumRows } = await db.query('SELECT SUM(monto_asignado) as total FROM presupuesto_categorias WHERE presupuesto_id = $1', [id]);
+  const totalAsignadoCategorias = Number(sumRows[0].total || 0);
+  if (nextMontoTotal < totalAsignadoCategorias) {
+    throw new Error(`El monto total no puede ser menor a la suma de las categorías asignadas (${totalAsignadoCategorias.toLocaleString('es-CL')})`);
   }
 
   const { rows: [updated] } = await db.query(

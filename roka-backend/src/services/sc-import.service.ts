@@ -4,15 +4,15 @@ import { execSync } from 'child_process';
 import OpenAI from 'openai';
 
 // ================================================
-// NVIDIA Nemotron Omni OCR Service for Vendor Quotations
+// NVIDIA Nemotron Nano VL OCR Service for Vendor Quotations
 // ================================================
-// Uses nvidia/nemotron-3-nano-omni-30b-a3b-reasoning via OpenAI-compatible API
-// Omni-modal reasoning model (30B total, 3B active via MoE)
+// Uses nvidia/llama-3.1-nemotron-nano-vl-8b-v1 via OpenAI-compatible API
+// Vision-Language model optimized for document OCR (invoices, quotations)
 // PDFs are converted to PNG before processing (model only accepts images)
 // ================================================
 
 const NVIDIA_BASE_URL = 'https://integrate.api.nvidia.com/v1';
-const NVIDIA_MODEL = 'nvidia/nemotron-nano-12b-v2-vl';
+const NVIDIA_MODEL = 'nvidia/llama-3.1-nemotron-nano-vl-8b-v1';
 
 // Supported image formats for the model
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp'];
@@ -147,9 +147,18 @@ export async function parseCotizacionArchivo(
     `- ID:${item.solicitud_item_id} | ${item.nombre_material} | Cant:${item.cantidad_requerida} ${item.unidad}`
   ).join('\n');
 
-  // System prompt for Nemotron Omni — structured extraction, no reasoning tokens
-  const systemPrompt = `Eres un extractor de datos de cotizaciones de proveedores de materiales de construcción.
-Responde EXCLUSIVAMENTE con JSON válido, sin texto adicional, sin markdown, sin explicaciones.
+  // System prompt — structured JSON extraction from vendor quotation documents
+  const systemPrompt = `Eres un extractor de datos de cotizaciones de proveedores de materiales de construcción en Chile.
+Responde EXCLUSIVAMENTE con JSON válido. Sin texto adicional, sin markdown, sin explicaciones.
+
+FORMATO NUMÉRICO CHILENO — LEE ESTO CUIDADOSAMENTE:
+En Chile, el punto (.) separa MILES y la coma (,) separa decimales.
+Ejemplos de conversión del documento al JSON:
+  "$3.500" en el documento → 3500 en el JSON
+  "$2.000" en el documento → 2000 en el JSON
+  "$324.000" en el documento → 324000 en el JSON
+  "$1.250,50" en el documento → 1250.50 en el JSON
+NUNCA escribas 3.5 si el documento dice $3.500. Eso es TRES MIL QUINIENTOS = 3500.
 
 Esquema de respuesta:
 {
@@ -170,23 +179,27 @@ Esquema de respuesta:
     "codigo_proveedor": "string|null",
     "match_confidence": "high|medium|low|none"
   }]
-}`;
+}
 
-  const userText = `Extrae los ítems y precios del documento adjunto. Haz matching con estos ítems de solicitud:
+VALIDACIÓN OBLIGATORIA:
+- precio_unitario * cantidad_extraida DEBE ser igual a subtotal_linea.
+- La suma de todos los subtotal_linea DEBE ser igual a monto_total (neto, sin IVA).
+- Si no cuadra, RELEE el documento y corrige los valores.
+- El JSON debe ser 100% válido para JSON.parse().`;
+
+  const userText = `Extrae los ítems y precios del documento de cotización adjunto.
+
+Haz matching con estos ítems de solicitud:
 ${itemsList}
 
-REGLAS DE MATCHING ESTRICTAS:
-1. NO FUERCES UN MATCH. Si un ítem del documento no se parece a NINGUNO de la solicitud, asígnale "solicitud_item_id": null y "match_confidence": "none".
-2. Para hacer match, compara SEMÁNTICAMENTE: tipo de material (ej. Tornillo vs Barra), uso (Madera vs Hormigón), dimensiones y características clave.
-3. Clasificación de confianza:
-   - "high": Coincide exactamente o es un claro sinónimo (ej. "Malla Raschel Negra 80%" vs "Malla Sombra 80% Negra").
-   - "medium": Mismo tipo de material pero difiere levemente en marca, dimensión menor o presentación (ej. "Pino 1x4x3.2" vs "Pino Bruto 1x4").
-   - "low": Mismo material base pero características diferentes (ej. Tornillo de 1" vs Tornillo de 2").
-   - "none": Materiales completamente distintos (ej. Tornillo vs Barra, Malla vs Cemento). NO asignes solicitud_item_id.
-4. Un mismo "solicitud_item_id" no puede ser asignado a más de un ítem extraído.
-5. Extrae: precio unitario, cantidad, unidad, código proveedor, subtotal línea, descuento.
-6. FORMATO NUMÉRICO (CHILE): El punto (.) es separador de miles y la coma (,) es separador decimal. Convierte los montos a formato numérico válido: $4.500 debe ser 4500 (entero) y 72,5 debe ser 72.5 (decimal).
-7. Identifica a nivel global: número COV (cotización), nombre proveedor, RUT, monto total, condiciones pago, plazo entrega.`;
+REGLAS:
+1. NO FUERCES MATCH. Si un ítem no coincide con ninguno de la solicitud, asígnale "solicitud_item_id": null.
+2. Compara semánticamente: tipo de material, dimensiones, uso.
+3. match_confidence: "high" = coincidencia exacta, "medium" = mismo tipo diferente variante, "low" = mismo material base, "none" = sin relación.
+4. Un solicitud_item_id solo puede asignarse a un ítem.
+5. NÚMEROS: Lee cuidadosamente. $3.500 = 3500, $2.000 = 2000, $324.000 = 324000. El punto en montos chilenos es separador de miles, NO decimal.
+6. Verifica: precio_unitario × cantidad = subtotal_linea.
+7. Extrae a nivel global: número de cotización, proveedor, RUT, monto total neto, condiciones, plazo.`;
 
   // Prepare image content for the model
   let content: any[];
@@ -238,7 +251,7 @@ REGLAS DE MATCHING ESTRICTAS:
       );
     }
 
-    // Call NVIDIA Nemotron model
+    // Call NVIDIA Nemotron Nano VL model
     const client = getNvidiaClient();
     const completion = await client.chat.completions.create({
       model: NVIDIA_MODEL,
@@ -246,12 +259,10 @@ REGLAS DE MATCHING ESTRICTAS:
         { role: 'system', content: systemPrompt },
         { role: 'user', content }
       ],
-      max_tokens: 3072,
+      max_tokens: 4096,
       temperature: 0,
       top_p: 1,
       stream: false,
-      // Disable reasoning chain for faster structured output (Nemotron Omni specific)
-      chat_template_kwargs: { enable_thinking: false },
     } as any);
 
     const text = completion.choices?.[0]?.message?.content || '';
@@ -265,42 +276,143 @@ REGLAS DE MATCHING ESTRICTAS:
 
     // Parse JSON from response (with enable_thinking:false, output should be clean JSON)
     let parsed: any;
+    let rawText = text.trim();
     try {
       // Try direct parse first (expected with reasoning disabled)
-      const trimmed = text.trim();
-      if (trimmed.startsWith('{')) {
-        parsed = JSON.parse(trimmed);
+      if (rawText.startsWith('{')) {
+        parsed = JSON.parse(rawText);
       } else {
         // Fallback: extract JSON block if model wrapped it in markdown or reasoning
-        const jsonMatch = trimmed.match(/\{[\s\S]*"items"[\s\S]*\}/);
+        const jsonMatch = rawText.match(/\{[\s\S]*"items"[\s\S]*\}/);
         if (jsonMatch) {
           parsed = JSON.parse(jsonMatch[0]);
         } else {
           throw new Error('No JSON block found in response');
         }
       }
-    } catch (parseError) {
-      console.error('Raw AI response:', text.substring(0, 2000));
-      throw Object.assign(
-        new Error('No se pudo parsear la respuesta de IA como JSON. El documento puede ser ilegible o el formato no es claro.'),
-        { statusCode: 500 }
-      );
+    } catch (firstError) {
+      // Attempt JSON repair before giving up
+      try {
+        console.warn('JSON malformado, intentando reparar:', rawText.substring(0, 200));
+        const repaired = repairJson(rawText);
+        parsed = JSON.parse(repaired);
+        console.warn('JSON reparado exitosamente');
+      } catch (repairError) {
+        console.error('Raw AI response:', text.substring(0, 2000));
+        throw Object.assign(
+          new Error('No se pudo parsear la respuesta de IA como JSON. El documento puede ser ilegible o el formato no es claro.'),
+          { statusCode: 500 }
+        );
+      }
+    }
+
+    // Helper: repair common JSON syntax errors (unclosed quotes, missing braces)
+    function repairJson(s: string): string {
+      let r = s.trim();
+      // Try to extract JSON from markdown block if present
+      const mdMatch = r.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+      if (mdMatch) r = mdMatch[1].trim();
+      // Count unclosed quotes after the last opening brace
+      const braceIdx = r.indexOf('{');
+      if (braceIdx >= 0) {
+        const afterBrace = r.substring(braceIdx);
+        const quoteCount = (afterBrace.match(/"/g) || []).length;
+        if (quoteCount % 2 !== 0) r += '"';
+      }
+      // Close unclosed braces
+      const openCurl = (r.match(/\{/g) || []).length;
+      const closeCurl = (r.match(/\}/g) || []).length;
+      r += '}'.repeat(openCurl - closeCurl);
+      // Close unclosed brackets
+      const openBrack = (r.match(/\[/g) || []).length;
+      const closeBrack = (r.match(/\]/g) || []).length;
+      r += ']'.repeat(openBrack - closeBrack);
+      return r;
+    }
+
+    // ---------------------------------------------------------------
+    // SANITIZACIÓN: Corrige el error de separador de miles chileno.
+    // El modelo de IA puede leer "$4.500" como 4.5 (en vez de 4500)
+    // porque interpreta el punto como decimal (formato anglosajón).
+    // Si precio * cantidad ≈ subtotal/1000, multiplicamos todo x1000.
+    // ---------------------------------------------------------------
+    function sanitizeCLPValue(raw: any): number {
+      const n = Number(raw);
+      return isNaN(n) ? 0 : n;
+    }
+
+    function fixThousandsSeparator(precio: number, cantidad: number | undefined, subtotal: number | undefined): number {
+      if (!precio || precio === 0) return precio;
+      // Si el precio parece un float con máximo 3 decimales (ej. 4.5, 324.0)
+      // y tenemos subtotal, verificamos si precio*1000*cantidad ≈ subtotal
+      if (subtotal && cantidad && subtotal > 0) {
+        const calcNormal = precio * cantidad;
+        const calcX1000 = precio * 1000 * cantidad;
+        const diffNormal = Math.abs(calcNormal - subtotal) / subtotal;
+        const diffX1000 = Math.abs(calcX1000 - subtotal) / subtotal;
+        if (diffX1000 < 0.01 && diffNormal > 0.5) {
+          // La versión ×1000 encaja mucho mejor con el subtotal
+          return precio * 1000;
+        }
+      }
+      // Heurística adicional: si el precio tiene parte decimal que parece miles
+      // (ej. 4.5 → el .5 representa 500, así que es 4500)
+      // Detectamos cuando precio < 1000 y el precio en el documento claramente
+      // debería ser un número de 4+ dígitos (precio tiene decimales .5, .25, etc.)
+      if (precio < 1000 && !Number.isInteger(precio)) {
+        const decimals = precio - Math.floor(precio);
+        // Si los decimales son múltiplos exactos de 0.1, 0.25, 0.5 → probablemente miles mal leídos
+        const roundedDecimals = Math.round(decimals * 1000);
+        if (roundedDecimals % 100 === 0 || roundedDecimals % 250 === 0 || roundedDecimals % 500 === 0) {
+          // Verificar con subtotal si está disponible
+          if (subtotal && cantidad) {
+            const candidatePrice = Math.floor(precio) * 1000 + roundedDecimals;
+            const candidateTotal = candidatePrice * cantidad;
+            if (Math.abs(candidateTotal - subtotal) / subtotal < 0.01) {
+              return candidatePrice;
+            }
+          }
+        }
+      }
+      return precio;
     }
 
     // Validate and normalize the response
-    const items = (parsed.items || []).map((item: any) => ({
-      solicitud_item_id: item.solicitud_item_id ?? null,
-      nombre_extraido: String(item.nombre_extraido || ''),
-      precio_unitario: Number(item.precio_unitario) || 0,
-      cantidad_extraida: item.cantidad_extraida != null ? Number(item.cantidad_extraida) : undefined,
-      unidad_extraida: item.unidad_extraida ? String(item.unidad_extraida) : undefined,
-      subtotal_linea: item.subtotal_linea != null ? Number(item.subtotal_linea) : undefined,
-      descuento_porcentaje: item.descuento_porcentaje != null ? Number(item.descuento_porcentaje) : undefined,
-      codigo_proveedor: item.codigo_proveedor ? String(item.codigo_proveedor) : undefined,
-      match_confidence: ['high', 'medium', 'low', 'none'].includes(item.match_confidence) 
-        ? item.match_confidence 
-        : 'none',
-    }));
+    const items = (parsed.items || []).map((item: any) => {
+      const rawPrecio = sanitizeCLPValue(item.precio_unitario);
+      const rawCantidad = item.cantidad_extraida != null ? Number(item.cantidad_extraida) : undefined;
+      const rawSubtotal = item.subtotal_linea != null ? sanitizeCLPValue(item.subtotal_linea) : undefined;
+
+      // Auto-correct subtotal if it also suffered thousands-as-decimal issue
+      let correctedSubtotal = rawSubtotal;
+      if (rawSubtotal && rawCantidad) {
+        const calcSubtotalX1000 = rawPrecio * 1000 * rawCantidad;
+        const calcSubtotalNormal = rawPrecio * rawCantidad;
+        if (rawSubtotal > 0) {
+          const diffNormal = Math.abs(calcSubtotalNormal - rawSubtotal) / rawSubtotal;
+          const diffX1000 = Math.abs(calcSubtotalX1000 - rawSubtotal * 1000) / (rawSubtotal * 1000);
+          if (diffX1000 < 0.01 && diffNormal > 0.5) {
+            correctedSubtotal = rawSubtotal * 1000;
+          }
+        }
+      }
+
+      const correctedPrecio = fixThousandsSeparator(rawPrecio, rawCantidad, correctedSubtotal);
+
+      return {
+        solicitud_item_id: item.solicitud_item_id ?? null,
+        nombre_extraido: String(item.nombre_extraido || ''),
+        precio_unitario: correctedPrecio,
+        cantidad_extraida: rawCantidad,
+        unidad_extraida: item.unidad_extraida ? String(item.unidad_extraida) : undefined,
+        subtotal_linea: correctedSubtotal,
+        descuento_porcentaje: item.descuento_porcentaje != null ? Number(item.descuento_porcentaje) : undefined,
+        codigo_proveedor: item.codigo_proveedor ? String(item.codigo_proveedor) : undefined,
+        match_confidence: ['high', 'medium', 'low', 'none'].includes(item.match_confidence)
+          ? item.match_confidence
+          : 'none',
+      };
+    });
 
     return {
       items,

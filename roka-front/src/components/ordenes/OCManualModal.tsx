@@ -4,6 +4,7 @@ import { createOrdenManual, getSolicitudes, getUnidadesMedida, getProveedores } 
 import { AlertCircle, Plus, Trash2, Building2 } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import { getProyectosAdmin } from '@/lib/api';
+import { formatCLP } from '@/lib/utils';
 import CreatableSelect from 'react-select/creatable';
 import ProveedorModal from '../proveedores/ProveedorModal';
 
@@ -261,7 +262,7 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
             ))}
           </div>
           <div className="mt-2 text-right text-sm font-bold text-slate-700">
-            Total: ${total.toLocaleString('es-CL')}
+            Total: {formatCLP(total)}
           </div>
         </div>
 

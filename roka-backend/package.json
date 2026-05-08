@@ -10,12 +10,14 @@
     "dev:unified": "cd ../.. && cd \"roka sistema finanzas\" && cross-env NODE_ENV=development nodemon index.cjs"
   },
   "dependencies": {
+    "@types/nodemailer": "^8.0.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
+    "nodemailer": "^8.0.7",
     "openai": "^4.104.0",
     "pdf-parse": "^2.4.5",
     "pg": "^8.20.0",

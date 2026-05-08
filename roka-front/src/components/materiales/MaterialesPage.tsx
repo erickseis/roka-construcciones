@@ -15,13 +15,14 @@ import { Material, MaterialInput, UnidadMedida, MaterialCategoria } from '../../
 import MaterialModal from './MaterialModal';
 import CategoriaModal from './CategoriaModal';
 import UnidadModal from './UnidadModal';
-import { 
-  getMaterialCategorias, 
-  deleteMaterialCategoria, 
+import {
+  getMaterialCategorias,
+  deleteMaterialCategoria,
   deleteUnidadMedida,
   getMaterialesSolicitados,
   getProyectos
 } from '../../lib/api';
+import { formatCLP } from '@/lib/utils';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/roka';
 
@@ -30,14 +31,14 @@ export default function MaterialesPage() {
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
   const [masterCategorias, setMasterCategorias] = useState<MaterialCategoria[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'materiales' | 'categorias' | 'unidades' | 'solicitados'>('materiales');
+  const [activeTab, setActiveTab] = useState<'solicitados' | 'categorias' | 'unidades'>('solicitados');
   const [materialesSolicitados, setMaterialesSolicitados] = useState<any[]>([]);
   const [proyectos, setProyectos] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
-  
+
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<MaterialCategoria | null>(null);
 
@@ -77,13 +78,13 @@ export default function MaterialesPage() {
       console.error(error);
     }
   };
-  
+
   const fetchSolicitados = async () => {
     setIsLoading(true);
     try {
-      const data = await getMaterialesSolicitados({ 
-        q: searchTerm, 
-        proyecto_id: selectedCategoryId && activeTab === 'solicitados' ? Number(selectedCategoryId) : undefined 
+      const data = await getMaterialesSolicitados({
+        q: searchTerm,
+        proyecto_id: selectedCategoryId && activeTab === 'solicitados' ? Number(selectedCategoryId) : undefined
       });
       setMaterialesSolicitados(data);
     } catch (error) {
@@ -163,12 +164,12 @@ export default function MaterialesPage() {
     return matchesSearch && matchesCategory;
   });
 
-  const filteredCategorias = masterCategorias.filter(c => 
+  const filteredCategorias = masterCategorias.filter(c =>
     c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (c.descripcion && c.descripcion.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const filteredUnidades = unidades.filter(u => 
+  const filteredUnidades = unidades.filter(u =>
     u.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.abreviatura.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -214,19 +215,18 @@ export default function MaterialesPage() {
         <div className="flex flex-col gap-4 w-full lg:w-auto">
           <div className="flex overflow-x-auto pb-2 scrollbar-hide gap-2 -mx-4 px-4 sm:mx-0 sm:px-0">
             {[
-              { id: 'materiales', label: 'Materiales' },
+              { id: 'solicitados', label: 'Solicitados' },
+              // { id: 'materiales', label: 'Materiales' },
               { id: 'categorias', label: 'Categorías' },
               { id: 'unidades', label: 'Unidades' },
-              { id: 'solicitados', label: 'Solicitados' },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`relative whitespace-nowrap rounded-xl px-6 py-2.5 text-sm font-bold transition-all duration-300 ${
-                  activeTab === tab.id
-                    ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-[0_4px_20px_rgba(245,158,11,0.4)] scale-105 z-10'
-                    : 'bg-white/50 text-slate-500 hover:bg-white border border-slate-200 dark:bg-slate-900/50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800'
-                }`}
+                className={`relative whitespace-nowrap rounded-xl px-6 py-2.5 text-sm font-bold transition-all duration-300 ${activeTab === tab.id
+                  ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-[0_4px_20px_rgba(245,158,11,0.4)] scale-105 z-10'
+                  : 'bg-white/50 text-slate-500 hover:bg-white border border-slate-200 dark:bg-slate-900/50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800'
+                  }`}
               >
                 {tab.label}
                 {activeTab === tab.id && (
@@ -238,7 +238,7 @@ export default function MaterialesPage() {
               </button>
             ))}
           </div>
-          
+
           <button
             onClick={() => {
               if (activeTab === 'materiales') {
@@ -268,8 +268,8 @@ export default function MaterialesPage() {
               <Package size={24} />
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Materiales</p>
-              <h3 className="text-2xl font-black text-slate-900 dark:text-slate-50">{materiales.length}</h3>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Materiales Solicitados</p>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-slate-50">{materialesSolicitados.length}</h3>
             </div>
           </div>
         </div>
@@ -377,7 +377,7 @@ export default function MaterialesPage() {
                       <td className="px-6 py-4 font-bold">{material.nombre}</td>
                       <td className="px-6 py-4 text-slate-500 font-medium text-xs">{material.categoria_nombre || material.categoria || 'Sin categoría'}</td>
                       <td className="px-6 py-4 text-slate-500 text-xs font-bold">{material.unidad_abreviatura}</td>
-                      <td className="px-6 py-4 text-right font-black">${Number(material.precio_referencial).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-right font-black">{formatCLP(Number(material.precio_referencial))}</td>
                       <td className="px-6 py-4 text-center">
                         <span className={`px-2 py-1 rounded-full text-[10px] font-black ${material.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                           {material.is_active ? 'ACTIVO' : 'INACTIVO'}
@@ -517,7 +517,7 @@ export default function MaterialesPage() {
         unidades={unidades}
       />
 
-      <CategoriaModal 
+      <CategoriaModal
         isOpen={isCategoryModalOpen}
         onClose={() => {
           setIsCategoryModalOpen(false);

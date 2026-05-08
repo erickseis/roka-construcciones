@@ -1,12 +1,26 @@
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { Sidebar } from '../Sidebar';
 import { Header } from '../Header';
 import { CopilotButton } from '../copilot/CopilotButton';
 import { RokaChatbot } from '../chat/RokaChatbot';
 
 export function MainLayout() {
+  const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#f7fafc] dark:bg-[#0b0e14]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-[#f7fafc] dark:bg-[#0b0e14]">

@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import * as solicitudCtrl from '../controllers/solicitudes.controller';
+import { authMiddleware } from '../middleware/authMiddleware';
 
 const router = Router();
+
+// Todas las rutas requieren autenticación
+router.use(authMiddleware);
 
 router.get('/', solicitudCtrl.list);
 router.get('/:id', solicitudCtrl.getById);

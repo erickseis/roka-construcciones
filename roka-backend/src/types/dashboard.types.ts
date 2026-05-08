@@ -10,6 +10,10 @@ export interface DashboardGastoPorProyecto {
   proyecto: string;
   total_ordenes: number;
   gasto_total: number;
+  presupuesto_total: number;
+  presupuesto_usado: number;
+  presupuesto_disponible: number;
+  porcentaje_uso: number;
 }
 
 export interface DashboardTiempoConversion {

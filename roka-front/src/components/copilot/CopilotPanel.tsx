@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
+import { usePermissions } from '../../context/PermissionsContext';
 import {
   Compass,
   FolderKanban,
@@ -26,6 +27,7 @@ const STEPS = [
     label: 'Proyecto',
     description: 'Crear proyecto de obra nuevo',
     detail: 'Define el nombre, ubicación, estado y responsable del proyecto.',
+    permiso: 'proyectos.view',
   },
   {
     id: 'presupuestos',
@@ -34,6 +36,7 @@ const STEPS = [
     label: 'Presupuesto',
     description: 'Asignar presupuesto y categorías al proyecto',
     detail: 'Sin presupuesto activo no se pueden generar órdenes de compra.',
+    permiso: 'presupuestos.view',
   },
   {
     id: 'solicitudes',
@@ -42,6 +45,7 @@ const STEPS = [
     label: 'Solicitud de Materiales',
     description: 'Solicitar los materiales necesarios',
     detail: 'Lista los materiales con cantidad y unidad de medida requeridos.',
+    permiso: 'solicitudes.view',
   },
   {
     id: 'solicitudes-cotizacion',
@@ -50,6 +54,7 @@ const STEPS = [
     label: 'Solicitud de Cotización',
     description: 'Gestionar solicitudes de cotización a proveedores',
     detail: 'Crea y envía solicitudes de cotización para obtener precios de proveedores.',
+    permiso: 'cotizaciones.view',
   },
   {
     id: 'ordenes',
@@ -58,6 +63,7 @@ const STEPS = [
     label: 'Orden de Compra',
     description: 'Generar OC que compromete el presupuesto',
     detail: 'Al generar la OC se valida disponibilidad presupuestaria y se compromete el monto.',
+    permiso: 'ordenes.view',
   },
 ];
 
@@ -69,22 +75,23 @@ const CATALOG_STEPS = [
     label: 'Materiales',
     description: 'Gestionar catálogo de materiales y unidades de medida',
     detail: 'Crea y administra los materiales disponibles y sus unidades.',
+    permiso: 'materiales.view',
   },
 ];
 
-function getStepStatus(currentPath: string, stepPath: string, stepIndex: number): 'completed' | 'active' | 'pending' {
+function getStepStatus(currentPath: string, stepPath: string, stepIndex: number, visibleSteps: typeof STEPS): 'completed' | 'active' | 'pending' {
   const exactMatch = currentPath === stepPath;
   const startsWith = currentPath.startsWith(stepPath + '/') || currentPath.startsWith(stepPath);
 
   if (exactMatch || (stepPath === '/' && currentPath === '/')) return 'active';
 
-  const currentIndex = STEPS.findIndex(s => {
+  const currentIndex = visibleSteps.findIndex(s => {
     const match = currentPath === s.path || currentPath.startsWith(s.path + '/');
     return match;
   });
 
   if (currentIndex === -1) {
-    if (CATALOG_STEPS.some(s => currentPath === s.path || currentPath.startsWith(s.path + '/'))) {
+    if (visibleCatalog.some(s => currentPath === s.path || currentPath.startsWith(s.path + '/'))) {
       return 'pending';
     }
     return 'pending';
@@ -99,6 +106,10 @@ export function CopilotPanel({ onClose }: CopilotPanelProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
+  const { hasPermission } = usePermissions();
+
+  const visibleSteps = STEPS.filter(s => hasPermission(s.permiso));
+  const visibleCatalog = CATALOG_STEPS.filter(s => hasPermission(s.permiso));
 
   return (
     <motion.div
@@ -136,8 +147,8 @@ export function CopilotPanel({ onClose }: CopilotPanelProps) {
 
       <div className="flex-1 overflow-y-auto px-5 py-4">
         <div className="space-y-0">
-          {STEPS.map((step, index) => {
-            const status = getStepStatus(currentPath, step.path, index);
+          {visibleSteps.map((step, index) => {
+            const status = getStepStatus(currentPath, step.path, index, visibleSteps);
             const Icon = step.icon;
 
             return (
@@ -176,7 +187,7 @@ export function CopilotPanel({ onClose }: CopilotPanelProps) {
                         />
                       )}
                     </button>
-                    {index < STEPS.length - 1 && (
+                    {index < visibleSteps.length - 1 && (
                       <div
                         className={`w-0.5 flex-1 min-h-[20px] my-1 transition-colors duration-300 ${
                           status === 'completed'
@@ -189,7 +200,7 @@ export function CopilotPanel({ onClose }: CopilotPanelProps) {
                     )}
                   </div>
 
-                  <div className={`pb-5 flex-1 ${index === STEPS.length - 1 ? 'pb-0' : ''}`}>
+                  <div className={`pb-5 flex-1 ${index === visibleSteps.length - 1 ? 'pb-0' : ''}`}>
                     <button
                       onClick={() => navigate(step.path)}
                       className={`text-left w-full group ${
@@ -254,7 +265,7 @@ export function CopilotPanel({ onClose }: CopilotPanelProps) {
             Catalogo transversal
           </p>
           <div className="space-y-2">
-            {CATALOG_STEPS.map((step) => {
+            {visibleCatalog.map((step) => {
               const isActive = currentPath === step.path || currentPath.startsWith(step.path + '/');
               const Icon = step.icon;
 

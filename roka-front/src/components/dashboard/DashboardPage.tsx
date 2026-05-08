@@ -4,6 +4,7 @@ import { TrendingUp, AlertTriangle, Clock, DollarSign, FileText, PackageCheck } 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useApi } from '@/hooks/useApi';
 import { getDashboardResumen } from '@/lib/api';
+import { formatCLP } from '@/lib/utils';
 import { useTheme } from '@/context/ThemeContext';
 
 const COLORS = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444'];
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   const gastoBarData = stats?.gasto_por_proyecto?.map((item: any) => ({
     name: item.proyecto.length > 20 ? item.proyecto.substring(0, 20) + '...' : item.proyecto,
     gasto: Number(item.gasto_total),
+    presupuesto: Number(item.presupuesto_total),
     ordenes: item.total_ordenes,
   })) || [];
 
@@ -28,8 +30,8 @@ export default function DashboardPage() {
     return (
       <div className="space-y-6">
         <div className="h-10 w-64 animate-pulse rounded-lg bg-slate-200" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {[...Array(5)].map((_, i) => (
             <div key={i} className="h-28 animate-pulse rounded-xl bg-slate-200" />
           ))}
         </div>
@@ -58,7 +60,7 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* KPI Cards */}
-      <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {[
           {
             label: 'Pendientes por Cotizar',
@@ -69,15 +71,15 @@ export default function DashboardPage() {
             iconBg: 'bg-amber-100',
             title: 'Solicitudes de materiales que aún no tienen cotizaciones enviadas a proveedores. Son el punto de partida para crear solicitudes de cotización.',
           },
-          {
-            label: 'En Cotización',
-            value: stats?.solicitudes_mensual?.cotizando ?? 0,
-            icon: <PackageCheck size={20} />,
-            color: 'text-blue-600',
-            bg: 'bg-blue-50',
-            iconBg: 'bg-blue-100',
-            title: 'Solicitudes con cotizaciones ya enviadas a proveedores, esperando respuesta de precios para generar órdenes de compra.',
-          },
+          // {
+          //   label: 'En Cotización',
+          //   value: stats?.solicitudes_mensual?.cotizando ?? 0,
+          //   icon: <PackageCheck size={20} />,
+          //   color: 'text-blue-600',
+          //   bg: 'bg-blue-50',
+          //   iconBg: 'bg-blue-100',
+          //   title: 'Solicitudes con cotizaciones ya enviadas a proveedores, esperando respuesta de precios para generar órdenes de compra.',
+          // },
           {
             label: 'Promedio Conversión',
             value: `${stats?.tiempo_conversion?.promedio_dias ?? 0} días`,
@@ -90,12 +92,30 @@ export default function DashboardPage() {
           },
           {
             label: 'Gasto Total en OCs',
-            value: `$${(stats?.gasto_por_proyecto?.reduce((s: number, p: any) => s + Number(p.gasto_total), 0) || 0).toLocaleString('es-ES')}`,
+            value: formatCLP(stats?.gasto_por_proyecto?.reduce((s: number, p: any) => s + Number(p.gasto_total), 0) || 0),
             icon: <DollarSign size={20} />,
             color: 'text-violet-600',
             bg: 'bg-violet-50',
             iconBg: 'bg-violet-100',
             title: 'Suma total en pesos del monto de todas las órdenes de compra generadas en los proyectos activos',
+          },
+          {
+            label: 'Presupuesto Total',
+            value: formatCLP(stats?.gasto_por_proyecto?.reduce((s: number, p: any) => s + Number(p.presupuesto_total), 0) || 0),
+            icon: <TrendingUp size={20} />,
+            color: 'text-emerald-600',
+            bg: 'bg-emerald-50',
+            iconBg: 'bg-emerald-100',
+            title: 'Suma total de presupuestos asignados a todos los proyectos activos',
+          },
+          {
+            label: 'Presupuesto Disponible',
+            value: formatCLP(stats?.gasto_por_proyecto?.reduce((s: number, p: any) => s + Number(p.presupuesto_disponible), 0) || 0),
+            icon: <DollarSign size={20} />,
+            color: 'text-sky-600',
+            bg: 'bg-sky-50',
+            iconBg: 'bg-sky-100',
+            title: 'Suma total de presupuesto aún disponible (no comprometido) en todos los proyectos',
           },
         ].map((kpi, idx) => (
           <motion.div
@@ -128,7 +148,7 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           title="Distribución mensual del estado de las solicitudes de materiales: cuántas están pendientes vs. atendidas"
-          className="col-span-1 lg:col-span-5 rounded-xl bg-white p-6 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700"
+          className="col-span-1 lg:col-span-6 rounded-xl bg-white p-6 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700"
         >
           <h3 className="mb-1 text-lg font-bold text-slate-900 dark:text-white">Solicitudes del Mes</h3>
           <p className="mb-6 text-xs text-slate-400">Por estado: Pendientes, Cotizando, Aprobadas</p>
@@ -187,10 +207,10 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
           title="Comparación del gasto total comprometido en órdenes de compra por cada proyecto activo"
-          className="col-span-1 lg:col-span-7 rounded-xl bg-white p-6 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700"
+          className="col-span-1 lg:col-span-6 rounded-xl bg-white p-6 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700"
         >
-          <h3 className="mb-1 text-lg font-bold text-slate-900 dark:text-white">Gasto por Proyecto</h3>
-          <p className="mb-6 text-xs text-slate-400">Total aprobado en Órdenes de Compra</p>
+          <h3 className="mb-1 text-lg font-bold text-slate-900 dark:text-white">Presupuesto vs Gasto por Proyecto</h3>
+          <p className="mb-6 text-xs text-slate-400">Presupuesto asignado vs gastado en Órdenes de Compra</p>
 
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
@@ -217,11 +237,26 @@ export default function DashboardPage() {
                     backgroundColor: theme === 'dark' ? '#0f172a' : '#ffffff',
                     color: theme === 'dark' ? '#f8fafc' : '#0f172a'
                   }}
-                  formatter={(value: number) => [`$${value.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`, 'Gasto']}
+                  formatter={(value: number, name: string) => {
+                    const label = name === 'presupuesto' ? 'Presupuesto' : 'Gasto OC';
+                    return [formatCLP(value), label];
+                  }}
                 />
+                <Bar dataKey="presupuesto" fill="#10b981" radius={[6, 6, 0, 0]} barSize={40} />
                 <Bar dataKey="gasto" fill="#f59e0b" radius={[6, 6, 0, 0]} barSize={40} />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+
+          <div className="mt-3 flex justify-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-sm bg-emerald-500" />
+              <span className="text-[10px] font-bold uppercase text-slate-500">Presupuesto</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-sm bg-amber-500" />
+              <span className="text-[10px] font-bold uppercase text-slate-500">Gasto OC</span>
+            </div>
           </div>
         </motion.div>
       </div>
@@ -330,6 +365,77 @@ export default function DashboardPage() {
           </div>
         )}
       </motion.div>
+
+      {/* Estado de Presupuestos */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35 }}
+        className="mt-4 rounded-xl bg-white p-6 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Estado de Presupuestos</h3>
+            <p className="text-xs text-slate-400">Presupuesto asignado, comprometido y disponible por proyecto</p>
+          </div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
+            <TrendingUp size={20} className="text-emerald-500" />
+          </div>
+        </div>
+
+        {(!stats?.gasto_por_proyecto || stats.gasto_por_proyecto.length === 0) ? (
+          <div className="py-8 text-center text-sm text-slate-500">
+            No hay proyectos con presupuesto asignado
+          </div>
+        ) : (
+          <div className="max-h-64 overflow-y-auto">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-white dark:bg-slate-800/50">
+                <tr className="border-b border-slate-100 dark:border-slate-700">
+                  <th className="py-2 text-left text-xs font-bold uppercase text-slate-400">Proyecto</th>
+                  <th className="py-2 text-right text-xs font-bold uppercase text-slate-400">Presupuesto</th>
+                  <th className="py-2 text-right text-xs font-bold uppercase text-slate-400">Usado</th>
+                  <th className="py-2 text-right text-xs font-bold uppercase text-slate-400">Disponible</th>
+                  <th className="py-2 text-center text-xs font-bold uppercase text-slate-400">Uso</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.gasto_por_proyecto.filter((p: any) => Number(p.presupuesto_total) > 0).map((p: any) => {
+                  const uso = Number(p.porcentaje_uso);
+                  let usoClass = 'bg-emerald-100 text-emerald-700';
+                  if (uso >= 100) usoClass = 'bg-red-100 text-red-700 font-bold';
+                  else if (uso >= 80) usoClass = 'bg-amber-100 text-amber-700 font-bold';
+                  else if (uso >= 50) usoClass = 'bg-yellow-100 text-yellow-700';
+
+                  return (
+                    <tr key={p.proyecto} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/20">
+                      <td className="py-2.5 text-slate-600 dark:text-slate-300 font-medium max-w-[200px] truncate" title={p.proyecto}>
+                        {p.proyecto}
+                      </td>
+                      <td className="py-2.5 text-right font-mono text-slate-600 dark:text-slate-300">
+                        {formatCLP(Number(p.presupuesto_total))}
+                      </td>
+                      <td className="py-2.5 text-right font-mono text-amber-700 dark:text-amber-400">
+                        {formatCLP(Number(p.presupuesto_usado))}
+                      </td>
+                      <td className="py-2.5 text-right font-mono text-emerald-700 dark:text-emerald-400 font-bold">
+                        {formatCLP(Number(p.presupuesto_disponible))}
+                      </td>
+                      <td className="py-2.5 text-center">
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs ${usoClass}`}>
+                          {uso.toFixed(1)}%
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </motion.div>
+
+
       {/* Conversion Time Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -373,110 +479,6 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* Solicitudes Urgentes */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="rounded-xl bg-white p-6 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700"
-      >
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Solicitudes por Fecha de Entrega</h3>
-            <p className="text-xs text-slate-400">Ordenadas por fecha más próxima a vencer</p>
-          </div>
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50">
-            <AlertTriangle size={20} className="text-red-500" />
-          </div>
-        </div>
-
-        {(!stats?.solicitudes_urgentes || stats.solicitudes_urgentes.length === 0) ? (
-          <div className="py-8 text-center text-sm text-slate-500">
-            ✓ No hay solicitudes pendientes con fecha de entrega próxima
-          </div>
-        ) : (
-          <div className="max-h-64 overflow-y-auto">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-white dark:bg-slate-800/50">
-                <tr className="border-b border-slate-100 dark:border-slate-700">
-                  <th className="py-2 text-left text-xs font-bold uppercase text-slate-400">Folio</th>
-                  <th className="py-2 text-left text-xs font-bold uppercase text-slate-400">Proyecto</th>
-                  <th className="py-2 text-left text-xs font-bold uppercase text-slate-400">Solicitante</th>
-                  <th className="py-2 text-center text-xs font-bold uppercase text-slate-400">Ítems</th>
-                  <th className="py-2 text-left text-xs font-bold uppercase text-slate-400">Fecha Requerida</th>
-                  <th className="py-2 text-center text-xs font-bold uppercase text-slate-400">Días Restantes</th>
-                  <th className="py-2 text-center text-xs font-bold uppercase text-slate-400">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.solicitudes_urgentes.map((sol: any) => {
-                  const diasRestantes = sol.dias_restantes;
-                  let diasBadgeClass = '';
-                  let diasBadgeText = '';
-
-                  if (diasRestantes === null) {
-                    diasBadgeClass = 'bg-slate-100 text-slate-500';
-                    diasBadgeText = '-';
-                  } else if (diasRestantes < 0) {
-                    diasBadgeClass = 'bg-red-100 text-red-700 font-bold';
-                    diasBadgeText = `Vencida hace ${Math.abs(diasRestantes)} día${Math.abs(diasRestantes) > 1 ? 's' : ''}`;
-                  } else if (diasRestantes === 0) {
-                    diasBadgeClass = 'bg-amber-100 text-amber-700 font-bold';
-                    diasBadgeText = 'HOY';
-                  } else if (diasRestantes >= 1 && diasRestantes <= 3) {
-                    diasBadgeClass = 'bg-orange-100 text-orange-700';
-                    diasBadgeText = `${diasRestantes} día${diasRestantes > 1 ? 's' : ''}`;
-                  } else if (diasRestantes >= 4 && diasRestantes <= 7) {
-                    diasBadgeClass = 'bg-yellow-100 text-yellow-700';
-                    diasBadgeText = `${diasRestantes} días`;
-                  } else {
-                    diasBadgeClass = 'bg-emerald-50 text-emerald-600';
-                    diasBadgeText = `${diasRestantes} días`;
-                  }
-
-                  const estadoClass = sol.estado === 'Pendiente' 
-                    ? 'bg-amber-100 text-amber-700' 
-                    : 'bg-blue-100 text-blue-700';
-
-                  return (
-                    <tr key={sol.id} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/20">
-                      <td className="py-2.5 text-slate-600 dark:text-slate-300 font-medium">
-                        SOL-{String(sol.id).padStart(3, '0')}
-                      </td>
-                      <td className="py-2.5 text-slate-600 dark:text-slate-300 max-w-[150px] truncate" title={sol.proyecto_nombre}>
-                        {sol.proyecto_nombre}
-                      </td>
-                      <td className="py-2.5 text-slate-600 dark:text-slate-300">
-                        {sol.solicitante}
-                      </td>
-                      <td className="py-2.5 text-center">
-                        <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-medium dark:bg-slate-700 dark:text-slate-300">
-                          {sol.total_items}
-                        </span>
-                      </td>
-                      <td className="py-2.5 text-slate-600 dark:text-slate-300">
-                        {sol.fecha_requerida 
-                          ? new Date(sol.fecha_requerida).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' })
-                          : '-'}
-                      </td>
-                      <td className="py-2.5 text-center">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs ${diasBadgeClass}`}>
-                          {diasBadgeText}
-                        </span>
-                      </td>
-                      <td className="py-2.5 text-center">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs ${estadoClass}`}>
-                          {sol.estado}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </motion.div>
     </div>
   );
 }

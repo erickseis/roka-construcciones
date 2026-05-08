@@ -41,23 +41,58 @@ export const login = (credentials: any) =>
 
 export const getMe = () => fetchApi<any>('/auth/me');
 
+export const getAuthPermisos = () => fetchApi<string[]>('/auth/permisos');
+
 // ---- Usuarios ----
 export const getUsers = () => fetchApi<any[]>('/users');
 export const createUser = (data: any) =>
   fetchApi<any>('/users', { method: 'POST', body: JSON.stringify(data) });
+export const updateUser = (id: number, data: any) =>
+  fetchApi<any>(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteUser = (id: number) =>
   fetchApi<any>(`/users/${id}`, { method: 'DELETE' });
+export const updateUserPassword = (id: number, password: string) =>
+  fetchApi<any>(`/users/${id}/password`, { method: 'PUT', body: JSON.stringify({ password }) });
 
 // ---- Configuración Estructural ----
 export const getDepartamentos = () => fetchApi<any[]>('/config/departamentos');
 export const createDepartamento = (data: any) =>
   fetchApi<any>('/config/departamentos', { method: 'POST', body: JSON.stringify(data) });
+export const updateDepartamento = (id: number, data: any) =>
+  fetchApi<any>(`/config/departamentos/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteDepartamento = (id: number, migrar_a_id?: number) =>
+  fetchApi<any>(`/config/departamentos/${id}`, { method: 'DELETE', body: JSON.stringify({ migrar_a_id }) });
 
 export const getCargos = () => fetchApi<any[]>('/config/cargos');
 export const createCargo = (data: any) =>
   fetchApi<any>('/config/cargos', { method: 'POST', body: JSON.stringify(data) });
+export const updateCargo = (id: number, data: any) =>
+  fetchApi<any>(`/config/cargos/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteCargo = (id: number, migrar_a_id?: number) =>
+  fetchApi<any>(`/config/cargos/${id}`, { method: 'DELETE', body: JSON.stringify({ migrar_a_id }) });
 
-export const getRoles = () => fetchApi<any[]>('/config/roles');
+export const getRoles = (params?: { incluir_inactivos?: boolean }) => {
+  const qs = params?.incluir_inactivos ? '?incluir_inactivos=true' : '';
+  return fetchApi<any[]>(`/config/roles${qs}`);
+};
+export const createRole = (data: any) =>
+  fetchApi<any>('/config/roles', { method: 'POST', body: JSON.stringify(data) });
+export const updateRole = (id: number, data: any) =>
+  fetchApi<any>(`/config/roles/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteRole = (id: number, migrar_a_id?: number) =>
+  fetchApi<any>(`/config/roles/${id}`, { method: 'DELETE', body: JSON.stringify({ migrar_a_id }) });
+export const reactivateRole = (id: number) =>
+  fetchApi<any>(`/config/roles/${id}/reactivar`, { method: 'PATCH' });
+
+export const getConfigPermisos = () => fetchApi<any[]>('/config/permisos');
+
+export const getPermisosByRol = (rolId: number) => fetchApi<string[]>(`/config/roles/${rolId}/permisos`);
+
+export const updatePermisosByRol = (rolId: number, codigos: string[]) =>
+  fetchApi<any>(`/config/roles/${rolId}/permisos`, {
+    method: 'PUT',
+    body: JSON.stringify({ codigos }),
+  });
 
 // ---- Proyectos ----
 export const getProyectos = () => fetchApi<any[]>('/dashboard/proyectos');
@@ -382,3 +417,31 @@ export const updateProveedor = (id: number, data: any) =>
 
 export const deleteProveedor = (id: number) =>
   fetchApi<any>(`/proveedores/${id}`, { method: 'DELETE' });
+
+// ---- Notificaciones Email ----
+export const getEmailNotificationEventos = () =>
+  fetchApi<any[]>('/config/email/eventos');
+
+export const updateEmailNotificationEvento = (codigo: string, habilitado: boolean) =>
+  fetchApi<any>(`/config/email/eventos/${codigo}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ habilitado }),
+  });
+
+export const getEmailSystemConfig = () =>
+  fetchApi<Record<string, string>>('/config/email/sistema');
+
+export const updateEmailSystemConfig = (config: Record<string, string>) =>
+  fetchApi<any>('/config/email/sistema', { method: 'PUT', body: JSON.stringify(config) });
+
+export const testEmailConnection = (destinatario: string) =>
+  fetchApi<any>('/config/email/test', { method: 'POST', body: JSON.stringify({ destinatario }) });
+
+export const getEmailLogs = (limit?: number) =>
+  fetchApi<any[]>(`/config/email/logs${limit ? `?limit=${limit}` : ''}`);
+
+export const enviarSCProveedor = (id: number) =>
+  fetchApi<any>(`/solicitud-cotizacion/${id}/enviar-proveedor`, { method: 'POST' });
+
+export const enviarOCProveedor = (id: number) =>
+  fetchApi<any>(`/ordenes/${id}/enviar-proveedor`, { method: 'POST' });

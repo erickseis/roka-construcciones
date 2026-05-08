@@ -1,11 +1,28 @@
 import { Request, Response } from 'express';
 import * as solicitudModel from '../models/solicitudes.model';
 import { crearSolicitudConItems } from '../services/solicitudes.service';
+import { AuthRequest } from '../middleware/authMiddleware';
+import {
+  createNotifications,
+  resolveRecipientUserIds,
+  getActorDisplayName,
+  NotificationInput,
+} from '../lib/notifications';
+import pool from '../db';
+import { isEventEnabled, sendEmail, getUserEmailsByRoles, buildSolicitudCreadaHtml } from '../lib/email';
+
+async function userHasPermission(rolId: number, permissionCode: string): Promise<boolean> {
+  const { rows } = await pool.query(
+    `SELECT 1 FROM rol_permisos rp JOIN permisos p ON p.id = rp.permiso_id WHERE rp.rol_id = $1 AND p.codigo = $2 LIMIT 1`,
+    [rolId, permissionCode]
+  );
+  return rows.length > 0;
+}
 
 export async function list(req: Request, res: Response) {
   try {
     const { proyecto_id, estado } = req.query;
-    const filters: { proyecto_id?: number; estado?: string } = {};
+    const filters: { proyecto_id?: number; estado?: string; created_by_usuario_id?: number } = {};
 
     if (proyecto_id && typeof proyecto_id === 'string') {
       filters.proyecto_id = Number(proyecto_id);
@@ -13,6 +30,15 @@ export async function list(req: Request, res: Response) {
 
     if (estado && typeof estado === 'string') {
       filters.estado = estado;
+    }
+
+    // Verificar permiso view_all — si no lo tiene, solo ver las propias
+    const user = (req as AuthRequest).user;
+    if (user?.rol_id) {
+      const canViewAll = await userHasPermission(user.rol_id, 'solicitudes.view_all');
+      if (!canViewAll) {
+        filters.created_by_usuario_id = user.id;
+      }
     }
 
     const solicitudes = await solicitudModel.getAllSolicitudes(filters);
@@ -35,6 +61,15 @@ export async function getById(req: Request, res: Response) {
       return res.status(404).json({ error: 'Solicitud no encontrada' });
     }
 
+    // Verificar permiso view_all — si no lo tiene, solo puede ver las propias
+    const user = (req as AuthRequest).user;
+    if (user?.rol_id) {
+      const canViewAll = await userHasPermission(user.rol_id, 'solicitudes.view_all');
+      if (!canViewAll && solicitud.created_by_usuario_id && solicitud.created_by_usuario_id !== user.id) {
+        return res.status(403).json({ error: 'No tienes permiso para ver esta solicitud' });
+      }
+    }
+
     const items = await solicitudModel.getSolicitudItems(id);
     res.json({ ...solicitud, items });
   } catch (error) {
@@ -53,15 +88,42 @@ export async function create(req: Request, res: Response) {
   }
 
   try {
+    const user = (req as AuthRequest).user;
     const result = await crearSolicitudConItems({
       proyecto_id: Number(proyecto_id),
       solicitante,
       fecha: fecha || undefined,
       fecha_requerida: fecha_requerida || null,
+      created_by_usuario_id: user?.id || null,
       items,
     });
 
     res.status(201).json(result);
+
+    // Fire-and-forget: email notification
+    isEventEnabled('solicitud.creada').then(async (enabled) => {
+      if (!enabled) return;
+      const destinatarios = await getUserEmailsByRoles(['Adquisiciones']);
+      if (!destinatarios.length) return;
+      const proyectoNombre = result.solicitud?.proyecto_nombre || undefined;
+      const html = buildSolicitudCreadaHtml({
+        id: result.solicitud?.id || result.id,
+        solicitante,
+        proyecto_nombre: proyectoNombre,
+        fecha_requerida: fecha_requerida || undefined,
+        itemCount: items?.length,
+      });
+      const solicitudId = result.solicitud?.id || result.id;
+      const folio = `SOL-${String(solicitudId).padStart(3, '0')}`;
+      sendEmail({
+        to: destinatarios,
+        subject: `Nueva solicitud de material: ${folio}`,
+        html,
+        eventoCodigo: 'solicitud.creada',
+        entidadTipo: 'solicitud',
+        entidadId: solicitudId,
+      }).catch(console.error);
+    }).catch(console.error);
   } catch (error) {
     console.error('Error al crear solicitud:', error);
     res.status(500).json({ error: 'Error al crear solicitud' });
@@ -85,6 +147,47 @@ export async function changeEstado(req: Request, res: Response) {
       return res.status(404).json({ error: 'Solicitud no encontrada' });
     }
 
+    // Notificar cambio de estado a Cotizando o Aprobado
+    if (estado === 'Cotizando' || estado === 'Aprobado') {
+      try {
+        const actorId = (req as any).user?.id || null;
+        const actorName = actorId ? await getActorDisplayName(actorId) : 'Sistema';
+
+        // Obtener datos de la solicitud para la notificación
+        const solicitud = await solicitudModel.getSolicitudById(id);
+        const proyectoNombre = solicitud?.proyecto_nombre || 'Proyecto';
+        const solicitudFolio = `SOL-${String(id).padStart(3, '0')}`;
+
+        const recipients = await resolveRecipientUserIds({
+          creatorUserId: solicitud?.created_by_usuario_id || null,
+          roleNames: ['Director de Obra', 'Adquisiciones'],
+          excludeUserId: actorId,
+        });
+
+        if (recipients.length > 0) {
+          const estadoLabel = estado === 'Cotizando' ? 'en cotización' : 'aprobada';
+          const notifications: NotificationInput[] = recipients.map(uid => ({
+            usuario_destino_id: uid,
+            tipo: estado === 'Cotizando' ? 'solicitud.cotizando' : 'solicitud.aprobada',
+            titulo: estado === 'Cotizando' ? 'Solicitud en cotización' : 'Solicitud aprobada',
+            mensaje: `${actorName} cambió la solicitud ${solicitudFolio} del proyecto ${proyectoNombre} a estado ${estadoLabel}.`,
+            entidad_tipo: 'solicitud',
+            entidad_id: id,
+            payload: {
+              estado,
+              proyecto_nombre: proyectoNombre,
+            },
+            enviado_por_usuario_id: actorId,
+          }));
+
+          await createNotifications(notifications);
+        }
+      } catch (notifError) {
+        console.error('Error al enviar notificación de cambio de estado:', notifError);
+        // No fallar el cambio de estado si la notificación falla
+      }
+    }
+
     res.json(updated);
   } catch (error) {
     console.error('Error al actualizar estado:', error);
@@ -97,6 +200,18 @@ export async function remove(req: Request, res: Response) {
     const id = Number(req.params.id);
     if (isNaN(id)) {
       return res.status(400).json({ error: 'ID invalido' });
+    }
+
+    // Verificar permiso view_all para eliminar solicitudes ajenas
+    const user = (req as AuthRequest).user;
+    if (user?.rol_id) {
+      const canViewAll = await userHasPermission(user.rol_id, 'solicitudes.view_all');
+      if (!canViewAll) {
+        const solicitud = await solicitudModel.getSolicitudById(id);
+        if (solicitud?.created_by_usuario_id && solicitud.created_by_usuario_id !== user.id) {
+          return res.status(403).json({ error: 'No tienes permiso para eliminar esta solicitud' });
+        }
+      }
     }
 
     const deleted = await solicitudModel.deleteSolicitud(id);

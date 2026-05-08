@@ -18,21 +18,36 @@ import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import logoRoka from '@/assets/image.png';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
+import { ALL_MODULES } from '../lib/navigation';
 
-const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', to: '/' },
-  { icon: FileText, label: 'Solicitudes de Materiales', to: '/solicitudes' },
-  { icon: DollarSign, label: 'Solicitudes de Cotización', to: '/cotizaciones' },
-  { icon: PackageCheck, label: 'Órdenes de Compra', to: '/ordenes' },
-];
+const MODULE_ICONS: Record<string, React.ElementType> = {
+  LayoutDashboard, FileText, DollarSign, PackageCheck,
+  Construction, CreditCard, Settings, Package, Truck,
+};
 
-const secondaryItems = [
-  { icon: Construction, label: 'Proyectos', to: '/proyectos' },
-  { icon: CreditCard, label: 'Presupuesto', to: '/presupuestos' },
-  { icon: Package, label: 'Catálogo de Materiales', to: '/materiales' },
-  { icon: Truck, label: 'Proveedores', to: '/proveedores' },
-  { icon: Settings, label: 'Configuración', to: '/config' },
-];
+const PRIMARY_PATHS = ['/', '/solicitudes', '/cotizaciones', '/ordenes'];
+const PRIMARY_ICONS: Record<string, React.ElementType> = {
+  '/': LayoutDashboard,
+  '/solicitudes': FileText,
+  '/cotizaciones': DollarSign,
+  '/ordenes': PackageCheck,
+};
+const SECONDARY_ICONS: Record<string, React.ElementType> = {
+  '/proyectos': Construction,
+  '/presupuestos': CreditCard,
+  '/materiales': Package,
+  '/proveedores': Truck,
+  '/config': Settings,
+};
+
+const navItems = ALL_MODULES.filter(m => PRIMARY_PATHS.includes(m.to)).map(m => ({
+  ...m, icon: PRIMARY_ICONS[m.to] || LayoutDashboard,
+}));
+
+const secondaryItems = ALL_MODULES.filter(m => !PRIMARY_PATHS.includes(m.to)).map(m => ({
+  ...m, icon: SECONDARY_ICONS[m.to] || Settings,
+}));
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -41,6 +56,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
+  const { hasPermission } = usePermissions();
 
   return (
     <aside className={cn(
@@ -69,40 +85,46 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
 
         {/* Primary Nav — Procurement Modules */}
-        <p className="mb-2 px-4 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-300">
-          Módulos de Gestión
-        </p>
-        <nav className="mb-6 space-y-1">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.label}
-              to={item.to}
-              end={item.to === '/'}
-              onClick={onClose}
-              className={({ isActive }) => cn(
-                "flex items-center gap-3 rounded-lg px-4 py-2.5 transition-all duration-200",
-                isActive
-                  ? "border border-slate-200 bg-white font-semibold text-amber-600 shadow-sm dark:border-[#1e293b] dark:bg-[#141b2d] dark:text-amber-500 dark:shadow-[0_4px_20px_rgba(245,158,11,0.05)]"
-                  : "text-slate-500 hover:bg-slate-200/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#141b2d]/50 dark:hover:text-slate-100"
-              )}
-            >
-              {({ isActive }) => (
-                <>
-                  <item.icon size={18} className={isActive ? "text-amber-500" : ""} />
-                  <span className="text-sm">{item.label}</span>
-                  {isActive && <motion.div layoutId="sidebar-active" className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500" />}
-                </>
-              )}
-            </NavLink>
-          ))}
-        </nav>
+        {navItems.filter(item => hasPermission(item.permission)).length > 0 && (
+          <>
+            <p className="mb-2 px-4 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-300">
+              Módulos de Gestión
+            </p>
+            <nav className="mb-6 space-y-1">
+              {navItems.filter(item => hasPermission(item.permission)).map((item) => (
+                <NavLink
+                  key={item.label}
+                  to={item.to}
+                  end={item.to === '/'}
+                  onClick={onClose}
+                  className={({ isActive }) => cn(
+                    "flex items-center gap-3 rounded-lg px-4 py-2.5 transition-all duration-200",
+                    isActive
+                      ? "border border-slate-200 bg-white font-semibold text-amber-600 shadow-sm dark:border-[#1e293b] dark:bg-[#141b2d] dark:text-amber-500 dark:shadow-[0_4px_20px_rgba(245,158,11,0.05)]"
+                      : "text-slate-500 hover:bg-slate-200/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#141b2d]/50 dark:hover:text-slate-100"
+                  )}
+                >
+                  {({ isActive }) => (
+                    <>
+                      <item.icon size={18} className={isActive ? "text-amber-500" : ""} />
+                      <span className="text-sm">{item.label}</span>
+                      {isActive && <motion.div layoutId="sidebar-active" className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500" />}
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </nav>
+          </>
+        )}
 
         {/* Admin Nav */}
-        <p className="mb-2 px-4 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-300">
-          Administración
-        </p>
-        <nav className="space-y-1">
-          {secondaryItems.map((item) => (
+        {secondaryItems.filter(item => hasPermission(item.permission)).length > 0 && (
+          <>
+            <p className="mb-2 px-4 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-300">
+              Administración
+            </p>
+            <nav className="space-y-1">
+              {secondaryItems.filter(item => hasPermission(item.permission)).map((item) => (
             <NavLink
               key={item.label}
               to={item.to}
@@ -119,6 +141,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </NavLink>
           ))}
         </nav>
+          </>
+        )}
       </div>
 
       <div className="border-t border-slate-200 bg-slate-200/30 p-4 dark:border-[#1e293b] dark:bg-[#0b0e14]/40">

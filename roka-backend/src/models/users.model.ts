@@ -76,3 +76,63 @@ export async function softDeleteUser(
   const conn = getDb(db);
   await conn.query('UPDATE usuarios SET is_active = false WHERE id = $1', [id]);
 }
+
+export interface UpdateUserInput {
+  nombre?: string;
+  apellido?: string;
+  rut?: string;
+  correo?: string;
+  telefono?: string | null;
+  departamento_id?: number | null;
+  cargo_id?: number | null;
+  rol_id?: number | null;
+}
+
+export async function updateUser(
+  id: number,
+  data: UpdateUserInput,
+  db?: Queryable
+): Promise<UsuarioPublic | null> {
+  const conn = getDb(db);
+  const { rows: [current] } = await conn.query(
+    'SELECT * FROM usuarios WHERE id = $1',
+    [id]
+  );
+  if (!current) return null;
+
+  const { rows: [updated] } = await conn.query(
+    `UPDATE usuarios SET
+      nombre = COALESCE($1, nombre),
+      apellido = COALESCE($2, apellido),
+      rut = COALESCE($3, rut),
+      correo = COALESCE($4, correo),
+      telefono = COALESCE($5, telefono),
+      departamento_id = COALESCE($6, departamento_id),
+      cargo_id = COALESCE($7, cargo_id),
+      rol_id = COALESCE($8, rol_id),
+      updated_at = NOW()
+     WHERE id = $9
+     RETURNING id, nombre, apellido, rut, correo, telefono,
+       departamento_id, cargo_id, rol_id, is_active, created_at, updated_at`,
+    [
+      data.nombre ?? null, data.apellido ?? null, data.rut ?? null,
+      data.correo ?? null, data.telefono ?? null,
+      data.departamento_id ?? null, data.cargo_id ?? null, data.rol_id ?? null,
+      id,
+    ]
+  );
+  return updated;
+}
+
+export async function updatePassword(
+  id: number,
+  password_hash: string,
+  db?: Queryable
+): Promise<boolean> {
+  const conn = getDb(db);
+  const { rowCount } = await conn.query(
+    'UPDATE usuarios SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+    [password_hash, id]
+  );
+  return (rowCount ?? 0) > 0;
+}

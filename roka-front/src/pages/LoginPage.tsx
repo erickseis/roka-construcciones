@@ -1,17 +1,29 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'motion/react';
 import { Lock, Mail, ChevronRight, AlertCircle, Construction } from 'lucide-react';
 import logoRoka from '../assets/image.png';
 
 export default function LoginPage() {
+  const { user, loading: authLoading, login } = useAuth();
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
   const navigate = useNavigate();
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +42,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
       <div className="flex w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl shadow-slate-200">
-        
+
         {/* Visual Side */}
         <div className="hidden w-1/2 bg-slate-900 p-12 lg:flex lg:flex-col lg:justify-between">
           <div className="flex items-center gap-3">
@@ -52,7 +64,7 @@ export default function LoginPage() {
                 'Control de Materiales',
                 'Gestión de Cotizaciones',
                 'Órdenes de Compra',
-                'Administración de Personal'
+
               ].map(item => (
                 <div key={item} className="flex items-center gap-3 text-slate-400">
                   <div className="h-1.5 w-1.5 rounded-full bg-amber-500"></div>
@@ -83,8 +95,8 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }} 
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="flex items-center gap-2 rounded-xl bg-red-50 p-4 text-xs font-bold text-red-600 border border-red-100"
                 >
@@ -110,10 +122,10 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
+                {/* <div className="flex items-center justify-between">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Contraseña</label>
                   <a href="#" className="text-[10px] font-bold text-amber-600 hover:underline">¿Olvidaste tu contraseña?</a>
-                </div>
+                </div> */}
                 <div className="relative flex items-center">
                   <Lock className="absolute left-3 text-slate-400" size={18} />
                   <input
@@ -143,11 +155,7 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <div className="mt-12 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 opacity-50">
-                Soporte Técnico Stitch IT
-              </p>
-            </div>
+
           </div>
         </div>
 

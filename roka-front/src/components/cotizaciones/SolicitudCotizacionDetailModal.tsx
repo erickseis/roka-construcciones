@@ -2,13 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { StatusBadge } from '../ui/StatusBadge';
 import FlowStepper from '../ui/FlowStepper';
-import { getSolicitudCotizacion, changeSolicitudCotizacionEstado, deleteSolicitudCotizacion, descargarSolicitudCotizacionPdf } from '@/lib/api';
-import { Send, Trash2, FileDown, Upload } from 'lucide-react';
+import { getSolicitudCotizacion, changeSolicitudCotizacionEstado, deleteSolicitudCotizacion, descargarSolicitudCotizacionPdf, getOrden } from '@/lib/api';
+import { formatCLP } from '@/lib/utils';
+import { Send, Trash2, FileDown, Upload, ShoppingCart, FileText } from 'lucide-react';
 import ImportarRespuestaSCModal from './ImportarRespuestaSCModal';
+import { CrearOCModal } from '../ordenes/CrearOCModal';
+import OCPreviewModal from '../ordenes/OCPreviewModal';
+import Swal from 'sweetalert2';
 export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, onSuccess }: { id: number | null; isOpen: boolean; onClose: () => void; onSuccess: () => void }) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showCrearOC, setShowCrearOC] = useState(false);
+  const [ocPreview, setOcPreview] = useState<any | null>(null);
+
+  const handleVerOC = async (ordenId: number) => {
+    try {
+      const data = await getOrden(ordenId);
+      setOcPreview(data);
+    } catch (err: any) {
+      alert(err.message || 'Error al cargar orden de compra');
+    }
+  };
 
   useEffect(() => {
     if (!isOpen || !id) { setData(null); return; }
@@ -25,6 +40,23 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
       onSuccess();
     } catch (err: any) {
       alert(err.message || 'Error al cambiar estado');
+    }
+  };
+
+  const handleAnular = async () => {
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: "Al anular esta cotización, no podrá ser utilizada en el flujo de compra.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, anular',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      handleEstado('Anulada');
     }
   };
 
@@ -97,8 +129,8 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
                           <td className="px-3 py-2 text-slate-500">{item.unidad}</td>
                           {item.precio_unitario != null && (
                             <>
-                              <td className="px-3 py-2 text-right font-mono text-slate-800">${Number(item.precio_unitario).toLocaleString('es-CL', { minimumFractionDigits: 2 })}</td>
-                              <td className="px-3 py-2 text-right font-mono font-bold text-slate-800">${Number(item.subtotal || item.precio_unitario * item.cantidad_requerida).toLocaleString('es-CL', { minimumFractionDigits: 2 })}</td>
+                              <td className="px-3 py-2 text-right font-mono text-slate-800">{formatCLP(Number(item.precio_unitario))}</td>
+                              <td className="px-3 py-2 text-right font-mono font-bold text-slate-800">{formatCLP(Number(item.subtotal || item.precio_unitario * item.cantidad_requerida))}</td>
                             </>
                           )}
                         </tr>
@@ -136,15 +168,28 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
                     Marcar como Respondida
                   </button>
                 )}
-                {(data.estado === 'Enviada' || data.estado === 'Respondida') && (
+                {data.estado?.toUpperCase() === 'ENVIADA' && (
                   <button onClick={() => setShowImport(true)}
                     className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">
                     <Upload size={14} /> Cargar Respuesta
                   </button>
                 )}
 
+                {data.estado?.toUpperCase() === 'RESPONDIDA' && !data.orden_id && (
+                  <button onClick={() => setShowCrearOC(true)}
+                    className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 transition-all">
+                    <ShoppingCart size={14} /> Crear Orden de Compra
+                  </button>
+                )}
+                {data.estado?.toUpperCase() === 'RESPONDIDA' && data.orden_id && (
+                  <button onClick={() => handleVerOC(data.orden_id)}
+                    className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-white hover:bg-amber-600 shadow-lg shadow-amber-500/20 transition-all">
+                    <FileText size={14} /> Ver Orden de Compra
+                  </button>
+                )}
+
                 {data.estado === 'Respondida' && (
-                  <button onClick={() => handleEstado('Anulada')}
+                  <button onClick={handleAnular}
                     className="rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-100">
                     Anular
                   </button>
@@ -171,6 +216,22 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
           if (id) getSolicitudCotizacion(id).then(setData);
           onSuccess();
         }}
+      />
+      <CrearOCModal
+        isOpen={showCrearOC}
+        onClose={() => setShowCrearOC(false)}
+        onSuccess={() => {
+          setShowCrearOC(false);
+          if (id) getSolicitudCotizacion(id).then(setData);
+          onSuccess();
+        }}
+        initialSolicitudCotizacionId={id || undefined}
+      />
+
+      <OCPreviewModal
+        isOpen={!!ocPreview}
+        onClose={() => setOcPreview(null)}
+        orden={ocPreview}
       />
     </>
   );

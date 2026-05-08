@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus, FileText, Eye, Trash2, Upload, Download, Send, PackageCheck, Ban } from 'lucide-react';
+import { Plus, FileText, Eye, Trash2, Upload, Download, Send, PackageCheck, Ban, UserCheck } from 'lucide-react';
 import * as XLSX from 'xlsx-js-style';
 import { DataTable } from '../ui/DataTable';
 import { StatusBadge } from '../ui/StatusBadge';
@@ -19,12 +19,16 @@ import {
   createMaterialMaster
 } from '@/lib/api';
 import { showConfirm, showAlert, showToast } from '@/lib/alerts';
+import { usePermissions } from '@/context/PermissionsContext';
 import MaterialModal from '../materiales/MaterialModal';
 import BulkImportModal from './BulkImportModal';
 import { MaterialInput } from '@/types';
 
 
 export default function SolicitudesPage() {
+  const { hasPermission } = usePermissions();
+  const canViewAll = hasPermission('solicitudes.view_all');
+
   const [showForm, setShowForm] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showDetail, setShowDetail] = useState<any | null>(null);
@@ -311,6 +315,12 @@ export default function SolicitudesPage() {
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Gestiona las solicitudes de materiales para cada proyecto de obra.
             </p>
+            {!canViewAll && (
+              <div className="mt-2 flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200 px-3 py-1.5">
+                <UserCheck size={14} className="text-blue-500" />
+                <span className="text-xs font-bold text-blue-700">Solo se muestran tus solicitudes</span>
+              </div>
+            )}
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button

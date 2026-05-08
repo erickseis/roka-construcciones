@@ -7,6 +7,7 @@ import * as ordenesModel from '../models/ordenes.model';
 import { generarOrdenCompra } from '../services/ordenes.service';
 import { crearOCManual } from '../services/ordenesManual.service';
 import puppeteer from 'puppeteer-core';
+import { isEventEnabled, sendEmail, buildOCProveedorHtml } from '../lib/email';
 
 function detectChromePath(): string | undefined {
   if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
@@ -129,9 +130,9 @@ function buildOCHtml(orden: any, items: any[], pdfUrl?: string): string {
   const itemsRows = items.length === 0
     ? '<tr><td colspan="6" style="border:1px solid #e2e8f0;padding:10px;text-align:center;font-size:10px;color:#64748b">Esta orden no tiene items cargados.</td></tr>'
     : items.map((it: any, i: number) => {
-      const cant = Number(it.cantidad_requerida || 0);
+      const cant = Number(it.cantidad_requerida ?? it.cantidad_extraida ?? 0);
       const punit = Number(it.precio_unitario || 0);
-      const sub = Number(it.subtotal ?? cant * punit);
+      const sub = cant * punit;
       return `<tr style="page-break-inside:avoid;break-inside:avoid">
           <td style="border:1px solid #e2e8f0;padding:5px 4px;font-size:10px;text-align:center">${i + 1}</td>
           <td style="border:1px solid #e2e8f0;padding:5px 4px;font-size:10px;text-align:right">${cant.toLocaleString('es-CL')}</td>
@@ -352,7 +353,11 @@ export async function getById(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: 'Orden de compra no encontrada' });
     }
 
-    const items = await ordenesModel.getOrdenItemsByOC(orden.id);
+    let items = await ordenesModel.getOrdenItemsByOC(orden.id);
+    // Fallback: si la OC no tiene ítems propios pero viene de una cotización, cargar desde solicitud_cotizacion_detalle
+    if (items.length === 0 && orden.solicitud_cotizacion_id) {
+      items = await ordenesModel.getOrdenItems(orden.solicitud_cotizacion_id);
+    }
     res.json({ ...orden, items });
   } catch (error) {
     console.error('Error al obtener orden:', error);
@@ -419,7 +424,10 @@ export async function exportarHtml(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: 'Orden de compra no encontrada' });
     }
 
-    const items = await ordenesModel.getOrdenItemsByOC(orden.id);
+    let items = await ordenesModel.getOrdenItemsByOC(orden.id);
+    if (items.length === 0 && orden.solicitud_cotizacion_id) {
+      items = await ordenesModel.getOrdenItems(orden.solicitud_cotizacion_id);
+    }
     const html = buildOCHtml(orden, items, pdfUrl);
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -446,7 +454,10 @@ export async function exportarPdf(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: 'Orden de compra no encontrada' });
     }
 
-    const items = await ordenesModel.getOrdenItemsByOC(orden.id);
+    let items = await ordenesModel.getOrdenItemsByOC(orden.id);
+    if (items.length === 0 && orden.solicitud_cotizacion_id) {
+      items = await ordenesModel.getOrdenItems(orden.solicitud_cotizacion_id);
+    }
     const html = buildOCHtml(orden, items);
     const pdfBuffer = await htmlToPdf(html);
 
@@ -477,7 +488,10 @@ export async function generarPdfLink(req: AuthRequest, res: Response) {
       fs.mkdirSync(PDF_OUTPUT_DIR, { recursive: true });
     }
 
-    const items = await ordenesModel.getOrdenItemsByOC(orden.id);
+    let items = await ordenesModel.getOrdenItemsByOC(orden.id);
+    if (items.length === 0 && orden.solicitud_cotizacion_id) {
+      items = await ordenesModel.getOrdenItems(orden.solicitud_cotizacion_id);
+    }
     const html = buildOCHtml(orden, items);
     const pdfBuffer = await htmlToPdf(html);
 
@@ -498,5 +512,64 @@ export async function generarPdfLink(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error('Error al generar link de PDF:', error);
     res.status(500).json({ error: 'Error al generar PDF de orden de compra' });
+  }
+}
+
+export async function enviarProveedor(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
+
+    const habilitado = await isEventEnabled('oc.envio_proveedor');
+    if (!habilitado) {
+      return res.status(403).json({ error: 'El envío de OC a proveedor no está habilitado en la configuración' });
+    }
+
+    const orden = await ordenesModel.getOrdenById(id);
+    if (!orden) return res.status(404).json({ error: 'Orden no encontrada' });
+
+    const emailDestino: string | undefined =
+      (orden as any).proveedor_correo || (orden as any).proveedor_contacto_correo;
+
+    if (!emailDestino) {
+      return res.status(400).json({ error: 'El proveedor no tiene correo registrado' });
+    }
+
+    let items = await ordenesModel.getOrdenItemsByOC(id);
+    if (items.length === 0 && (orden as any).solicitud_cotizacion_id) {
+      items = await ordenesModel.getOrdenItems((orden as any).solicitud_cotizacion_id);
+    }
+
+    const folio = (orden as any).folio || `OC-${String(id).padStart(3, '0')}`;
+    const html = buildOCProveedorHtml({
+      id,
+      numero: folio,
+      proveedor: (orden as any).proveedor || 'Proveedor',
+      proyectoNombre: (orden as any).proyecto_nombre,
+      condicionesPago: (orden as any).condiciones_pago,
+      plazoEntrega: (orden as any).plazo_entrega,
+      total: (orden as any).total,
+      items: items.map((i: any) => ({
+        descripcion: i.descripcion || i.nombre_material || '-',
+        cantidad: i.cantidad || 0,
+        unidad: i.unidad || '',
+        precio_unitario: i.precio_unitario,
+        total: i.subtotal || i.total,
+      })),
+    });
+
+    await sendEmail({
+      to: emailDestino,
+      subject: `Orden de Compra ${folio} — ROKA Construcciones`,
+      html,
+      eventoCodigo: 'oc.envio_proveedor',
+      entidadTipo: 'orden_compra',
+      entidadId: id,
+    });
+
+    res.json({ ok: true, enviado_a: emailDestino });
+  } catch (err: any) {
+    console.error('Error al enviar OC al proveedor:', err);
+    res.status(500).json({ error: err.message || 'Error al enviar OC al proveedor' });
   }
 }

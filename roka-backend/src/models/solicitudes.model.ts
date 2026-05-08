@@ -12,6 +12,7 @@ export interface SolicitudRow {
   proyecto_nombre?: string;
   total_items?: number;
   presupuesto_categoria_id?: number | null;
+  created_by_usuario_id?: number | null;
 }
 
 export interface SolicitudItemRow {
@@ -33,6 +34,7 @@ export interface CreateSolicitudData {
   solicitante: string;
   fecha?: string;
   fecha_requerida?: string | null;
+  created_by_usuario_id?: number | null;
 }
 
 export interface CreateSolicitudItemData {
@@ -45,7 +47,7 @@ export interface CreateSolicitudItemData {
 }
 
 export async function getAllSolicitudes(
-  filters: { proyecto_id?: number; estado?: string } = {},
+  filters: { proyecto_id?: number; estado?: string; created_by_usuario_id?: number } = {},
   db?: Queryable
 ): Promise<SolicitudRow[]> {
   const conn = getDb(db);
@@ -66,6 +68,11 @@ export async function getAllSolicitudes(
   if (filters.estado) {
     params.push(filters.estado);
     query += ` AND sm.estado = $${params.length}`;
+  }
+
+  if (filters.created_by_usuario_id) {
+    params.push(filters.created_by_usuario_id);
+    query += ` AND sm.created_by_usuario_id = $${params.length}`;
   }
 
   if (!filters.estado) {
@@ -110,10 +117,10 @@ export async function getSolicitudItems(solicitudId: number, db?: Queryable): Pr
 export async function createSolicitud(data: CreateSolicitudData, db?: Queryable): Promise<SolicitudRow> {
   const conn = getDb(db);
   const { rows } = await conn.query(
-    `INSERT INTO solicitudes_material (proyecto_id, solicitante, fecha, fecha_requerida)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO solicitudes_material (proyecto_id, solicitante, fecha, fecha_requerida, created_by_usuario_id)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING *`,
-    [data.proyecto_id, data.solicitante, data.fecha || new Date().toISOString().split('T')[0], data.fecha_requerida || null]
+    [data.proyecto_id, data.solicitante, data.fecha || new Date().toISOString().split('T')[0], data.fecha_requerida || null, data.created_by_usuario_id || null]
   );
   return rows[0];
 }

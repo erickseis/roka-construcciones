@@ -32,12 +32,17 @@ export async function getGastoPorProyecto(
     SELECT
       p.nombre AS proyecto,
       COUNT(oc.id)::int AS total_ordenes,
-      COALESCE(SUM(oc.total), 0)::numeric AS gasto_total
+      COALESCE(SUM(oc.total), 0)::numeric AS gasto_total,
+      COALESCE(pp.monto_total, 0)::numeric AS presupuesto_total,
+      COALESCE(SUM(oc.total), 0)::numeric AS presupuesto_usado,
+      COALESCE(pp.monto_total - COALESCE(SUM(oc.total), 0), 0)::numeric AS presupuesto_disponible,
+      COALESCE((COALESCE(SUM(oc.total), 0) / NULLIF(pp.monto_total, 0)) * 100, 0)::numeric(8,2) AS porcentaje_uso
     FROM proyectos p
+    LEFT JOIN presupuestos_proyecto pp ON pp.proyecto_id = p.id
     LEFT JOIN solicitudes_material sm ON sm.proyecto_id = p.id
     LEFT JOIN solicitud_cotizacion sc ON sc.solicitud_id = sm.id AND sc.estado = 'Respondida'
     LEFT JOIN ordenes_compra oc ON oc.solicitud_cotizacion_id = sc.id
-    GROUP BY p.id, p.nombre
+    GROUP BY p.id, p.nombre, pp.monto_total
     ORDER BY gasto_total DESC
   `);
   return rows;
@@ -110,12 +115,17 @@ export async function getResumen(
       SELECT
         p.nombre AS proyecto,
         COUNT(oc.id)::int AS total_ordenes,
-        COALESCE(SUM(oc.total), 0)::numeric AS gasto_total
+        COALESCE(SUM(oc.total), 0)::numeric AS gasto_total,
+        COALESCE(pp.monto_total, 0)::numeric AS presupuesto_total,
+        COALESCE(SUM(oc.total), 0)::numeric AS presupuesto_usado,
+        COALESCE(pp.monto_total - COALESCE(SUM(oc.total), 0), 0)::numeric AS presupuesto_disponible,
+        COALESCE((COALESCE(SUM(oc.total), 0) / NULLIF(pp.monto_total, 0)) * 100, 0)::numeric(8,2) AS porcentaje_uso
       FROM proyectos p
+      LEFT JOIN presupuestos_proyecto pp ON pp.proyecto_id = p.id
       LEFT JOIN solicitudes_material sm ON sm.proyecto_id = p.id
       LEFT JOIN solicitud_cotizacion sc ON sc.solicitud_id = sm.id AND sc.estado = 'Respondida'
       LEFT JOIN ordenes_compra oc ON oc.solicitud_cotizacion_id = sc.id
-      GROUP BY p.id, p.nombre
+      GROUP BY p.id, p.nombre, pp.monto_total
       ORDER BY gasto_total DESC
     `),
     conn.query(`

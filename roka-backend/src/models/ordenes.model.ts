@@ -120,9 +120,9 @@ export async function getSolicitudCotizacionForOC(solicitudCotizacionId: number,
               (SELECT SUM(
                 CASE 
                   WHEN scd.descuento_porcentaje > 0 THEN 
-                    (scd.cantidad_requerida * scd.precio_unitario) * (1 - scd.descuento_porcentaje / 100)
+                    (si.cantidad_requerida * scd.precio_unitario) * (1 - scd.descuento_porcentaje / 100)
                   ELSE 
-                    scd.cantidad_requerida * scd.precio_unitario
+                    si.cantidad_requerida * scd.precio_unitario
                 END
               )
               FROM solicitud_cotizacion_detalle scd
