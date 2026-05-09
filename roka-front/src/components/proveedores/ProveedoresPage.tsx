@@ -96,13 +96,13 @@ export default function ProveedoresPage() {
         <div className="flex gap-1">
           <button
             onClick={(e) => { e.stopPropagation(); handleEdit(row); }}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
           >
             <Edit size={14} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 cursor-pointer"
           >
             <Trash2 size={14} />
           </button>
@@ -126,7 +126,7 @@ export default function ProveedoresPage() {
           </div>
           <button
             onClick={openNewForm}
-            className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 hover:shadow-amber-500/30 active:scale-[0.98]"
+            className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 hover:shadow-amber-500/30 active:scale-[0.98] cursor-pointer"
           >
             <Plus size={18} />
             Nuevo Proveedor

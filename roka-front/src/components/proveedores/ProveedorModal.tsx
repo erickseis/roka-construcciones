@@ -245,14 +245,14 @@ export default function ProveedorModal({ isOpen, onClose, onSave, editingProveed
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 disabled:opacity-60"
+            className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 disabled:opacity-60 cursor-pointer"
           >
             <Truck size={16} />
             {submitting ? 'Guardando...' : editingProveedor ? 'Actualizar' : 'Crear Proveedor'}

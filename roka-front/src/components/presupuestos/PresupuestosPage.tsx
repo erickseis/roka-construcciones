@@ -211,7 +211,7 @@ export default function PresupuestosPage() {
           </div>
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600"
+            className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 cursor-pointer"
           >
             <Plus size={18} />
             Nuevo Presupuesto
@@ -304,7 +304,7 @@ export default function PresupuestosPage() {
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Categorías iniciales</p>
-              <button type="button" onClick={addCategoria} className="text-xs font-bold text-amber-600 hover:text-amber-700">Agregar categoría</button>
+              <button type="button" onClick={addCategoria} className="text-xs font-bold text-amber-600 hover:text-amber-700 cursor-pointer">Agregar categoría</button>
             </div>
             <div className="space-y-2">
               {form.categorias.map((c, idx) => (
@@ -333,7 +333,7 @@ export default function PresupuestosPage() {
                   <button
                     type="button"
                     onClick={() => removeCategoria(idx)}
-                    className="col-span-1 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"
+                    className="col-span-1 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 cursor-pointer"
                   >
                     <Trash2 size={14} className="mx-auto" />
                   </button>
@@ -343,11 +343,11 @@ export default function PresupuestosPage() {
           </div>
 
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
-            <button type="button" onClick={() => setShowCreate(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">Cancelar</button>
+            <button type="button" onClick={() => setShowCreate(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer">Cancelar</button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 hover:bg-amber-600 disabled:opacity-60"
+              className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 hover:bg-amber-600 disabled:opacity-60 cursor-pointer"
             >
               <Wallet size={16} />
               {submitting ? 'Guardando...' : 'Guardar Presupuesto'}
@@ -429,7 +429,7 @@ export default function PresupuestosPage() {
                 <button
                   type="submit"
                   disabled={addingCategoria}
-                  className="col-span-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-60 dark:bg-amber-600 dark:hover:bg-amber-700"
+                  className="col-span-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-60 dark:bg-amber-600 dark:hover:bg-amber-700 cursor-pointer"
                 >
                   {addingCategoria ? 'Agregando...' : 'Agregar'}
                 </button>

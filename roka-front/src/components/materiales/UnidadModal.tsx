@@ -59,7 +59,7 @@ export default function UnidadModal({ isOpen, onClose, onSave, unidad }: UnidadM
           <h2 className="text-xl font-black text-slate-900 dark:text-slate-50">
             {unidad ? 'Editar Unidad' : 'Nueva Unidad'}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
             <X size={24} />
           </button>
         </div>
@@ -93,14 +93,14 @@ export default function UnidadModal({ isOpen, onClose, onSave, unidad }: UnidadM
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="rounded-xl px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-2 text-sm font-black text-white shadow-lg transition-all hover:bg-slate-800 active:scale-95 disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900"
+              className="flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-2 text-sm font-black text-white shadow-lg transition-all hover:bg-slate-800 active:scale-95 disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900 cursor-pointer"
             >
               <Save size={18} />
               {isSubmitting ? 'Guardando...' : 'Guardar Unidad'}

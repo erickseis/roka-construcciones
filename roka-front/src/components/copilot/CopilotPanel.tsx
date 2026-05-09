@@ -135,7 +135,7 @@ export function CopilotPanel({ onClose }: CopilotPanelProps) {
         </div>
         <button
           onClick={onClose}
-          className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+          className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300 cursor-pointer"
           title="Minimizar guía"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -168,7 +168,7 @@ export function CopilotPanel({ onClose }: CopilotPanelProps) {
                           : status === 'completed'
                           ? 'border-emerald-500 bg-emerald-500 shadow-sm shadow-emerald-500/20'
                           : 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800'
-                      }`}
+                      } cursor-pointer`}
                       title={`Ir a ${step.label}`}
                     >
                       {status === 'completed' ? (

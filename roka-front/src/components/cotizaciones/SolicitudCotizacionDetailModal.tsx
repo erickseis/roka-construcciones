@@ -328,25 +328,25 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
             <div className="flex justify-between border-t border-slate-100 pt-4 dark:border-slate-800">
               <div className="flex gap-2">
                 <button onClick={() => descargarSolicitudCotizacionPdf(id!)}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer">
                   <FileDown size={14} /> Descargar PDF
                 </button>
                 <button
                   onClick={handleEnviarProveedor}
                   disabled={sendingEmail}
                   title="Enviar solicitud de cotización al proveedor por email"
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 dark:text-indigo-400 dark:hover:bg-indigo-900/30 cursor-pointer"
                 >
                   <MailCheck size={14} /> {sendingEmail ? 'Enviando...' : 'Enviar a Proveedor'}
                 </button>
                 {(data.estado === 'Borrador') && (
                   <>
                     <button onClick={handleAnular}
-                      className="rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
+                      className="rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer">
                       <Ban size={14} className="inline mr-1" />Anular
                     </button>
                     <button onClick={handleDelete}
-                      className="rounded-lg px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30">
+                      className="rounded-lg px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 cursor-pointer">
                       <Trash2 size={14} className="inline mr-1" />Eliminar
                     </button>
                   </>
@@ -355,13 +355,13 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
               <div className="flex gap-2">
                 {data.estado === 'Borrador' && (
                   <button onClick={() => handleEstado('Enviada')}
-                    className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-white hover:bg-amber-600">
+                    className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-white hover:bg-amber-600 cursor-pointer">
                     <Send size={14} /> Marcar como Enviada
                   </button>
                 )}
                 {data.estado === 'Enviada' && (
                   <button onClick={() => setShowImport(true)}
-                    className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">
+                    className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 cursor-pointer">
                     <Upload size={14} /> Cargar Respuesta
                   </button>
                 )}
@@ -369,26 +369,26 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
 
                 {data.estado?.toUpperCase() === 'RESPONDIDA' && !data.orden_id && (
                   <button onClick={() => setShowCrearOC(true)}
-                    className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 transition-all">
+                    className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer">
                     <ShoppingCart size={14} /> Crear Orden de Compra
                   </button>
                 )}
                 {data.estado?.toUpperCase() === 'RESPONDIDA' && data.orden_id && (
                   <button onClick={() => handleVerOC(data.orden_id)}
-                    className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-white hover:bg-amber-600 shadow-lg shadow-amber-500/20 transition-all">
+                    className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-white hover:bg-amber-600 shadow-lg shadow-amber-500/20 transition-all cursor-pointer">
                     <FileText size={14} /> Ver Orden de Compra
                   </button>
                 )}
 
                 {data.estado === 'Respondida' && (
                   <button onClick={handleAnular}
-                    className="rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
+                    className="rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer">
                     Anular
                   </button>
                 )}
                 {data.estado === 'Enviada' && (
                   <button onClick={() => handleEstado('Borrador')}
-                    className="rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
+                    className="rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer">
                     Volver a Borrador
                   </button>
                 )}

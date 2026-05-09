@@ -157,7 +157,7 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Nombre *</label>
                 <button type="button" onClick={() => setShowProveedorModal(true)}
-                  className="flex items-center gap-1 text-[10px] font-bold text-amber-600 hover:text-amber-700">
+                  className="flex items-center gap-1 text-[10px] font-bold text-amber-600 hover:text-amber-700 cursor-pointer">
                   <Building2 size={12} /> Nuevo proveedor
                 </button>
               </div>
@@ -238,7 +238,7 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
         <div className="border-t border-slate-200 pt-4 dark:border-slate-800">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Ítems</p>
-            <button type="button" onClick={addItem} className="flex items-center gap-1 text-xs font-medium text-amber-600 hover:text-amber-700">
+            <button type="button" onClick={addItem} className="flex items-center gap-1 text-xs font-medium text-amber-600 hover:text-amber-700 cursor-pointer">
               <Plus size={14} /> Agregar ítem
             </button>
           </div>
@@ -272,7 +272,7 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
                     <input type="number" step="0.01" min="0" value={item.precio_unitario} onChange={e => updateItem(item.id, 'precio_unitario', Number(e.target.value))} placeholder="0" className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100" />
                   </div>
                 </div>
-                <button type="button" onClick={() => removeItem(item.id)} className="mb-1 rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors dark:hover:bg-red-900/20 dark:hover:text-red-400" title="Eliminar ítem">
+                <button type="button" onClick={() => removeItem(item.id)} className="mb-1 rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors dark:hover:bg-red-900/20 dark:hover:text-red-400 cursor-pointer" title="Eliminar ítem">
                   <Trash2 size={16} />
                 </button>
               </div>
@@ -320,8 +320,8 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
         />
 
         <div className="flex justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-          <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">Cancelar</button>
-          <button type="submit" disabled={submitting} className="flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-600 active:scale-95 disabled:opacity-60">
+          <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer">Cancelar</button>
+          <button type="submit" disabled={submitting} className="flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-600 active:scale-95 disabled:opacity-60 cursor-pointer">
             {submitting ? 'Creando...' : 'Crear OC Manual'}
           </button>
         </div>

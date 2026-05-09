@@ -249,7 +249,7 @@ export default function EmailAlertasTab() {
           </div>
             <button
               onClick={() => { setShowModal(true); setBusqueda(''); }}
-              className="flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+              className="flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 cursor-pointer"
             >
             <Plus size={14} />
             Seleccionar usuarios
@@ -267,7 +267,7 @@ export default function EmailAlertasTab() {
                 {u.nombre} {u.apellido}
                 <button
                   onClick={() => toggleUsuario(u.id)}
-                  className="ml-1 rounded-full p-0.5 hover:bg-amber-200 dark:hover:bg-amber-800"
+                  className="ml-1 rounded-full p-0.5 hover:bg-amber-200 dark:hover:bg-amber-800 cursor-pointer"
                 >
                   <X size={12} />
                 </button>
@@ -284,7 +284,7 @@ export default function EmailAlertasTab() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 rounded-lg bg-amber-500 px-6 py-2.5 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-lg bg-amber-500 px-6 py-2.5 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-50 cursor-pointer"
         >
           <Save size={16} />
           {saving ? 'Guardando...' : 'Guardar configuración'}
@@ -307,7 +307,7 @@ export default function EmailAlertasTab() {
               <h3 className="text-lg font-bold text-slate-800 dark:text-white">Seleccionar destinatarios</h3>
               <button
                 onClick={() => { setShowModal(false); setBusqueda(''); }}
-                className="rounded-full p-1 hover:bg-slate-100 dark:hover:bg-slate-700"
+                className="rounded-full p-1 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
               >
                 <X size={20} className="text-slate-500" />
               </button>
@@ -368,13 +368,13 @@ export default function EmailAlertasTab() {
             <div className="mt-4 flex justify-end gap-2">
               <button
                 onClick={() => { setShowModal(false); setBusqueda(''); }}
-                className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 onClick={() => { setShowModal(false); setBusqueda(''); }}
-                className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-white hover:bg-amber-600"
+                className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-white hover:bg-amber-600 cursor-pointer"
               >
                 Aceptar
               </button>

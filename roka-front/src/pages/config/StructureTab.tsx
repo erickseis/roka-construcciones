@@ -136,7 +136,7 @@ export default function StructureTab() {
             <h4 className="text-xl font-black text-slate-800 dark:text-slate-100">Departamentos</h4>
           </div>
           <button onClick={openCreateDept} 
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500 text-white shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all hover:scale-105 active:scale-95">
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500 text-white shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all hover:scale-105 active:scale-95 cursor-pointer">
             <Plus size={18} />
           </button>
         </div>
@@ -149,8 +149,8 @@ export default function StructureTab() {
                   <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{d.descripcion || 'Sin descripción adicional.'}</p>
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
-                  <button onClick={() => openEditDept(d)} className="rounded-lg p-1.5 bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 dark:bg-slate-800 dark:text-slate-500 dark:hover:text-blue-400"><Pencil size={14} /></button>
-                  <button onClick={() => handleDeleteDept(d)} className="rounded-lg p-1.5 bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:bg-slate-800 dark:text-slate-500 dark:hover:text-red-400"><Trash2 size={14} /></button>
+                  <button onClick={() => openEditDept(d)} className="rounded-lg p-1.5 bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 dark:bg-slate-800 dark:text-slate-500 dark:hover:text-blue-400 cursor-pointer"><Pencil size={14} /></button>
+                  <button onClick={() => handleDeleteDept(d)} className="rounded-lg p-1.5 bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:bg-slate-800 dark:text-slate-500 dark:hover:text-red-400 cursor-pointer"><Trash2 size={14} /></button>
                 </div>
               </div>
               <div className="absolute -bottom-2 -right-2 h-12 w-12 rounded-full bg-amber-500/5 blur-xl group-hover:bg-amber-500/10 transition-colors" />
@@ -170,7 +170,7 @@ export default function StructureTab() {
             <h4 className="text-xl font-black text-slate-800 dark:text-slate-100">Cargos</h4>
           </div>
           <button onClick={openCreateCargo}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all hover:scale-105 active:scale-95">
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all hover:scale-105 active:scale-95 cursor-pointer">
             <Plus size={18} />
           </button>
         </div>
@@ -183,8 +183,8 @@ export default function StructureTab() {
                   <p className="text-[10px] uppercase font-black tracking-widest text-blue-500 dark:text-blue-400 mt-0.5">{c.departamento_nombre}</p>
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
-                  <button onClick={() => openEditCargo(c)} className="rounded-lg p-1.5 bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 dark:bg-slate-800 dark:text-slate-500 dark:hover:text-blue-400"><Pencil size={14} /></button>
-                  <button onClick={() => handleDeleteCargo(c)} className="rounded-lg p-1.5 bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:bg-slate-800 dark:text-slate-500 dark:hover:text-red-400"><Trash2 size={14} /></button>
+                  <button onClick={() => openEditCargo(c)} className="rounded-lg p-1.5 bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 dark:bg-slate-800 dark:text-slate-500 dark:hover:text-blue-400 cursor-pointer"><Pencil size={14} /></button>
+                  <button onClick={() => handleDeleteCargo(c)} className="rounded-lg p-1.5 bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:bg-slate-800 dark:text-slate-500 dark:hover:text-red-400 cursor-pointer"><Trash2 size={14} /></button>
                 </div>
               </div>
               <div className="absolute -bottom-2 -right-2 h-12 w-12 rounded-full bg-blue-500/5 blur-xl group-hover:bg-blue-500/10 transition-colors" />
@@ -206,9 +206,9 @@ export default function StructureTab() {
             className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100" />
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setShowDeptModal(false)}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">Cancelar</button>
+              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer">Cancelar</button>
             <button type="submit" disabled={submitting}
-              className="rounded-lg bg-amber-500 px-6 py-2 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-60">
+              className="rounded-lg bg-amber-500 px-6 py-2 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-60 cursor-pointer">
               {submitting ? 'Guardando...' : editingDept ? 'Guardar Cambios' : 'Crear'}
             </button>
           </div>
@@ -231,9 +231,9 @@ export default function StructureTab() {
           </select>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setShowCargoModal(false)}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">Cancelar</button>
+              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer">Cancelar</button>
             <button type="submit" disabled={submitting}
-              className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60">
+              className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60 cursor-pointer">
               {submitting ? 'Guardando...' : editingCargo ? 'Guardar Cambios' : 'Crear Cargo'}
             </button>
           </div>
@@ -273,9 +273,9 @@ export default function StructureTab() {
 
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setMigrationModal(null)}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">Cancelar</button>
+              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer">Cancelar</button>
             <button type="button" disabled={!migrarAId || submitting} onClick={handleConfirmMigration}
-              className="flex items-center gap-2 rounded-lg bg-red-500 px-6 py-2 text-sm font-bold text-white hover:bg-red-600 disabled:opacity-60">
+              className="flex items-center gap-2 rounded-lg bg-red-500 px-6 py-2 text-sm font-bold text-white hover:bg-red-600 disabled:opacity-60 cursor-pointer">
               {submitting ? 'Procesando...' : 'Migrar y Eliminar'}
             </button>
           </div>

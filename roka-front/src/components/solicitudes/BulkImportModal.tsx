@@ -311,7 +311,7 @@ export default function BulkImportModal({
             <button 
               type="button"
               onClick={(e) => { e.stopPropagation(); downloadTemplate(); }}
-              className="mt-4 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-600 hover:underline"
+              className="mt-4 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-600 hover:underline cursor-pointer"
             >
               <Download size={12} /> Descargar Plantilla
             </button>
@@ -330,7 +330,7 @@ export default function BulkImportModal({
               </div>
               <button 
                 onClick={() => { setFile(null); setParsedData([]); }}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-red-500"
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-red-500 cursor-pointer"
               >
                 <X size={16} />
               </button>
@@ -395,7 +395,7 @@ export default function BulkImportModal({
                       <td className="px-3 py-2">
                         <button 
                           onClick={() => removeItem(item.id)}
-                          className="text-slate-300 hover:text-red-500 transition-colors"
+                          className="text-slate-300 hover:text-red-500 transition-colors cursor-pointer"
                         >
                           <Trash2 size={12} />
                         </button>
@@ -413,7 +413,7 @@ export default function BulkImportModal({
           <button
             type="button"
             onClick={handleClose}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 cursor-pointer"
           >
             Cancelar
           </button>

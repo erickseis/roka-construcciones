@@ -80,11 +80,11 @@ export default function ChangePasswordModal({ isOpen, onClose, user }: Props) {
 
           <div className="flex justify-end gap-3 pt-4">
             <button type="button" onClick={() => { reset(); onClose(); }}
-              className="rounded-xl px-4 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100">
+              className="rounded-xl px-4 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100 cursor-pointer">
               Cancelar
             </button>
             <button type="submit" disabled={submitting}
-              className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 hover:bg-amber-600 disabled:opacity-60">
+              className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 hover:bg-amber-600 disabled:opacity-60 cursor-pointer">
               <Key size={16} />
               {submitting ? 'Guardando...' : 'Cambiar Contraseña'}
             </button>

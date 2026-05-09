@@ -226,7 +226,7 @@ export default function MaterialesPage() {
                 className={`relative whitespace-nowrap rounded-xl px-6 py-2.5 text-sm font-bold transition-all duration-300 ${activeTab === tab.id
                   ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-[0_4px_20px_rgba(245,158,11,0.4)] scale-105 z-10'
                   : 'bg-white/50 text-slate-500 hover:bg-white border border-slate-200 dark:bg-slate-900/50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800'
-                  }`}
+                  } cursor-pointer`}
               >
                 {tab.label}
                 {activeTab === tab.id && (
@@ -254,7 +254,7 @@ export default function MaterialesPage() {
                   setIsUnidadModalOpen(true);
                 }
               }}
-              className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-black text-white shadow-xl transition-all hover:bg-slate-800 active:scale-95 dark:bg-white dark:text-slate-900 w-full sm:w-auto"
+              className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-black text-white shadow-xl transition-all hover:bg-slate-800 active:scale-95 dark:bg-white dark:text-slate-900 w-full sm:w-auto cursor-pointer"
             >
               <Plus size={18} />
               {activeTab === 'materiales' ? 'Registrar Material' : activeTab === 'categorias' ? 'Nueva Categoría' : activeTab === 'unidades' ? 'Nueva Unidad' : 'Registrar'}
@@ -336,7 +336,7 @@ export default function MaterialesPage() {
           </select>
           <button
             onClick={fetchMateriales}
-            className="rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-slate-500 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-800"
+            className="rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-slate-500 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-800 cursor-pointer"
           >
             <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
           </button>
@@ -388,8 +388,8 @@ export default function MaterialesPage() {
                       </td>
                       <td className="px-6 py-4 text-right grayscale opacity-30 group-hover:grayscale-0 group-hover:opacity-100 transition-all">
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => { setEditingMaterial(material); setIsModalOpen(true); }} className="hover:text-amber-600"><Edit2 size={16} /></button>
-                          <button onClick={() => handleDelete(material.id)} className="hover:text-red-500"><Trash2 size={16} /></button>
+                          <button onClick={() => { setEditingMaterial(material); setIsModalOpen(true); }} className="hover:text-amber-600 cursor-pointer"><Edit2 size={16} /></button>
+                          <button onClick={() => handleDelete(material.id)} className="hover:text-red-500 cursor-pointer"><Trash2 size={16} /></button>
                         </div>
                       </td>
                     </tr>
@@ -422,8 +422,8 @@ export default function MaterialesPage() {
                       <td className="px-6 py-4 text-xs text-slate-400">{new Date(cat.created_at).toLocaleDateString()}</td>
                       <td className="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => { setEditingCategory(cat); setIsCategoryModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-amber-600"><Edit2 size={16} /></button>
-                          <button onClick={() => handleDeleteCategory(cat.id)} className="p-1.5 text-slate-400 hover:text-red-500"><Trash2 size={16} /></button>
+                          <button onClick={() => { setEditingCategory(cat); setIsCategoryModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-amber-600 cursor-pointer"><Edit2 size={16} /></button>
+                          <button onClick={() => handleDeleteCategory(cat.id)} className="p-1.5 text-slate-400 hover:text-red-500 cursor-pointer"><Trash2 size={16} /></button>
                         </div>
                       </td>
                     </tr>
@@ -454,8 +454,8 @@ export default function MaterialesPage() {
                       <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400 font-mono">{u.abreviatura}</td>
                       <td className="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => { setEditingUnidad(u); setIsUnidadModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-amber-600"><Edit2 size={16} /></button>
-                          <button onClick={() => handleDeleteUnidad(u.id)} className="p-1.5 text-slate-400 hover:text-red-500"><Trash2 size={16} /></button>
+                          <button onClick={() => { setEditingUnidad(u); setIsUnidadModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-amber-600 cursor-pointer"><Edit2 size={16} /></button>
+                          <button onClick={() => handleDeleteUnidad(u.id)} className="p-1.5 text-slate-400 hover:text-red-500 cursor-pointer"><Trash2 size={16} /></button>
                         </div>
                       </td>
                     </tr>

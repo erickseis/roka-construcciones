@@ -79,7 +79,7 @@ export function Sidebar({ isOpen, onClose, onProfileClick }: SidebarProps) {
           {/* Close button for mobile */}
           <button
             onClick={onClose}
-            className="rounded-lg p-2 text-slate-400 hover:bg-slate-200 lg:hidden dark:hover:bg-slate-800"
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-200 lg:hidden dark:hover:bg-slate-800 cursor-pointer"
           >
             <X size={20} />
           </button>

@@ -159,7 +159,7 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
             <p className="text-xs text-slate-400 mt-1">PDF, Excel, CSV o imagen (máx 20MB)</p>
             <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.csv,.png,.jpg,.jpeg,.webp" className="hidden" onChange={handleFileChange} />
             <button onClick={() => fileRef.current?.click()}
-              className="mt-4 rounded-lg bg-amber-500 px-4 py-2 text-xs font-bold text-white hover:bg-amber-600">
+              className="mt-4 rounded-lg bg-amber-500 px-4 py-2 text-xs font-bold text-white hover:bg-amber-600 cursor-pointer">
               Seleccionar archivo
             </button>
           </div>
@@ -168,7 +168,7 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
             <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800 p-3">
               <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{file.name}</span>
               <button onClick={handleUpload}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">
+                className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 cursor-pointer">
                 Procesar archivo
               </button>
             </div>
@@ -465,12 +465,12 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
 
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => { setStep('upload'); setPreview(null); setEditedPrices({}); }}
-                className="rounded-lg px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                className="rounded-lg px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
                 ← Volver
               </button>
               <button onClick={handleConfirm}
                 disabled={matchedCount === 0}
-                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors">
+                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors cursor-pointer">
                 <Check size={14} /> Confirmar y Guardar Precios ({matchedCount})
               </button>
             </div>

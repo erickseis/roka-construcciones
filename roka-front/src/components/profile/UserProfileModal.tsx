@@ -213,14 +213,14 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-all"
+            className="rounded-xl px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-all cursor-pointer"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-2 rounded-xl bg-amber-500 px-8 py-2.5 text-sm font-black text-white shadow-lg shadow-amber-500/20 hover:bg-amber-600 disabled:opacity-50 transition-all active:scale-95"
+            className="flex items-center gap-2 rounded-xl bg-amber-500 px-8 py-2.5 text-sm font-black text-white shadow-lg shadow-amber-500/20 hover:bg-amber-600 disabled:opacity-50 transition-all active:scale-95 cursor-pointer"
           >
             <Save size={18} />
             {loading ? 'Guardando...' : 'Actualizar Perfil'}

@@ -251,7 +251,7 @@ export default function ProyectosPage() {
               e.stopPropagation();
               openEdit(row);
             }}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
             title="Editar"
           >
             <Pencil size={14} />
@@ -261,7 +261,7 @@ export default function ProyectosPage() {
               e.stopPropagation();
               handleToggleActive(row);
             }}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600 cursor-pointer"
             title={row.is_active ? 'Inactivar' : 'Activar'}
           >
             <Power size={14} />
@@ -282,7 +282,7 @@ export default function ProyectosPage() {
           </div>
           <button
             onClick={openCreate}
-            className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600"
+            className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 cursor-pointer"
           >
             <Plus size={18} />
             Nuevo Proyecto
@@ -422,7 +422,7 @@ export default function ProyectosPage() {
             <button
               type="button"
               onClick={() => setMostrarLicitacion(!mostrarLicitacion)}
-              className="flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700"
+              className="flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
             >
               <ChevronDown size={16} className={`transition-transform ${mostrarLicitacion ? 'rotate-180' : ''}`} />
               Datos de Licitación
@@ -529,7 +529,7 @@ export default function ProyectosPage() {
                         <button
                           type="button"
                           onClick={() => downloadLicitacionArchivo(editing.id, editing.archivo_licitacion_nombre)}
-                          className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+                          className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 cursor-pointer"
                         >
                           <Download size={12} />
                           Descargar
@@ -558,7 +558,7 @@ export default function ProyectosPage() {
                         <button
                           type="button"
                           onClick={() => downloadMaterialesArchivo(editing.id, editing.archivo_materiales_nombre)}
-                          className="text-xs font-semibold text-amber-600 hover:text-amber-700 dark:text-amber-400 flex items-center gap-1"
+                          className="text-xs font-semibold text-amber-600 hover:text-amber-700 dark:text-amber-400 flex items-center gap-1 cursor-pointer"
                         >
                           ⬇ Descargar
                         </button>
@@ -596,13 +596,13 @@ export default function ProyectosPage() {
           </div>
 
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
-            <button type="button" onClick={() => setShowForm(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
+            <button type="button" onClick={() => setShowForm(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer">
               Cancelar
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 hover:bg-amber-600 disabled:opacity-60"
+              className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 hover:bg-amber-600 disabled:opacity-60 cursor-pointer"
             >
               <FolderKanban size={16} />
               {submitting ? 'Guardando...' : 'Guardar Proyecto'}

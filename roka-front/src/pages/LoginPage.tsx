@@ -148,7 +148,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-500 py-3.5 text-sm font-black text-white shadow-xl shadow-amber-500/30 transition-all hover:bg-amber-600 hover:translate-y-[-2px] active:scale-[0.98] disabled:opacity-60"
+                className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-500 py-3.5 text-sm font-black text-white shadow-xl shadow-amber-500/30 transition-all hover:bg-amber-600 hover:translate-y-[-2px] active:scale-[0.98] disabled:opacity-60 cursor-pointer"
               >
                 {loading ? 'Accediendo...' : 'Entrar al Sistema'}
                 <ChevronRight className="transition-transform group-hover:translate-x-1" size={18} />

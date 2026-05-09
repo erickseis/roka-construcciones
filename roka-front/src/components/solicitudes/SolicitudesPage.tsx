@@ -7,6 +7,7 @@ import { StatusBadge } from '../ui/StatusBadge';
 import { Modal } from '../ui/Modal';
 import FlowStepper from '../ui/FlowStepper';
 import AuditTrailBadge from '../ui/AuditTrailBadge';
+import FilterPanel, { FilterField } from '../ui/FilterPanel';
 import CreatableSelect from 'react-select/creatable';
 import { useApi } from '@/hooks/useApi';
 import {
@@ -43,18 +44,58 @@ export default function SolicitudesPage() {
   const { data: solicitudes, loading, refetch } = useApi(() => getSolicitudes(showAnuladas ? { estado: 'Anulada' } : {}), [showAnuladas]);
   const { data: proyectos } = useApi(() => getProyectos(), []);
 
-  // Sort: Pendiente first, then Cotizando, then Aprobado, then others
+  // Filters state
+  const [filters, setFilters] = useState<Record<string, string>>({
+    estado: '',
+    proyecto_id: '',
+    solicitante: '',
+    fecha_desde: '',
+    fecha_hasta: '',
+  });
+  const handleFilterChange = (key: string, value: string) => setFilters(prev => ({ ...prev, [key]: value }));
+  const handleResetFilters = () => setFilters({ estado: '', proyecto_id: '', solicitante: '', fecha_desde: '', fecha_hasta: '' });
+  const activeFilterCount = Object.values(filters).filter(v => v !== '').length;
+
+  // Sort + filter: Pendiente first, then Cotizando, then Aprobado, then others
   const sortedSolicitudes = React.useMemo(() => {
     if (!solicitudes) return [];
     const order: Record<string, number> = { 'Pendiente': 0, 'Cotizando': 1, 'Aprobado': 2 };
-    return [...solicitudes].sort((a: any, b: any) => {
+    let result = [...solicitudes];
+
+    // Apply filters
+    if (filters.estado) result = result.filter((s: any) => s.estado === filters.estado);
+    if (filters.proyecto_id) result = result.filter((s: any) => String(s.proyecto_id) === filters.proyecto_id);
+    if (filters.solicitante) result = result.filter((s: any) => (s.solicitante || '').toLowerCase().includes(filters.solicitante.toLowerCase()));
+    if (filters.fecha_desde) result = result.filter((s: any) => s.fecha && s.fecha.slice(0, 10) >= filters.fecha_desde);
+    if (filters.fecha_hasta) result = result.filter((s: any) => s.fecha && s.fecha.slice(0, 10) <= filters.fecha_hasta);
+
+    return result.sort((a: any, b: any) => {
       const orderA = order[a.estado] ?? 3;
       const orderB = order[b.estado] ?? 3;
       if (orderA !== orderB) return orderA - orderB;
       // Within same status, sort by date descending (newest first)
       return new Date(b.created_at || b.fecha).getTime() - new Date(a.created_at || a.fecha).getTime();
     });
-  }, [solicitudes]);
+  }, [solicitudes, filters]);
+
+  const filterFields: FilterField[] = React.useMemo(() => [
+    {
+      key: 'estado', label: 'Estado', type: 'select',
+      options: [
+        { value: 'Pendiente', label: 'Pendiente' },
+        { value: 'Cotizando', label: 'Cotizando' },
+        { value: 'Aprobado', label: 'Aprobado' },
+        { value: 'Anulada', label: 'Anulada' },
+      ]
+    },
+    {
+      key: 'proyecto_id', label: 'Proyecto', type: 'select',
+      options: (proyectos || []).map((p: any) => ({ value: String(p.id), label: p.nombre }))
+    },
+    { key: 'solicitante', label: 'Solicitante', type: 'text', placeholder: 'Nombre...' },
+    { key: 'fecha_desde', label: 'Fecha desde', type: 'date' },
+    { key: 'fecha_hasta', label: 'Fecha hasta', type: 'date' },
+  ], [proyectos]);
   const { data: masterMateriales, refetch: refetchMateriales } = useApi(() => getMaterialesMaster(), []);
   const { data: masterUnidades } = useApi(() => getUnidadesMedida(), []);
 
@@ -210,7 +251,7 @@ export default function SolicitudesPage() {
         <div className="flex gap-1">
           <button
             onClick={(e) => { e.stopPropagation(); exportarSolicitudHtml(row.id); }}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-500 transition-colors"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-500 transition-colors cursor-pointer"
             title="Descargar PDF"
           >
             <Download size={14} />
@@ -229,7 +270,7 @@ export default function SolicitudesPage() {
                 setLoadingDetail(false);
               }
             }}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
             title="Ver detalle"
           >
             <Eye size={14} />
@@ -240,7 +281,7 @@ export default function SolicitudesPage() {
               className={`rounded-lg p-1.5 transition-colors ${row.estado === 'Anulada'
                 ? 'text-red-600 hover:bg-red-100'
                 : 'text-slate-400 hover:bg-amber-50 hover:text-amber-500'
-                }`}
+                } cursor-pointer`}
               title={row.estado === 'Anulada' ? 'Eliminar permanentemente' : 'Descartar solicitud'}
             >
               {row.estado === 'Anulada' ? <Trash2 size={14} /> : <Ban size={14} />}
@@ -412,11 +453,21 @@ export default function SolicitudesPage() {
         ))}
       </div>
 
+      {/* Filters */}
+      <FilterPanel
+        fields={filterFields}
+        values={filters}
+        onChange={handleFilterChange}
+        onReset={handleResetFilters}
+        activeCount={activeFilterCount}
+      />
+
       {/* Table */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-[#111827]/40 dark:border dark:border-slate-800">
           <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
             Ordenadas por prioridad: Pendientes → En Cotización → Aprobadas
+            {activeFilterCount > 0 && <span className="ml-2 text-amber-600">• {sortedSolicitudes.length} resultado{sortedSolicitudes.length !== 1 ? 's' : ''} con filtros</span>}
           </p>
           <DataTable
             columns={columns}
@@ -488,7 +539,7 @@ export default function SolicitudesPage() {
               <button
                 type="button"
                 onClick={addItem}
-                className="flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-600 shadow-sm border border-amber-100 transition-all hover:bg-amber-100 hover:shadow-md active:scale-95 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400 dark:hover:bg-amber-500/20"
+                className="flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-600 shadow-sm border border-amber-100 transition-all hover:bg-amber-100 hover:shadow-md active:scale-95 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400 dark:hover:bg-amber-500/20 cursor-pointer"
               >
                 <Plus size={14} /> Agregar ítem
               </button>
@@ -516,7 +567,7 @@ export default function SolicitudesPage() {
                           <button
                             type="button"
                             onClick={() => setIsMaterialModalOpen(true)}
-                            className="flex items-center gap-1 rounded-md bg-amber-50/50 px-2 py-0.5 text-[10px] font-bold text-amber-600 border border-amber-100/50 transition-all hover:bg-amber-100 hover:text-amber-700 dark:bg-amber-500/5 dark:border-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/10"
+                            className="flex items-center gap-1 rounded-md bg-amber-50/50 px-2 py-0.5 text-[10px] font-bold text-amber-600 border border-amber-100/50 transition-all hover:bg-amber-100 hover:text-amber-700 dark:bg-amber-500/5 dark:border-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/10 cursor-pointer"
                             title="Registrar nuevo material en el catálogo"
                           >
                             <Plus size={10} /> Nuevo en catálogo
@@ -658,7 +709,7 @@ export default function SolicitudesPage() {
                         {/* Botón Eliminar */}
                         <div className="flex items-end pb-[6px]">
                           {form.items.length > 1 ? (
-                            <button type="button" onClick={() => removeItem(idx)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors" title="Eliminar ítem">
+                            <button type="button" onClick={() => removeItem(idx)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors cursor-pointer" title="Eliminar ítem">
                               <Trash2 size={16} />
                             </button>
                           ) : (
@@ -677,14 +728,14 @@ export default function SolicitudesPage() {
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100"
+              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 disabled:opacity-60"
+              className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 disabled:opacity-60 cursor-pointer"
             >
               <FileText size={16} />
               {submitting ? 'Creando...' : 'Crear Solicitud'}
@@ -799,7 +850,7 @@ export default function SolicitudesPage() {
               <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
                 <button
                   onClick={() => handleDelete(showDetail.id, showDetail.estado)}
-                  className="flex items-center gap-2 rounded-xl bg-red-50 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-100 transition-all active:scale-95 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40"
+                  className="flex items-center gap-2 rounded-xl bg-red-50 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-100 transition-all active:scale-95 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 cursor-pointer"
                 >
                   <Ban size={16} />
                   Descartar Solicitud

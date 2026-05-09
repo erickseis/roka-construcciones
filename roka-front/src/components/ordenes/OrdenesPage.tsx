@@ -5,6 +5,7 @@ import { DataTable } from '../ui/DataTable';
 import { StatusBadge } from '../ui/StatusBadge';
 import { Modal } from '../ui/Modal';
 import FlowStepper from '../ui/FlowStepper';
+import FilterPanel, { FilterField } from '../ui/FilterPanel';
 import OCPreviewModal from './OCPreviewModal';
 import OCManualModal from './OCManualModal';
 import { CrearOCModal } from './CrearOCModal';
@@ -21,6 +22,49 @@ export default function OrdenesPage() {
   const [ocPreview, setOcPreview] = useState<any | null>(null);
   const [loadingOc, setLoadingOc] = useState(false);
   const { data: ordenes, loading, refetch } = useApi(() => getOrdenes(), []);
+
+  // Filters
+  const [filters, setFilters] = useState<Record<string, string>>({
+    estado_entrega: '', proveedor: '', proyecto: '',
+    fecha_desde: '', fecha_hasta: '', total_min: '', total_max: '',
+  });
+  const handleFilterChange = (key: string, value: string) => setFilters(prev => ({ ...prev, [key]: value }));
+  const handleResetFilters = () => setFilters({ estado_entrega: '', proveedor: '', proyecto: '', fecha_desde: '', fecha_hasta: '', total_min: '', total_max: '' });
+  const activeFilterCount = Object.values(filters).filter(v => v !== '').length;
+
+  const filteredOrdenes = React.useMemo(() => {
+    if (!ordenes) return [];
+    let result = [...ordenes];
+    if (filters.estado_entrega) result = result.filter((o: any) => o.estado_entrega === filters.estado_entrega);
+    if (filters.proveedor) result = result.filter((o: any) => o.proveedor === filters.proveedor);
+    if (filters.proyecto) result = result.filter((o: any) => o.proyecto_nombre === filters.proyecto);
+    if (filters.fecha_desde) result = result.filter((o: any) => o.fecha_emision && String(o.fecha_emision).slice(0, 10) >= filters.fecha_desde);
+    if (filters.fecha_hasta) result = result.filter((o: any) => o.fecha_emision && String(o.fecha_emision).slice(0, 10) <= filters.fecha_hasta);
+    if (filters.total_min) result = result.filter((o: any) => Number(o.total_final ?? o.total ?? 0) >= Number(filters.total_min));
+    if (filters.total_max) result = result.filter((o: any) => Number(o.total_final ?? o.total ?? 0) <= Number(filters.total_max));
+    return result;
+  }, [ordenes, filters]);
+
+  const filterFields: FilterField[] = React.useMemo(() => {
+    const proveedores = Array.from(new Set((ordenes || []).map((o: any) => o.proveedor).filter(Boolean))) as string[];
+    const proyectos = Array.from(new Set((ordenes || []).map((o: any) => o.proyecto_nombre).filter(Boolean))) as string[];
+    return [
+      {
+        key: 'estado_entrega', label: 'Estado Entrega', type: 'select',
+        options: [
+          { value: 'Pendiente', label: 'Pendiente' },
+          { value: 'Recibido parcial', label: 'Recibido parcial' },
+          { value: 'Completado', label: 'Completado' },
+        ]
+      },
+      { key: 'proveedor', label: 'Proveedor', type: 'select', options: proveedores.map(p => ({ value: p, label: p })) },
+      { key: 'proyecto', label: 'Proyecto', type: 'select', options: proyectos.map(p => ({ value: p, label: p })) },
+      { key: 'fecha_desde', label: 'Emisión desde', type: 'date' },
+      { key: 'fecha_hasta', label: 'Emisión hasta', type: 'date' },
+      { key: 'total_min', label: 'Total mínimo', type: 'number', placeholder: '0' },
+      { key: 'total_max', label: 'Total máximo', type: 'number', placeholder: '999999' },
+    ];
+  }, [ordenes]);
 
   const handleUpdateEntrega = async (id: number, estado: string) => {
     try {
@@ -104,14 +148,14 @@ export default function OrdenesPage() {
         <div className="flex gap-1">
           <button
             onClick={(e) => { e.stopPropagation(); handlePreviewOC(row.id); }}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-colors cursor-pointer"
             title="Ver / Imprimir OC"
           >
             <FileText size={14} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); setShowDetail(row); }}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
             title="Ver detalle"
           >
             <Eye size={14} />
@@ -119,7 +163,7 @@ export default function OrdenesPage() {
           {row.estado_entrega === 'Pendiente' && (
             <button
               onClick={(e) => { e.stopPropagation(); handleUpdateEntrega(row.id, 'Recibido parcial'); }}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-sky-50 hover:text-sky-600 transition-colors"
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-sky-50 hover:text-sky-600 transition-colors cursor-pointer"
               title="Marcar recibido parcial"
             >
               <Truck size={14} />
@@ -128,7 +172,7 @@ export default function OrdenesPage() {
           {row.estado_entrega === 'Recibido parcial' && (
             <button
               onClick={(e) => { e.stopPropagation(); handleUpdateEntrega(row.id, 'Completado'); }}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors cursor-pointer"
               title="Marcar completado"
             >
               <PackageCheck size={14} />
@@ -156,14 +200,14 @@ export default function OrdenesPage() {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             {/* <button
               onClick={() => setShowForm(true)}
-              className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 hover:shadow-emerald-600/30 active:scale-[0.98]"
+              className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 hover:shadow-emerald-600/30 active:scale-[0.98] cursor-pointer"
             >
               <Plus size={18} />
               Generar OC
             </button> */}
             <button
               onClick={() => setShowManualForm(true)}
-              className="flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-600 hover:shadow-orange-500/30 active:scale-[0.98]"
+              className="flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-600 hover:shadow-orange-500/30 active:scale-[0.98] cursor-pointer"
             >
               <Plus size={18} />
               OC Manual
@@ -186,12 +230,26 @@ export default function OrdenesPage() {
         ))}
       </div>
 
+      {/* Filters */}
+      <FilterPanel
+        fields={filterFields}
+        values={filters}
+        onChange={handleFilterChange}
+        onReset={handleResetFilters}
+        activeCount={activeFilterCount}
+      />
+
       {/* Table */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-900 dark:border dark:border-slate-800">
+          {activeFilterCount > 0 && (
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-amber-600">
+              {filteredOrdenes.length} resultado{filteredOrdenes.length !== 1 ? 's' : ''} con filtros aplicados
+            </p>
+          )}
           <DataTable
             columns={columns}
-            data={ordenes || []}
+            data={filteredOrdenes}
             loading={loading}
             searchable
             searchPlaceholder="Buscar por proveedor, proyecto..."

@@ -49,7 +49,7 @@ export default function ConfigPage() {
               ${activeTab === tab.id 
                 ? 'text-amber-600 dark:text-amber-500' 
                 : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}
-            `}
+             cursor-pointer`}
           >
             {activeTab === tab.id && (
               <motion.div

@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { Plus, Eye, Send, Trash2, FileDown, Upload, ShoppingCart, FileText, Ban } from 'lucide-react';
 import { DataTable } from '../ui/DataTable';
 import { StatusBadge } from '../ui/StatusBadge';
+import FilterPanel, { FilterField } from '../ui/FilterPanel';
 import { useApi } from '@/hooks/useApi';
 import { getSolicitudesCotizacion, changeSolicitudCotizacionEstado, deleteSolicitudCotizacion, getSolicitudes, descargarSolicitudCotizacionPdf, getSolicitudCotizacion, getOrden } from '@/lib/api';
 import SolicitudCotizacionModal from './SolicitudCotizacionModal';
@@ -33,6 +34,14 @@ export default function SolicitudCotizacionTab() {
   const [loadingOc, setLoadingOc] = useState(false);
   const [mostrarAnuladas, setMostrarAnuladas] = useState(false);
 
+  // Filters
+  const [filters, setFilters] = useState<Record<string, string>>({
+    estado: '', proveedor: '', proyecto: '', fecha_desde: '', fecha_hasta: '',
+  });
+  const handleFilterChange = (key: string, value: string) => setFilters(prev => ({ ...prev, [key]: value }));
+  const handleResetFilters = () => setFilters({ estado: '', proveedor: '', proyecto: '', fecha_desde: '', fecha_hasta: '' });
+  const activeFilterCount = Object.values(filters).filter(v => v !== '').length;
+
   const handlePreviewOC = async (id: number) => {
     setLoadingOc(true);
     try {
@@ -53,6 +62,37 @@ export default function SolicitudCotizacionTab() {
     setInitialSolicitudId(solId);
     setShowForm(true);
   };
+
+  const filteredList = React.useMemo(() => {
+    if (!list) return [];
+    let result = (list as any[]).filter((c: any) => mostrarAnuladas || c.estado?.toUpperCase() !== 'ANULADA');
+    if (filters.estado) result = result.filter((c: any) => c.estado === filters.estado);
+    if (filters.proveedor) result = result.filter((c: any) => c.proveedor === filters.proveedor);
+    if (filters.proyecto) result = result.filter((c: any) => c.proyecto_nombre === filters.proyecto);
+    if (filters.fecha_desde) result = result.filter((c: any) => c.created_at && String(c.created_at).slice(0, 10) >= filters.fecha_desde);
+    if (filters.fecha_hasta) result = result.filter((c: any) => c.created_at && String(c.created_at).slice(0, 10) <= filters.fecha_hasta);
+    return result;
+  }, [list, mostrarAnuladas, filters]);
+
+  const filterFields: FilterField[] = React.useMemo(() => {
+    const proveedores = Array.from(new Set((list || []).map((c: any) => c.proveedor).filter(Boolean))) as string[];
+    const proyectos = Array.from(new Set((list || []).map((c: any) => c.proyecto_nombre).filter(Boolean))) as string[];
+    return [
+      {
+        key: 'estado', label: 'Estado', type: 'select',
+        options: [
+          { value: 'Borrador', label: 'Borrador' },
+          { value: 'Enviada', label: 'Enviada' },
+          { value: 'Respondida', label: 'Respondida' },
+          { value: 'Anulada', label: 'Anulada' },
+        ]
+      },
+      { key: 'proveedor', label: 'Proveedor', type: 'select', options: proveedores.map(p => ({ value: p, label: p })) },
+      { key: 'proyecto', label: 'Proyecto', type: 'select', options: proyectos.map(p => ({ value: p, label: p })) },
+      { key: 'fecha_desde', label: 'Fecha desde', type: 'date' },
+      { key: 'fecha_hasta', label: 'Fecha hasta', type: 'date' },
+    ];
+  }, [list]);
 
   // Auto-open form when coming from dashboard with solicitud_id param
   useEffect(() => {
@@ -152,43 +192,43 @@ export default function SolicitudCotizacionTab() {
       render: (row: any) => (
         <div className="flex gap-1">
           <button onClick={(e) => { e.stopPropagation(); setDetailId(row.id); }}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600" title="Ver detalle">
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer" title="Ver detalle">
             <Eye size={14} />
           </button>
           <button onClick={(e) => { e.stopPropagation(); descargarSolicitudCotizacionPdf(row.id); }}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600" title="Descargar PDF">
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600 cursor-pointer" title="Descargar PDF">
             <FileDown size={14} />
           </button>
           {row.estado?.toUpperCase() === 'ENVIADA' && (
             <button onClick={(e) => { e.stopPropagation(); handleOpenImport(row.id); }}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600" title="Cargar respuesta del vendedor">
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 cursor-pointer" title="Cargar respuesta del vendedor">
               <Upload size={14} />
             </button>
           )}
           {row.estado?.toUpperCase() === 'RESPONDIDA' && !row.orden_id && (
             <button onClick={(e) => { e.stopPropagation(); setCrearOCFromSC(row.id); }}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600" title="Crear Orden de Compra">
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 cursor-pointer" title="Crear Orden de Compra">
               <ShoppingCart size={14} />
             </button>
           )}
           {row.estado?.toUpperCase() === 'RESPONDIDA' && row.orden_id && (
             <button onClick={(e) => { e.stopPropagation(); handlePreviewOC(row.orden_id); }}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600" title="Ver Orden de Compra">
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600 cursor-pointer" title="Ver Orden de Compra">
               <FileText size={14} />
             </button>
           )}
           {row.estado?.toUpperCase() === 'BORRADOR' && (
             <>
               <button onClick={(e) => { e.stopPropagation(); handleEstado(row.id, 'Enviada'); }}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600" title="Marcar como Enviada">
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600 cursor-pointer" title="Marcar como Enviada">
                 <Send size={14} />
               </button>
               <button onClick={(e) => handleAnular(row.id, e)}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500" title="Anular">
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 cursor-pointer" title="Anular">
                 <Ban size={14} />
               </button>
               <button onClick={(e) => handleDelete(row.id, e)}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500" title="Eliminar">
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 cursor-pointer" title="Eliminar">
                 <Trash2 size={14} />
               </button>
             </>
@@ -207,7 +247,7 @@ export default function SolicitudCotizacionTab() {
           </p>
         </div>
         <button onClick={() => handleOpenForm()}
-          className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 active:scale-[0.98]">
+          className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 active:scale-[0.98] cursor-pointer">
           <Plus size={18} />
           Nueva Solicitud de Cotización
         </button>
@@ -274,7 +314,7 @@ export default function SolicitudCotizacionTab() {
                     <div className="mt-3 text-right">
                       <button 
                         onClick={() => handleOpenForm(String(sol.id))}
-                        className="inline-flex items-center gap-1.5 rounded-md bg-amber-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-amber-600 active:scale-95 transition-all"
+                        className="inline-flex items-center gap-1.5 rounded-md bg-amber-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-amber-600 active:scale-95 transition-all cursor-pointer"
                       >
                         <Send size={12} />
                         Crear Cotización
@@ -312,17 +352,31 @@ export default function SolicitudCotizacionTab() {
         ))}
       </div>
 
+      {/* Filters */}
+      <FilterPanel
+        fields={filterFields}
+        values={filters}
+        onChange={handleFilterChange}
+        onReset={handleResetFilters}
+        activeCount={activeFilterCount}
+      />
+
       {/* Table */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-[#111827]/40 dark:border dark:border-slate-800">
-          <div className="flex justify-end mb-3">
+          <div className="flex justify-between mb-3">
+            {activeFilterCount > 0 ? (
+              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-600">
+                {filteredList.length} resultado{filteredList.length !== 1 ? 's' : ''} con filtros aplicados
+              </p>
+            ) : <span />}
             <button
               onClick={() => setMostrarAnuladas(v => !v)}
               className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
                 mostrarAnuladas
                   ? 'border-red-300 bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
                   : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
-              }`}
+              } cursor-pointer`}
             >
               <span className={`inline-block w-2 h-2 rounded-full ${mostrarAnuladas ? 'bg-red-500' : 'bg-slate-300'}`} />
               {mostrarAnuladas ? 'Ocultar Anuladas' : 'Mostrar Anuladas'}
@@ -330,7 +384,7 @@ export default function SolicitudCotizacionTab() {
           </div>
           <DataTable
             columns={columns}
-            data={(list || []).filter((c: any) => mostrarAnuladas || c.estado?.toUpperCase() !== 'ANULADA')}
+            data={filteredList}
             loading={loading}
             searchable
             searchPlaceholder="Buscar por proveedor, proyecto..."

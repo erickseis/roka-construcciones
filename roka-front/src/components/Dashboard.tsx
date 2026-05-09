@@ -111,7 +111,7 @@ export default function Dashboard() {
             >
               <div className="mb-6 flex items-center justify-between">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">Solicitud de Materiales</h3>
-                <button className="text-[10px] font-bold uppercase tracking-wider text-amber-600 hover:underline dark:text-amber-500">
+                <button className="text-[10px] font-bold uppercase tracking-wider text-amber-600 hover:underline dark:text-amber-500 cursor-pointer">
                   Ver Todo
                 </button>
               </div>

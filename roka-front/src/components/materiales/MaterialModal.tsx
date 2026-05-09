@@ -91,7 +91,7 @@ export default function MaterialModal({ isOpen, onClose, onSave, material, unida
           <h2 className="text-xl font-black text-slate-900 dark:text-slate-50">
             {material ? 'Editar Material' : 'Nuevo Material'}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
             <X size={24} />
           </button>
         </div>
@@ -114,7 +114,7 @@ export default function MaterialModal({ isOpen, onClose, onSave, material, unida
                 <button 
                   type="button"
                   onClick={() => setIsCategoriaModalOpen(true)}
-                  className="text-[10px] font-bold text-amber-600 hover:text-amber-700 hover:underline"
+                  className="text-[10px] font-bold text-amber-600 hover:text-amber-700 hover:underline cursor-pointer"
                 >
                   + Nueva
                 </button>
@@ -207,14 +207,14 @@ export default function MaterialModal({ isOpen, onClose, onSave, material, unida
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="rounded-xl px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-2 text-sm font-black text-white shadow-lg shadow-amber-500/30 transition-all hover:bg-amber-600 active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-2 text-sm font-black text-white shadow-lg shadow-amber-500/30 transition-all hover:bg-amber-600 active:scale-95 disabled:opacity-50 cursor-pointer"
             >
               <Save size={18} />
               {isSubmitting ? 'Guardando...' : 'Guardar Material'}

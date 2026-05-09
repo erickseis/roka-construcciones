@@ -151,14 +151,14 @@ export default function RolesTab() {
               ${incluirInactivos
                 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                 : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'}
-            `}
+             cursor-pointer`}
           >
             {incluirInactivos ? <Eye size={14} /> : <EyeOff size={14} />}
             {incluirInactivos ? 'Ocultar Inactivos' : 'Ver Inactivos'}
           </button>
           
           <button onClick={openCreate}
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 hover:scale-105 active:scale-95 transition-all">
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 hover:scale-105 active:scale-95 transition-all cursor-pointer">
             <Plus size={20} />
           </button>
         </div>
@@ -190,15 +190,15 @@ export default function RolesTab() {
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
                     {isInactive ? (
                       <button onClick={(e) => { e.stopPropagation(); handleReactivate(role.id); }}
-                        className="rounded-lg p-1.5 bg-white shadow-sm border border-slate-100 text-emerald-500 hover:bg-emerald-50 dark:bg-slate-800 dark:border-slate-700 dark:text-emerald-400" title="Reactivar">
+                        className="rounded-lg p-1.5 bg-white shadow-sm border border-slate-100 text-emerald-500 hover:bg-emerald-50 dark:bg-slate-800 dark:border-slate-700 dark:text-emerald-400 cursor-pointer" title="Reactivar">
                         <RotateCcw size={14} />
                       </button>
                     ) : (
                       <>
                         <button onClick={(e) => { e.stopPropagation(); openEdit(role); }}
-                          className="rounded-lg p-1.5 bg-white shadow-sm border border-slate-100 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-blue-400"><Pencil size={14} /></button>
+                          className="rounded-lg p-1.5 bg-white shadow-sm border border-slate-100 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-blue-400 cursor-pointer"><Pencil size={14} /></button>
                         <button onClick={(e) => { e.stopPropagation(); handleDeleteRole(role); }}
-                          className="rounded-lg p-1.5 bg-white shadow-sm border border-slate-100 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-red-400"><Trash2 size={14} /></button>
+                          className="rounded-lg p-1.5 bg-white shadow-sm border border-slate-100 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-red-400 cursor-pointer"><Trash2 size={14} /></button>
                       </>
                     )}
                   </div>
@@ -296,9 +296,9 @@ export default function RolesTab() {
             className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100" />
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setShowForm(false)}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">Cancelar</button>
+              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer">Cancelar</button>
             <button type="submit" disabled={submitting}
-              className="rounded-lg bg-emerald-600 px-6 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60">
+              className="rounded-lg bg-emerald-600 px-6 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60 cursor-pointer">
               {submitting ? 'Guardando...' : editingRole ? 'Guardar Cambios' : 'Crear Rol'}
             </button>
           </div>
@@ -331,9 +331,9 @@ export default function RolesTab() {
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setMigrationModal(null)}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">Cancelar</button>
+              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer">Cancelar</button>
             <button disabled={!migrarAId || submitting} onClick={handleConfirmMigration}
-              className="flex items-center gap-2 rounded-lg bg-red-500 px-6 py-2 text-sm font-bold text-white hover:bg-red-600 disabled:opacity-60">
+              className="flex items-center gap-2 rounded-lg bg-red-500 px-6 py-2 text-sm font-bold text-white hover:bg-red-600 disabled:opacity-60 cursor-pointer">
               {submitting ? 'Procesando...' : 'Migrar y Desactivar'}
             </button>
           </div>

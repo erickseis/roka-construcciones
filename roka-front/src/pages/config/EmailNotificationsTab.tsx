@@ -244,7 +244,7 @@ export default function EmailNotificationsTab() {
                       <button
                         type="button"
                         onClick={() => toggleShowSecret(key)}
-                        className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                        className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                       >
                         {show ? <EyeOff size={14} /> : <Eye size={14} />}
                       </button>
@@ -258,7 +258,7 @@ export default function EmailNotificationsTab() {
               <button
                 onClick={handleSaveConfig}
                 disabled={savingConfig}
-                className="flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-50"
+                className="flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-50 cursor-pointer"
               >
                 <Settings2 size={14} />
                 {savingConfig ? 'Guardando...' : 'Guardar configuración'}
@@ -284,7 +284,7 @@ export default function EmailNotificationsTab() {
                 <button
                   onClick={handleTest}
                   disabled={testLoading || !testEmail}
-                  className="flex items-center gap-2 rounded-lg bg-slate-700 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-slate-600"
+                  className="flex items-center gap-2 rounded-lg bg-slate-700 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-slate-600 cursor-pointer"
                 >
                   <Send size={14} />
                   {testLoading ? 'Enviando...' : 'Probar'}
@@ -381,7 +381,7 @@ export default function EmailNotificationsTab() {
           </div>
           <button
             onClick={loadLogs}
-            className="flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+            className="flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer"
           >
             <RefreshCw size={12} className={loadingLogs ? 'animate-spin' : ''} />
             Actualizar
@@ -444,14 +444,14 @@ export default function EmailNotificationsTab() {
                   <button
                     disabled={currentPage === 1}
                     onClick={() => setCurrentPage(p => p - 1)}
-                    className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-30 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+                    className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-30 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
                   >
                     Anterior
                   </button>
                   <button
                     disabled={currentPage === totalPages}
                     onClick={() => setCurrentPage(p => p + 1)}
-                    className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-30 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+                    className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-30 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
                   >
                     Siguiente
                   </button>
