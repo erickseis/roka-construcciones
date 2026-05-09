@@ -7,7 +7,7 @@ const openai = new OpenAI({
   baseURL: process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1',
 });
 
-const BASE_SYSTEM_PROMPT = `Eres Roka AI, asistente virtual del sistema de gestion de compras para construccion ROKA.
+const BASE_SYSTEM_PROMPT = `Eres RokAI, asistente virtual del sistema de gestion de compras para construccion ROKA.
 
 El sistema ROKA gestiona el ciclo de compras y control presupuestario.
 
@@ -61,7 +61,7 @@ Si necesitas informacion mas detallada de algun proyecto (lineas de compra, prov
   } else if (msg.includes('tiempo') || msg.includes('conversion') || msg.includes('tarda')) {
     return `Nuestra eficiencia operativa indica que el **tiempo promedio de conversion** (desde solicitud hasta orden de compra) es de **${stats.promedio_conversion} dias**.`;
   } else if (msg.includes('hola') || msg.includes('buenos') || msg.includes('asistente')) {
-    return `Hola! Soy Roka AI. Puedo asistirte hoy con informacion sobre las ${stats.pendientes} solicitudes pendientes, el presupuesto ejecutado ($${stats.total_gastado.toLocaleString('es-ES')}) o el estado de tus proyectos. En que puedo ayudarte?`;
+    return `Hola! Soy RokAI. Puedo asistirte hoy con informacion sobre las ${stats.pendientes} solicitudes pendientes, el presupuesto ejecutado ($${stats.total_gastado.toLocaleString('es-ES')}) o el estado de tus proyectos. En que puedo ayudarte?`;
   } else {
     return `Entiendo su consulta. Segun los datos del sistema, tenemos ${stats.pendientes} solicitudes pendientes y una inversion total de $${stats.total_gastado.toLocaleString('es-ES')}. Puedo darle mas detalles si lo desea.`;
   }
@@ -105,10 +105,10 @@ export async function getChatResponse(message: string, userId: number | null, ro
 
       const presupuestosList = stats.presupuestos.length > 0
         ? stats.presupuestos
-            .map((p: any) =>
-              `- ${p.proyecto_nombre}: Total $${Number(p.monto_total).toLocaleString('es-ES')}, Comprometido $${Number(p.monto_comprometido).toLocaleString('es-ES')} (${p.porcentaje_uso}%)`
-            )
-            .join('\n')
+          .map((p: any) =>
+            `- ${p.proyecto_nombre}: Total $${Number(p.monto_total).toLocaleString('es-ES')}, Comprometido $${Number(p.monto_comprometido).toLocaleString('es-ES')} (${p.porcentaje_uso}%)`
+          )
+          .join('\n')
         : 'No disponible para su rol';
 
       const alertasList =
@@ -132,7 +132,7 @@ export async function getChatResponse(message: string, userId: number | null, ro
       if (!userPermisos.includes('notificaciones.view')) filtrosPorRol.push('- NOTIFICACIONES: NO visible para este rol');
 
       const contextMessage = `
-Eres Roka AI, asistente virtual del sistema de gestion de compras para construccion ROKA.
+Eres RokAI, asistente virtual del sistema de gestion de compras para construccion ROKA.
 
 DATOS ACTUALES DEL SISTEMA (${new Date().toLocaleDateString('es-CL')}):
 

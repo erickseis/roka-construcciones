@@ -445,3 +445,33 @@ export const enviarSCProveedor = (id: number) =>
 
 export const enviarOCProveedor = (id: number) =>
   fetchApi<any>(`/ordenes/${id}/enviar-proveedor`, { method: 'POST' });
+
+// ---- Alertas de Fecha de Entrega ----
+export interface AlertaEmailConfig {
+  id: number;
+  habilitada: boolean;
+  umbral_tipo: 'horas' | 'dias';
+  umbral_valor: number;
+  recordatorios_habilitados: boolean;
+  recordatorios_cantidad: number;
+  recordatorios_frecuencia_hs: number;
+  destinatarios_usuario_ids: number[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UsuarioAlerta {
+  id: number;
+  nombre: string;
+  apellido: string;
+  correo: string;
+}
+
+export const getEmailAlertasConfig = () =>
+  fetchApi<AlertaEmailConfig>('/config/email/alertas');
+
+export const updateEmailAlertasConfig = (data: Partial<AlertaEmailConfig>) =>
+  fetchApi<AlertaEmailConfig>('/config/email/alertas', { method: 'PUT', body: JSON.stringify(data) });
+
+export const getUsuariosAlertas = () =>
+  fetchApi<UsuarioAlerta[]>('/config/email/alertas/usuarios');

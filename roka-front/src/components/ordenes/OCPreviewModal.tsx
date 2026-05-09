@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, Printer } from 'lucide-react';
+import { X, Printer, MailCheck } from 'lucide-react';
 import { formatCLP } from '@/lib/utils';
+import { enviarOCProveedor } from '@/lib/api';
+import Swal from 'sweetalert2';
+import AuditTrailBadge from '../ui/AuditTrailBadge';
 
 const EMPRESA = {
   nombre: 'Constructora Roka SpA',
@@ -345,11 +348,46 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
 
 const OCPreviewModal: React.FC<OCPreviewModalProps> = ({ isOpen, onClose, orden }) => {
   const [atencion, setAtencion] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
     setAtencion(orden?.atencion_a || orden?.proveedor_contacto_nombre || '');
   }, [isOpen, orden]);
+
+  const handleEnviarProveedor = async () => {
+    if (!orden?.id) return;
+    const result = await Swal.fire({
+      title: '¿Enviar OC al proveedor?',
+      html: `Se enviará la Orden de Compra <strong>${orden.folio || `OC-${String(orden.id).padStart(3, '0')}`}</strong> por correo electrónico al proveedor <strong>${orden.proveedor}</strong>.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#f59e0b',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, enviar',
+      cancelButtonText: 'Cancelar',
+    });
+    if (!result.isConfirmed) return;
+    setSendingEmail(true);
+    try {
+      const res = await enviarOCProveedor(orden.id);
+      await Swal.fire({
+        title: '¡Email enviado!',
+        text: `Orden de Compra enviada a ${res.enviado_a}`,
+        icon: 'success',
+        confirmButtonColor: '#f59e0b',
+      });
+    } catch (err: any) {
+      await Swal.fire({
+        title: 'Error al enviar',
+        text: err.message || 'No se pudo enviar el email',
+        icon: 'error',
+        confirmButtonColor: '#64748b',
+      });
+    } finally {
+      setSendingEmail(false);
+    }
+  };
 
   const handlePrint = () => {
     const apiBase = import.meta.env.VITE_API_URL + '/roka/api';
@@ -382,6 +420,17 @@ const OCPreviewModal: React.FC<OCPreviewModalProps> = ({ isOpen, onClose, orden 
             <p className="text-xs text-slate-500">
               {orden.folio || `OC-${String(orden.id).padStart(6, '0')}`} | {orden.proveedor} | {orden.proyecto_nombre}
             </p>
+            {/* Audit Trail - Estado de entrega */}
+            {orden.estado_entrega && orden.estado_entrega !== 'Pendiente' && (
+              <div className="mt-1">
+                <AuditTrailBadge
+                  label="Entrega actualizada por"
+                  nombre={orden.entrega_updated_by_nombre}
+                  fecha={orden.entrega_updated_at}
+                  icon="entrega"
+                />
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
@@ -393,6 +442,15 @@ const OCPreviewModal: React.FC<OCPreviewModalProps> = ({ isOpen, onClose, orden 
                 className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-amber-400 w-48"
               />
             </div>
+            <button
+              onClick={handleEnviarProveedor}
+              disabled={sendingEmail}
+              title="Enviar OC al proveedor por email"
+              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-md hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            >
+              <MailCheck size={15} />
+              {sendingEmail ? 'Enviando...' : 'Enviar a Proveedor'}
+            </button>
             <button
               onClick={handlePrint}
               className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white shadow-md hover:bg-amber-600 transition-colors"

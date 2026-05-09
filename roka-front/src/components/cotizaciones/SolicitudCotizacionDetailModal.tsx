@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { StatusBadge } from '../ui/StatusBadge';
 import FlowStepper from '../ui/FlowStepper';
-import { getSolicitudCotizacion, changeSolicitudCotizacionEstado, deleteSolicitudCotizacion, descargarSolicitudCotizacionPdf, getOrden } from '@/lib/api';
+import AuditTrailBadge from '../ui/AuditTrailBadge';
+import { getSolicitudCotizacion, changeSolicitudCotizacionEstado, deleteSolicitudCotizacion, descargarSolicitudCotizacionPdf, getOrden, enviarSCProveedor } from '@/lib/api';
 import { formatCLP } from '@/lib/utils';
-import { Send, Trash2, FileDown, Upload, ShoppingCart, FileText } from 'lucide-react';
+import { Send, Trash2, FileDown, Upload, ShoppingCart, FileText, MailCheck, Ban } from 'lucide-react';
 import ImportarRespuestaSCModal from './ImportarRespuestaSCModal';
 import { CrearOCModal } from '../ordenes/CrearOCModal';
 import OCPreviewModal from '../ordenes/OCPreviewModal';
@@ -15,6 +16,7 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
   const [showImport, setShowImport] = useState(false);
   const [showCrearOC, setShowCrearOC] = useState(false);
   const [ocPreview, setOcPreview] = useState<any | null>(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   const handleVerOC = async (ordenId: number) => {
     try {
@@ -60,6 +62,40 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
     }
   };
 
+  const handleEnviarProveedor = async () => {
+    if (!id || !data) return;
+    const result = await Swal.fire({
+      title: '¿Enviar SC al proveedor?',
+      html: `Se enviará la solicitud de cotización <strong>SC-${String(id).padStart(3, '0')}</strong> por correo electrónico al proveedor <strong>${data.proveedor}</strong>.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#f59e0b',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, enviar',
+      cancelButtonText: 'Cancelar',
+    });
+    if (!result.isConfirmed) return;
+    setSendingEmail(true);
+    try {
+      const res = await enviarSCProveedor(id);
+      await Swal.fire({
+        title: '¡Email enviado!',
+        text: `Solicitud de cotización enviada a ${res.enviado_a}`,
+        icon: 'success',
+        confirmButtonColor: '#f59e0b',
+      });
+    } catch (err: any) {
+      await Swal.fire({
+        title: 'Error al enviar',
+        text: err.message || 'No se pudo enviar el email',
+        icon: 'error',
+        confirmButtonColor: '#64748b',
+      });
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!id) return;
     if (!confirm('¿Eliminar esta solicitud de cotización?')) return;
@@ -82,6 +118,34 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
         {data && (
           <div className="space-y-4">
             <FlowStepper currentStep={1} estado={data.estado} tipo="solicitud_cotizacion" />
+
+            {/* Audit Trail - Trazabilidad */}
+            <div className="flex flex-wrap gap-3">
+              {data.estado === 'Enviada' && (
+                <AuditTrailBadge
+                  label="Enviado por"
+                  nombre={data.enviado_by_nombre}
+                  fecha={data.enviado_at}
+                  icon="enviado"
+                />
+              )}
+              {data.estado === 'Respondida' && (
+                <AuditTrailBadge
+                  label="Respondido por"
+                  nombre={data.respondido_by_nombre}
+                  fecha={data.respondido_at}
+                  icon="respondido"
+                />
+              )}
+              {data.estado === 'Anulada' && (
+                <AuditTrailBadge
+                  label="Anulada por"
+                  nombre={data.rechazado_by_nombre}
+                  fecha={data.rechazado_at}
+                  icon="rechazado"
+                />
+              )}
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-lg bg-slate-50 p-3">
@@ -129,8 +193,8 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
                           <td className="px-3 py-2 text-slate-500">{item.unidad}</td>
                           {item.precio_unitario != null && (
                             <>
-                              <td className="px-3 py-2 text-right font-mono text-slate-800">{formatCLP(Number(item.precio_unitario))}</td>
-                              <td className="px-3 py-2 text-right font-mono font-bold text-slate-800">{formatCLP(Number(item.subtotal || item.precio_unitario * item.cantidad_requerida))}</td>
+                              <td className="px-3 py-2 text-right font-mono text-slate-800 dark:text-slate-200">{formatCLP(Number(item.precio_unitario))}</td>
+                              <td className="px-3 py-2 text-right font-mono font-bold text-slate-800 dark:text-slate-100">{formatCLP(Number(item.subtotal || item.precio_unitario * item.cantidad_requerida))}</td>
                             </>
                           )}
                         </tr>
@@ -148,11 +212,25 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
                   className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100">
                   <FileDown size={14} /> Descargar PDF
                 </button>
+                <button
+                  onClick={handleEnviarProveedor}
+                  disabled={sendingEmail}
+                  title="Enviar solicitud de cotización al proveedor por email"
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
+                >
+                  <MailCheck size={14} /> {sendingEmail ? 'Enviando...' : 'Enviar a Proveedor'}
+                </button>
                 {(data.estado === 'Borrador') && (
-                  <button onClick={handleDelete}
-                    className="rounded-lg px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-50">
-                    <Trash2 size={14} className="inline mr-1" />Eliminar
-                  </button>
+                  <>
+                    <button onClick={handleAnular}
+                      className="rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-100">
+                      <Ban size={14} className="inline mr-1" />Anular
+                    </button>
+                    <button onClick={handleDelete}
+                      className="rounded-lg px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-50">
+                      <Trash2 size={14} className="inline mr-1" />Eliminar
+                    </button>
+                  </>
                 )}
               </div>
               <div className="flex gap-2">
@@ -163,17 +241,12 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
                   </button>
                 )}
                 {data.estado === 'Enviada' && (
-                  <button onClick={() => handleEstado('Respondida')}
-                    className="flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-xs font-bold text-white hover:bg-sky-600">
-                    Marcar como Respondida
-                  </button>
-                )}
-                {data.estado?.toUpperCase() === 'ENVIADA' && (
                   <button onClick={() => setShowImport(true)}
                     className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">
                     <Upload size={14} /> Cargar Respuesta
                   </button>
                 )}
+
 
                 {data.estado?.toUpperCase() === 'RESPONDIDA' && !data.orden_id && (
                   <button onClick={() => setShowCrearOC(true)}

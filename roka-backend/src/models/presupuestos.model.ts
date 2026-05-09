@@ -6,11 +6,13 @@ const PRESUPUESTO_SELECT = `
     pp.*,
     p.nombre AS proyecto_nombre,
     p.estado AS proyecto_estado,
+    NULLIF(CONCAT(u_cre.nombre, ' ', u_cre.apellido), ' ') AS created_by_nombre,
     COALESCE(oc_agg.gasto_total, 0)::numeric AS gasto_total,
     COALESCE((COALESCE(oc_agg.gasto_total, 0) / NULLIF(pp.monto_total, 0)) * 100, 0)::numeric(8,2) AS porcentaje_uso,
     (pp.monto_total - COALESCE(oc_agg.gasto_total, 0))::numeric AS monto_disponible
   FROM presupuestos_proyecto pp
   JOIN proyectos p ON p.id = pp.proyecto_id
+  LEFT JOIN usuarios u_cre ON u_cre.id = pp.created_by_usuario_id
   LEFT JOIN (
     SELECT p2.id AS proyecto_id,
            COALESCE(SUM(oc.total), 0) AS gasto_total
@@ -20,6 +22,7 @@ const PRESUPUESTO_SELECT = `
     LEFT JOIN ordenes_compra oc ON oc.solicitud_cotizacion_id = sc.id
     GROUP BY p2.id
   ) oc_agg ON oc_agg.proyecto_id = p.id
+  WHERE 1=1
 `;
 
 const CATEGORIA_SELECT = `
@@ -68,6 +71,15 @@ export async function getPresupuestoById(id: number): Promise<PresupuestoProyect
   const db = getDb();
   const { rows: [row] } = await db.query('SELECT * FROM presupuestos_proyecto WHERE id = $1', [id]);
   return row || null;
+}
+
+export async function getPresupuestoByIdEnriched(id: number): Promise<PresupuestoProyecto | null> {
+  const db = getDb();
+  const { rows: [presupuesto] } = await db.query(
+    `${PRESUPUESTO_SELECT} AND pp.id = $1`,
+    [id]
+  );
+  return presupuesto || null;
 }
 
 export async function getCategoriaById(id: number): Promise<PresupuestoCategoria | null> {
@@ -120,13 +132,13 @@ export async function checkExistingPresupuesto(proyectoId: number, db?: Queryabl
   return rows[0]?.id || null;
 }
 
-export async function createPresupuesto(data: CreatePresupuestoInput, db?: Queryable): Promise<PresupuestoProyecto> {
+export async function createPresupuesto(data: CreatePresupuestoInput & { created_by_usuario_id?: number | null }, db?: Queryable): Promise<PresupuestoProyecto> {
   const conn = getDb(db);
   const { rows: [presupuesto] } = await conn.query(
-    `INSERT INTO presupuestos_proyecto (proyecto_id, monto_total, umbral_alerta, estado)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO presupuestos_proyecto (proyecto_id, monto_total, umbral_alerta, estado, created_by_usuario_id)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING *`,
-    [data.proyecto_id, data.monto_total, data.umbral_alerta || 80, data.estado || 'Vigente']
+    [data.proyecto_id, data.monto_total, data.umbral_alerta || 80, data.estado || 'Vigente', data.created_by_usuario_id || null]
   );
 
   return presupuesto;

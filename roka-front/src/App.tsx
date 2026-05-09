@@ -15,9 +15,11 @@ import MaterialesPage from './components/materiales/MaterialesPage';
 import ProveedoresPage from './components/proveedores/ProveedoresPage';
 import ProyectosPage from './components/proyectos/ProyectosPage';
 import PresupuestosPage from './components/presupuestos/PresupuestosPage';
+import SinAccesoPage from './pages/SinAccesoPage';
 
 function FirstAvailableRedirect() {
-  const { permissions } = usePermissions();
+  const { permissions, loading } = usePermissions();
+  if (loading) return <div className="flex h-screen items-center justify-center"><div className="text-sm text-slate-400">Cargando...</div></div>;
   return <Navigate to={getFirstAvailableRoute(permissions)} replace />;
 }
 
@@ -43,6 +45,9 @@ export default function App() {
                 <Route path="/proveedores" element={<ProtectedRoute permission="proveedores.view"><ProveedoresPage /></ProtectedRoute>} />
                 <Route path="/config" element={<ProtectedRoute permission="config.manage"><ConfigPage /></ProtectedRoute>} />
               </Route>
+
+              {/* Sin acceso */}
+              {/* <Route path="/sin-acceso" element={<SinAccesoPage />} /> */}
 
               {/* Fallback */}
               <Route path="*" element={<FirstAvailableRedirect />} />

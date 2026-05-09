@@ -13,6 +13,16 @@ export interface SolicitudRow {
   total_items?: number;
   presupuesto_categoria_id?: number | null;
   created_by_usuario_id?: number | null;
+  // Audit trail — sección 5
+  aprobado_by_usuario_id?: number | null;
+  aprobado_at?: Date | string | null;
+  rechazado_by_usuario_id?: number | null;
+  rechazado_at?: Date | string | null;
+  estado_changed_by_usuario_id?: number | null;
+  estado_changed_at?: Date | string | null;
+  aprobado_by_nombre?: string | null;
+  rechazado_by_nombre?: string | null;
+  estado_changed_by_nombre?: string | null;
 }
 
 export interface SolicitudItemRow {
@@ -88,9 +98,15 @@ export async function getAllSolicitudes(
 export async function getSolicitudById(id: number, db?: Queryable): Promise<SolicitudRow | null> {
   const conn = getDb(db);
   const { rows } = await conn.query(
-    `SELECT sm.*, p.nombre AS proyecto_nombre
+    `SELECT sm.*, p.nombre AS proyecto_nombre,
+            NULLIF(CONCAT(u_apr.nombre, ' ', u_apr.apellido), ' ') AS aprobado_by_nombre,
+            NULLIF(CONCAT(u_rec.nombre, ' ', u_rec.apellido), ' ') AS rechazado_by_nombre,
+            NULLIF(CONCAT(u_chg.nombre, ' ', u_chg.apellido), ' ') AS estado_changed_by_nombre
      FROM solicitudes_material sm
      JOIN proyectos p ON p.id = sm.proyecto_id
+     LEFT JOIN usuarios u_apr ON u_apr.id = sm.aprobado_by_usuario_id
+     LEFT JOIN usuarios u_rec ON u_rec.id = sm.rechazado_by_usuario_id
+     LEFT JOIN usuarios u_chg ON u_chg.id = sm.estado_changed_by_usuario_id
      WHERE sm.id = $1`,
     [id]
   );
@@ -136,17 +152,25 @@ export async function createSolicitudItem(data: CreateSolicitudItemData, db?: Qu
   return rows[0];
 }
 
-export async function updateSolicitudEstado(id: number, estado: string, db?: Queryable): Promise<SolicitudRow | null> {
+export async function updateSolicitudEstado(id: number, estado: string, changedByUsuarioId: number | null, db?: Queryable): Promise<SolicitudRow | null> {
   const conn = getDb(db);
+  
+  // Build dynamic SET clauses based on the new estado
+  let setClauses = `estado = $1, updated_at = NOW(), estado_changed_by_usuario_id = $3, estado_changed_at = NOW()`;
+  const params: any[] = [estado, id, changedByUsuarioId];
+  
+  if (estado === 'Aprobado') {
+    setClauses += `, aprobado_by_usuario_id = $3, aprobado_at = NOW()`;
+  }
+  
   const { rows } = await conn.query(
-    `UPDATE solicitudes_material SET estado = $1, updated_at = NOW()
-     WHERE id = $2 RETURNING *`,
-    [estado, id]
+    `UPDATE solicitudes_material SET ${setClauses} WHERE id = $2 RETURNING *`,
+    params
   );
   return rows[0] || null;
 }
 
-export async function deleteSolicitud(id: number, db?: Queryable): Promise<boolean> {
+export async function deleteSolicitud(id: number, anuladoByUsuarioId?: number | null, db?: Queryable): Promise<boolean> {
   const conn = getDb(db);
   
   // Verificamos el estado actual
@@ -156,10 +180,10 @@ export async function deleteSolicitud(id: number, db?: Queryable): Promise<boole
   const currentEstado = rows[0].estado;
   
   if (currentEstado !== 'Anulada') {
-    // Primer paso: Anular
+    // Primer paso: Anular con trazabilidad
     const { rowCount } = await conn.query(
-      "UPDATE solicitudes_material SET estado = 'Anulada', updated_at = NOW() WHERE id = $1",
-      [id]
+      `UPDATE solicitudes_material SET estado = 'Anulada', updated_at = NOW(), rechazado_by_usuario_id = $2, rechazado_at = NOW(), estado_changed_by_usuario_id = $2, estado_changed_at = NOW() WHERE id = $1`,
+      [id, anuladoByUsuarioId || null]
     );
     return (rowCount ?? 0) > 0;
   } else {

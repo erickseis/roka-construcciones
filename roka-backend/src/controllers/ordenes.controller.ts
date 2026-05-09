@@ -401,7 +401,7 @@ export async function updateEntrega(req: AuthRequest, res: Response) {
       return res.status(400).json({ error: 'Estado de entrega inválido' });
     }
 
-    const updated = await ordenesModel.updateEstadoEntrega(Number(id), estado_entrega);
+    const updated = await ordenesModel.updateEstadoEntrega(Number(id), estado_entrega, req.user?.id || null);
 
     if (!updated) {
       return res.status(404).json({ error: 'Orden de compra no encontrada' });

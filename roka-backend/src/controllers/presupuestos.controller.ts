@@ -48,7 +48,7 @@ export async function create(req: AuthRequest, res: Response) {
     }
 
     const presupuesto = await presupuestosModel.createPresupuesto(
-      { proyecto_id, monto_total, umbral_alerta, estado },
+      { proyecto_id, monto_total, umbral_alerta, estado, created_by_usuario_id: req.user?.id || null },
       client
     );
 
@@ -75,7 +75,9 @@ export async function create(req: AuthRequest, res: Response) {
     }
 
     await client.query('COMMIT');
-    res.status(201).json(presupuesto);
+
+    const enriched = await presupuestosModel.getPresupuestoByIdEnriched(presupuesto.id);
+    res.status(201).json(enriched || presupuesto);
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error al crear presupuesto:', error);

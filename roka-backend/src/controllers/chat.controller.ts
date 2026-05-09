@@ -15,7 +15,7 @@ export async function complete(req: AuthRequest, res: Response) {
     const result = await getChatResponse(message, userId, rolId);
     res.json(result);
   } catch (error) {
-    console.error('Error en el chat de Roka AI:', error);
+    console.error('Error en el chat de RokAI:', error);
     res.status(500).json({ error: 'Error al procesar la consulta del chat' });
   }
 }

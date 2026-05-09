@@ -129,11 +129,16 @@ export async function crearSolicitudConItems(input: CreateSolicitudInput): Promi
 
     await client.query('COMMIT');
 
-    // Notificar a roles de compras sobre la nueva solicitud
+    // Notificar a usuarios con acceso a solicitudes de cotización
     try {
-      const actorId = null; // No hay usuario autenticado en este contexto
+      const actorId = input.created_by_usuario_id || null;
+      const actorName = actorId ? await getActorDisplayName(actorId) : 'El sistema';
+
+      // Destinatarios: usuarios con permiso para ver cotizaciones (módulo SC),
+      // excluyendo al creador
       const recipients = await resolveRecipientUserIds({
-        roleNames: ['Director de Obra', 'Adquisiciones'],
+        permissionCodes: ['cotizaciones.view'],
+        excludeUserId: actorId,
       });
 
       if (recipients.length > 0) {
@@ -149,15 +154,16 @@ export async function crearSolicitudConItems(input: CreateSolicitudInput): Promi
           usuario_destino_id: uid,
           tipo: 'solicitud.creada',
           titulo: 'Nueva solicitud de materiales',
-          mensaje: `Se creó la solicitud ${solicitudFolio} para el proyecto ${proyectoNombre} con ${totalItems} ítem${totalItems > 1 ? 's' : ''}. Solicitante: ${input.solicitante}.`,
+          mensaje: `${actorName} creó la solicitud ${solicitudFolio} para el proyecto ${proyectoNombre} con ${totalItems} ítem${totalItems > 1 ? 's' : ''}. Solicitante: ${input.solicitante}.`,
           entidad_tipo: 'solicitud',
           entidad_id: solicitud.id,
           payload: {
             proyecto_id: input.proyecto_id,
             solicitante: input.solicitante,
             total_items: totalItems,
+            created_by_usuario_id: actorId,
           },
-          enviado_por_usuario_id: null,
+          enviado_por_usuario_id: actorId,
         }));
 
         await createNotifications(notifications);

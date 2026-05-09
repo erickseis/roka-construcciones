@@ -204,6 +204,28 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
 
         return (
           <div className="space-y-4">
+            {/* Warnings de validación post-OCR */}
+            {preview.warnings && preview.warnings.length > 0 && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-4">
+                <div className="flex items-start gap-2">
+                  <span className="text-lg">⚠️</span>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-amber-900 dark:text-amber-200 mb-2">
+                      Advertencias de validación
+                    </p>
+                    <ul className="space-y-1 text-xs text-amber-800 dark:text-amber-300">
+                      {preview.warnings.map((w: string, i: number) => (
+                        <li key={i} className="flex gap-1.5">
+                          <span>•</span>
+                          <span>{w}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Header de Trazabilidad: Proyecto y Proveedor */}
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-xl bg-slate-50 dark:bg-slate-800 p-4 border border-slate-200 dark:border-slate-700">

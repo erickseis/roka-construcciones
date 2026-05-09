@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus, Eye, Send, Trash2, FileDown, Upload, ShoppingCart, FileText } from 'lucide-react';
+import { Plus, Eye, Send, Trash2, FileDown, Upload, ShoppingCart, FileText, Ban } from 'lucide-react';
 import { DataTable } from '../ui/DataTable';
 import { StatusBadge } from '../ui/StatusBadge';
 import { useApi } from '@/hooks/useApi';
@@ -11,10 +11,11 @@ import ImportarRespuestaSCModal from './ImportarRespuestaSCModal';
 import { CrearOCModal } from '../ordenes/CrearOCModal';
 import OCPreviewModal from '../ordenes/OCPreviewModal';
 import { Clock, AlertTriangle } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 const estadoColor: Record<string, string> = {
   Borrador: 'text-slate-500',
-  Enviada: 'text-amber-600',
+  Enviada: 'text-blue-600',
   Respondida: 'text-emerald-600',
   Anulada: 'text-red-600',
 };
@@ -61,6 +62,27 @@ export default function SolicitudCotizacionTab() {
     }
   };
 
+  const handleAnular = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: 'Al anular esta cotización, no podrá ser utilizada en el flujo de compra.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, anular',
+      cancelButtonText: 'Cancelar'
+    });
+    if (result.isConfirmed) {
+      try {
+        await changeSolicitudCotizacionEstado(id, 'Anulada');
+        refetch();
+        refetchPendientes();
+      } catch { alert('Error al anular'); }
+    }
+  };
+
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!confirm('¿Eliminar esta solicitud de cotización?')) return;
@@ -84,18 +106,18 @@ export default function SolicitudCotizacionTab() {
   const columns = [
     {
       key: 'id', header: 'ID', sortable: true,
-      render: (row: any) => <span className="font-mono text-xs font-bold text-amber-600">SC-{String(row.id).padStart(3, '0')}</span>,
+      render: (row: any) => <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400">SC-{String(row.id).padStart(3, '0')}</span>,
     },
     { key: 'proveedor', header: 'Proveedor', sortable: true },
     {
       key: 'solicitud_id', header: 'Solicitud',
-      render: (row: any) => <span className="font-mono text-xs text-slate-500">SOL-{String(row.solicitud_id).padStart(3, '0')}</span>,
+      render: (row: any) => <span className="font-mono text-xs text-slate-500 dark:text-slate-400">SOL-{String(row.solicitud_id).padStart(3, '0')}</span>,
     },
     { key: 'proyecto_nombre', header: 'Proyecto', sortable: true },
     {
       key: 'total_items', header: 'Ítems',
       render: (row: any) => (
-        <span className="font-mono text-sm text-slate-600">{row.total_items ?? '-'}</span>
+        <span className="font-mono text-sm text-slate-600 dark:text-slate-400">{row.total_items ?? '-'}</span>
       ),
     },
     {
@@ -137,6 +159,10 @@ export default function SolicitudCotizacionTab() {
               <button onClick={(e) => { e.stopPropagation(); handleEstado(row.id, 'Enviada'); }}
                 className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600" title="Marcar como Enviada">
                 <Send size={14} />
+              </button>
+              <button onClick={(e) => handleAnular(row.id, e)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500" title="Anular">
+                <Ban size={14} />
               </button>
               <button onClick={(e) => handleDelete(row.id, e)}
                 className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500" title="Eliminar">
@@ -237,10 +263,10 @@ export default function SolicitudCotizacionTab() {
       {/* Stats */}
       <div className="mb-6 grid grid-cols-4 gap-4">
         {[
-          { label: 'Borrador', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'BORRADOR').length || 0, color: 'text-slate-500', toggle: false },
-          { label: 'Enviadas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'ENVIADA').length || 0, color: 'text-emerald-600', toggle: false },
-          { label: 'Respondidas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'RESPONDIDA').length || 0, color: 'text-emerald-600', toggle: false },
-          { label: 'Anuladas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'ANULADA').length || 0, color: 'text-red-600', toggle: true },
+          { label: 'Borrador', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'BORRADOR').length || 0, color: 'text-slate-500 dark:text-slate-400', toggle: false },
+          { label: 'Enviadas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'ENVIADA').length || 0, color: 'text-blue-600 dark:text-blue-400', toggle: false },
+          { label: 'Respondidas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'RESPONDIDA').length || 0, color: 'text-emerald-600 dark:text-emerald-400', toggle: false },
+          { label: 'Anuladas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'ANULADA').length || 0, color: 'text-red-600 dark:text-red-400', toggle: true },
         ].map(stat => (
           <div
             key={stat.label}

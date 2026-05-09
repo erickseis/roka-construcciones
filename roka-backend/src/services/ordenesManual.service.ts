@@ -201,7 +201,7 @@ export async function crearOCManual(input: CrearOCManualInput, usuarioId: number
 
     const recipients = await resolveRecipientUserIds(
       {
-        roleNames: ['Director de Obra', 'Adquisiciones'],
+        permissionCodes: ['ordenes.view'],
         excludeUserId: actorId,
       },
       client

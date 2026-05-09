@@ -6,6 +6,7 @@ import { DataTable } from '../ui/DataTable';
 import { StatusBadge } from '../ui/StatusBadge';
 import { Modal } from '../ui/Modal';
 import FlowStepper from '../ui/FlowStepper';
+import AuditTrailBadge from '../ui/AuditTrailBadge';
 import CreatableSelect from 'react-select/creatable';
 import { useApi } from '@/hooks/useApi';
 import {
@@ -20,6 +21,7 @@ import {
 } from '@/lib/api';
 import { showConfirm, showAlert, showToast } from '@/lib/alerts';
 import { usePermissions } from '@/context/PermissionsContext';
+import { useAuth } from '@/context/AuthContext';
 import MaterialModal from '../materiales/MaterialModal';
 import BulkImportModal from './BulkImportModal';
 import { MaterialInput } from '@/types';
@@ -27,7 +29,9 @@ import { MaterialInput } from '@/types';
 
 export default function SolicitudesPage() {
   const { hasPermission } = usePermissions();
+  const { user } = useAuth();
   const canViewAll = hasPermission('solicitudes.view_all');
+  const userName = user ? `${user.nombre} ${user.apellido}`.trim() : '';
 
   const [showForm, setShowForm] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
@@ -156,7 +160,7 @@ export default function SolicitudesPage() {
       header: 'ID',
       sortable: true,
       render: (row: any) => (
-        <span className="font-mono text-xs font-bold text-amber-600">SOL-{String(row.id).padStart(3, '0')}</span>
+        <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400">SOL-{String(row.id).padStart(3, '0')}</span>
       ),
     },
     { key: 'proyecto_nombre', header: 'Proyecto', sortable: true },
@@ -171,7 +175,7 @@ export default function SolicitudesPage() {
       key: 'total_items',
       header: 'Ítems',
       render: (row: any) => (
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
           {row.total_items}
         </span>
       ),
@@ -352,7 +356,10 @@ export default function SolicitudesPage() {
               </button>
             </div>
             <button
-              onClick={() => setShowForm(true)}
+              onClick={() => {
+                setForm(prev => ({ ...prev, solicitante: userName }));
+                setShowForm(true);
+              }}
               className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 hover:shadow-amber-500/30 active:scale-[0.98]"
             >
               <Plus size={18} />
@@ -366,9 +373,9 @@ export default function SolicitudesPage() {
       {/* Stats Row */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: 'Pendientes por Cotizar', value: solicitudes?.filter((s: any) => s.estado === 'Pendiente').length || 0, color: 'text-amber-600', bg: 'bg-amber-50', iconBg: 'bg-amber-100', icon: <FileText size={18} />, title: 'Solicitudes de materiales que aún no tienen cotizaciones enviadas a proveedores. Necesitan crear solicitudes de cotización.' },
-          { label: 'En Cotización', value: solicitudes?.filter((s: any) => s.estado === 'Cotizando').length || 0, color: 'text-blue-600', bg: 'bg-blue-50', iconBg: 'bg-blue-100', icon: <Send size={18} />, title: 'Solicitudes con cotizaciones ya enviadas a proveedores, esperando respuesta de precios' },
-          { label: 'Aprobadas / Con OC', value: solicitudes?.filter((s: any) => s.estado === 'Aprobado').length || 0, color: 'text-emerald-600', bg: 'bg-emerald-50', iconBg: 'bg-emerald-100', icon: <PackageCheck size={18} />, title: 'Solicitudes con cotización aprobada u orden de compra generada' },
+          { label: 'Pendientes por Cotizar', value: solicitudes?.filter((s: any) => s.estado === 'Pendiente').length || 0, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50', iconBg: 'bg-amber-100 dark:bg-amber-900/30', icon: <FileText size={18} />, title: 'Solicitudes de materiales que aún no tienen cotizaciones enviadas a proveedores. Necesitan crear solicitudes de cotización.' },
+          { label: 'En Cotización', value: solicitudes?.filter((s: any) => s.estado === 'Cotizando').length || 0, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50', iconBg: 'bg-blue-100 dark:bg-blue-900/30', icon: <Send size={18} />, title: 'Solicitudes con cotizaciones ya enviadas a proveedores, esperando respuesta de precios' },
+          { label: 'Aprobadas / Con OC', value: solicitudes?.filter((s: any) => s.estado === 'Aprobado').length || 0, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50', iconBg: 'bg-emerald-100 dark:bg-emerald-900/30', icon: <PackageCheck size={18} />, title: 'Solicitudes con cotización aprobada u orden de compra generada' },
         ].map(stat => (
           <div key={stat.label} title={stat.title} className="rounded-xl bg-white p-4 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700">
             <div className="flex items-center justify-between">
@@ -676,6 +683,41 @@ export default function SolicitudesPage() {
         {showDetail && (
           <div className="space-y-4">
             <FlowStepper currentStep={0} estado={showDetail.estado} tipo="solicitud" />
+
+            {/* Audit Trail - Trazabilidad */}
+            <div className="flex flex-wrap gap-3">
+              {showDetail.estado === 'Aprobado' && (
+                <AuditTrailBadge
+                  label="Aprobado por"
+                  nombre={showDetail.aprobado_by_nombre}
+                  fecha={showDetail.aprobado_at}
+                  icon="aprobado"
+                />
+              )}
+              {showDetail.estado === 'Anulada' && (
+                <AuditTrailBadge
+                  label="Anulada por"
+                  nombre={showDetail.rechazado_by_nombre}
+                  fecha={showDetail.rechazado_at}
+                  icon="rechazado"
+                />
+              )}
+              {(showDetail.estado === 'Cotizando' || showDetail.estado === 'Pendiente') && showDetail.estado_changed_by_nombre && (
+                <AuditTrailBadge
+                  label="Estado actualizado por"
+                  nombre={showDetail.estado_changed_by_nombre}
+                  fecha={showDetail.estado_changed_at}
+                  icon="enviado"
+                />
+              )}
+              {showDetail.estado_changed_by_nombre && showDetail.estado !== 'Aprobado' && showDetail.estado !== 'Anulada' && (
+                <AuditTrailBadge
+                  label="Último cambio por"
+                  nombre={showDetail.estado_changed_by_nombre}
+                  fecha={showDetail.estado_changed_at}
+                />
+              )}
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="rounded-lg bg-slate-50 p-3">

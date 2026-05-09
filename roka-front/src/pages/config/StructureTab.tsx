@@ -127,28 +127,33 @@ export default function StructureTab() {
     <div className="grid grid-cols-2 gap-8">
       {/* Departamentos */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h4 className="flex items-center gap-2 text-lg font-bold text-slate-800">
-            <Building2 className="text-amber-500" size={20} />
-            Departamentos
-          </h4>
-          <button onClick={openCreateDept} className="p-1.5 rounded-lg bg-amber-100 text-amber-600 hover:bg-amber-200 transition-colors">
+        <div className="flex items-end justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2 text-amber-500">
+              <Building2 size={16} />
+              <span className="text-[10px] font-bold uppercase tracking-widest">Organización</span>
+            </div>
+            <h4 className="text-xl font-black text-slate-800 dark:text-slate-100">Departamentos</h4>
+          </div>
+          <button onClick={openCreateDept} 
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500 text-white shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all hover:scale-105 active:scale-95">
             <Plus size={18} />
           </button>
         </div>
         <div className="space-y-2">
           {departamentos?.map((d: any) => (
-            <div key={d.id} className="group rounded-xl border border-slate-100 bg-white p-4 shadow-sm hover:border-slate-200 transition-colors">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-bold text-slate-800">{d.nombre}</p>
-                  <p className="text-xs text-slate-500">{d.descripcion || 'Sin descripción'}</p>
+            <div key={d.id} className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-4 shadow-sm hover:border-amber-200 hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-300 dark:bg-[#111827]/40 dark:border-slate-800 dark:hover:border-slate-700">
+              <div className="relative z-10 flex items-start justify-between">
+                <div className="space-y-1">
+                  <p className="font-bold text-slate-800 dark:text-slate-200">{d.nombre}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{d.descripcion || 'Sin descripción adicional.'}</p>
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openEditDept(d)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600"><Pencil size={14} /></button>
-                  <button onClick={() => handleDeleteDept(d)} className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500"><Trash2 size={14} /></button>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
+                  <button onClick={() => openEditDept(d)} className="rounded-lg p-1.5 bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 dark:bg-slate-800 dark:text-slate-500 dark:hover:text-blue-400"><Pencil size={14} /></button>
+                  <button onClick={() => handleDeleteDept(d)} className="rounded-lg p-1.5 bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:bg-slate-800 dark:text-slate-500 dark:hover:text-red-400"><Trash2 size={14} /></button>
                 </div>
               </div>
+              <div className="absolute -bottom-2 -right-2 h-12 w-12 rounded-full bg-amber-500/5 blur-xl group-hover:bg-amber-500/10 transition-colors" />
             </div>
           ))}
         </div>
@@ -156,28 +161,33 @@ export default function StructureTab() {
 
       {/* Cargos */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h4 className="flex items-center gap-2 text-lg font-bold text-slate-800">
-            <Briefcase className="text-blue-500" size={20} />
-            Cargos
-          </h4>
-          <button onClick={openCreateCargo} className="p-1.5 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors">
+        <div className="flex items-end justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2 text-blue-500">
+              <Briefcase size={16} />
+              <span className="text-[10px] font-bold uppercase tracking-widest">Estructura</span>
+            </div>
+            <h4 className="text-xl font-black text-slate-800 dark:text-slate-100">Cargos</h4>
+          </div>
+          <button onClick={openCreateCargo}
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all hover:scale-105 active:scale-95">
             <Plus size={18} />
           </button>
         </div>
         <div className="space-y-2">
           {cargos?.map((c: any) => (
-            <div key={c.id} className="group rounded-xl border border-slate-100 bg-white p-4 shadow-sm hover:border-slate-200 transition-colors">
-              <div className="flex items-center justify-between">
+            <div key={c.id} className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-4 shadow-sm hover:border-blue-200 hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-300 dark:bg-[#111827]/40 dark:border-slate-800 dark:hover:border-slate-700">
+              <div className="relative z-10 flex items-center justify-between">
                 <div>
-                  <p className="font-bold text-slate-800">{c.nombre}</p>
-                  <p className="text-[10px] uppercase font-bold text-slate-400">{c.departamento_nombre}</p>
+                  <p className="font-bold text-slate-800 dark:text-slate-200">{c.nombre}</p>
+                  <p className="text-[10px] uppercase font-black tracking-widest text-blue-500 dark:text-blue-400 mt-0.5">{c.departamento_nombre}</p>
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openEditCargo(c)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600"><Pencil size={14} /></button>
-                  <button onClick={() => handleDeleteCargo(c)} className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500"><Trash2 size={14} /></button>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
+                  <button onClick={() => openEditCargo(c)} className="rounded-lg p-1.5 bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 dark:bg-slate-800 dark:text-slate-500 dark:hover:text-blue-400"><Pencil size={14} /></button>
+                  <button onClick={() => handleDeleteCargo(c)} className="rounded-lg p-1.5 bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:bg-slate-800 dark:text-slate-500 dark:hover:text-red-400"><Trash2 size={14} /></button>
                 </div>
               </div>
+              <div className="absolute -bottom-2 -right-2 h-12 w-12 rounded-full bg-blue-500/5 blur-xl group-hover:bg-blue-500/10 transition-colors" />
             </div>
           ))}
         </div>

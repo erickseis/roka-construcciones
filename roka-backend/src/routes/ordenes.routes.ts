@@ -28,7 +28,7 @@ router.post('/', authMiddleware, requirePermission('ordenes.create'), create);
 router.post('/manual', authMiddleware, requirePermission('ordenes.create'), createManual);
 
 // PATCH /api/ordenes/:id/entrega — Actualizar estado de entrega
-router.patch('/:id/entrega', updateEntrega);
+router.patch('/:id/entrega', authMiddleware, updateEntrega);
 
 // GET /api/ordenes/:id/exportar — Exportar OC como HTML
 router.get('/:id/exportar', exportarHtml);

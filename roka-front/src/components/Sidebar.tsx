@@ -76,7 +76,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
           </div>
           {/* Close button for mobile */}
-          <button 
+          <button
             onClick={onClose}
             className="rounded-lg p-2 text-slate-400 hover:bg-slate-200 lg:hidden dark:hover:bg-slate-800"
           >
@@ -125,22 +125,22 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </p>
             <nav className="space-y-1">
               {secondaryItems.filter(item => hasPermission(item.permission)).map((item) => (
-            <NavLink
-              key={item.label}
-              to={item.to}
-              onClick={onClose}
-              className={({ isActive }) => cn(
-                "flex items-center gap-3 rounded-lg px-4 py-2.5 transition-all duration-200",
-                isActive
-                  ? "border border-slate-200 bg-white font-semibold text-amber-600 shadow-sm dark:border-[#1e293b] dark:bg-[#141b2d] dark:text-amber-500 dark:shadow-[0_4px_20px_rgba(245,158,11,0.05)]"
-                  : "text-slate-500 hover:bg-slate-200/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#141b2d]/50 dark:hover:text-slate-100"
-              )}
-            >
-              <item.icon size={18} />
-              <span className="text-sm">{item.label}</span>
-            </NavLink>
-          ))}
-        </nav>
+                <NavLink
+                  key={item.label}
+                  to={item.to}
+                  onClick={onClose}
+                  className={({ isActive }) => cn(
+                    "flex items-center gap-3 rounded-lg px-4 py-2.5 transition-all duration-200",
+                    isActive
+                      ? "border border-slate-200 bg-white font-semibold text-amber-600 shadow-sm dark:border-[#1e293b] dark:bg-[#141b2d] dark:text-amber-500 dark:shadow-[0_4px_20px_rgba(245,158,11,0.05)]"
+                      : "text-slate-500 hover:bg-slate-200/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#141b2d]/50 dark:hover:text-slate-100"
+                  )}
+                >
+                  <item.icon size={18} />
+                  <span className="text-sm">{item.label}</span>
+                </NavLink>
+              ))}
+            </nav>
           </>
         )}
       </div>
@@ -159,7 +159,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             onClick={() => {
               logout();
             }}
-            className="ml-auto rounded-lg p-2 text-slate-400 transition-all hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/40"
+            className="cursor-pointer ml-auto rounded-lg p-2 text-slate-400 transition-all hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/40"
             title="Cerrar sesión"
           >
             <LogOut size={16} />

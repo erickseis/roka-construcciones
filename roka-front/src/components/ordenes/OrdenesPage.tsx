@@ -49,14 +49,14 @@ export default function OrdenesPage() {
       header: 'ID',
       sortable: true,
       render: (row: any) => (
-        <span className="font-mono text-xs font-bold text-emerald-600">{row.folio || `OC-${String(row.id).padStart(3, '0')}`}</span>
+        <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">{row.folio || `OC-${String(row.id).padStart(3, '0')}`}</span>
       ),
     },
     {
       key: 'solicitud_cotizacion_id',
       header: 'Sol. Cotización',
       render: (row: any) => (
-        <span className="font-mono text-xs text-slate-500">SC-{String(row.solicitud_cotizacion_id).padStart(3, '0')}</span>
+        <span className="font-mono text-xs text-slate-500 dark:text-slate-400">SC-{String(row.solicitud_cotizacion_id).padStart(3, '0')}</span>
       ),
     },
     { key: 'proveedor', header: 'Proveedor', sortable: true },
@@ -72,7 +72,7 @@ export default function OrdenesPage() {
       header: 'Total',
       sortable: true,
       render: (row: any) => (
-        <span className="font-mono text-sm font-bold text-slate-800">
+        <span className="font-mono text-sm font-bold text-slate-800 dark:text-slate-100">
           {formatCLP(Number(row.total_final ?? row.total))}
         </span>
       ),
@@ -163,9 +163,9 @@ export default function OrdenesPage() {
       {/* Stats */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: 'Pendientes', value: ordenes?.filter((o: any) => o.estado_entrega === 'Pendiente').length || 0, color: 'text-amber-600' },
-          { label: 'Recibido Parcial', value: ordenes?.filter((o: any) => o.estado_entrega === 'Recibido parcial').length || 0, color: 'text-sky-600' },
-          { label: 'Completadas', value: ordenes?.filter((o: any) => o.estado_entrega === 'Completado').length || 0, color: 'text-emerald-600' },
+          { label: 'Pendientes', value: ordenes?.filter((o: any) => o.estado_entrega === 'Pendiente').length || 0, color: 'text-amber-600 dark:text-amber-400' },
+          { label: 'Recibido Parcial', value: ordenes?.filter((o: any) => o.estado_entrega === 'Recibido parcial').length || 0, color: 'text-sky-600 dark:text-sky-400' },
+          { label: 'Completadas', value: ordenes?.filter((o: any) => o.estado_entrega === 'Completado').length || 0, color: 'text-emerald-600 dark:text-emerald-400' },
         ].map(stat => (
           <div key={stat.label} className="rounded-xl bg-white p-4 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700">
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stat.label}</p>

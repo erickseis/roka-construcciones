@@ -43,7 +43,7 @@ const QUICK_ACTIONS_BY_ROLE: Record<number, Array<{ label: string; query: string
   ],
 };
 
-const API_URL = import.meta.env.VITE_API_URL+ '/roka/api';
+const API_URL = import.meta.env.VITE_API_URL + '/roka/api';
 
 export function RokaChatbot() {
   const { user } = useAuth();
@@ -64,13 +64,13 @@ export function RokaChatbot() {
   useEffect(() => {
     if (isInitialized.current) return;
     isInitialized.current = true;
-    
+
     const firstName = user?.nombre?.split(' ')[0] || 'Usuario';
     setMessages([
       {
         id: 'initial',
         role: 'bot',
-        text: `¡Buen día, ${firstName}! Soy **Roka AI**, su asistente virtual. Puedo ayudarle con información sobre solicitudes, solicitudes de cotización, órdenes de compra y estadísticas del sistema. ¿En qué le puedo asistir hoy?`,
+        text: `¡Buen día, ${firstName}! Soy **RokAI**, su asistente virtual. Puedo ayudarle con información sobre solicitudes, solicitudes de cotización, órdenes de compra y estadísticas del sistema. ¿En qué le puedo asistir hoy?`,
         time: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }),
       }
     ]);
@@ -112,7 +112,7 @@ export function RokaChatbot() {
       });
 
       if (!response.ok) throw new Error('Error en la respuesta de IA');
-      
+
       const data = await response.json();
 
       const botMsg: Message = {
@@ -154,7 +154,7 @@ export function RokaChatbot() {
       if (lines.length < 3) return match;
 
       const headers = lines[0].split('|').map(h => h.trim()).filter(h => h);
-      const rows = lines.slice(2).map(row => 
+      const rows = lines.slice(2).map(row =>
         row.split('|').map(c => c.trim()).filter(c => c !== '')
       );
 
@@ -204,10 +204,10 @@ export function RokaChatbot() {
 
   return (
     <div className="roka-chat-container roka-chat-wrapper">
-      <button 
-        id="chat-fab" 
-        onClick={toggleChat} 
-        title="Roka AI Assistant"
+      <button
+        id="chat-fab"
+        onClick={toggleChat}
+        title="RokAI Assistant"
         className={isOpen ? 'open' : ''}
       >
         {!isOpen && hasUnread && <div className="fab-badge">1</div>}
@@ -229,7 +229,7 @@ export function RokaChatbot() {
             <div className="chat-brand">
               <div className="chat-avatar">R</div>
               <div className="chat-brand-text">
-                <strong>Roka AI</strong>
+                <strong>RokAI</strong>
                 <span>Asistente de Roka Construcciones</span>
               </div>
             </div>
@@ -252,9 +252,9 @@ export function RokaChatbot() {
                 {msg.role === 'bot' ? 'R' : (user?.nombre?.[0] || 'U')}
               </div>
               <div className="msg-content">
-                <div 
-                  className="msg-bubble" 
-                  dangerouslySetInnerHTML={{ __html: formatMessage(msg.text) }} 
+                <div
+                  className="msg-bubble"
+                  dangerouslySetInnerHTML={{ __html: formatMessage(msg.text) }}
                 />
                 <div className="msg-time">{msg.time}</div>
               </div>
@@ -284,16 +284,16 @@ export function RokaChatbot() {
         )}
 
         <div className="chat-input-wrap">
-          <textarea 
-            className="chat-input" 
-            placeholder="Escriba su consulta..." 
+          <textarea
+            className="chat-input"
+            placeholder="Escriba su consulta..."
             rows={1}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
           ></textarea>
-          <button 
-            className="send-btn" 
+          <button
+            className="send-btn"
             onClick={() => handleSend(inputText)}
             disabled={!inputText.trim() || isTyping}
           >

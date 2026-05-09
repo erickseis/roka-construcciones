@@ -8,7 +8,7 @@ import * as scModel from '../models/solicitud_cotizacion.model';
 import { crearSolicitudCotizacion, crearBatchSolicitudesCotizacion, cambiarEstadoSolicitudCotizacion } from '../services/solicitud_cotizacion.service';
 import { getDb } from '../types';
 import puppeteer from 'puppeteer-core';
-import { isEventEnabled, sendEmail, buildSCProveedorHtml, buildCotizacionCreadaHtml, getUserEmailsByRoles } from '../lib/email';
+import { isEventEnabled, sendEmail, buildSCProveedorHtml, buildCotizacionCreadaHtml, getUserEmailsByPermission } from '../lib/email';
 
 function detectChromePath(): string | undefined {
   if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
@@ -342,7 +342,7 @@ export async function create(req: AuthRequest, res: Response) {
     // Fire-and-forget: email notification
     isEventEnabled('cotizacion.creada').then(async (enabled) => {
       if (!enabled) return;
-      const destinatarios = await getUserEmailsByRoles(['Adquisiciones']);
+      const destinatarios = await getUserEmailsByPermission('cotizaciones.view');
       if (!destinatarios.length) return;
       const detalles = await scModel.getSolicitudCotizacionDetalle(sc.id);
       const html = buildCotizacionCreadaHtml({
@@ -572,7 +572,7 @@ export async function importarArchivo(req: AuthRequest, res: Response) {
 
     // Parse the file with AI
     const { parseCotizacionArchivo } = await import('../services/sc-import.service');
-    const parsed = await parseCotizacionArchivo(file.path, sanitizedItems);
+    const parsed = await parseCotizacionArchivo(file.path, sanitizedItems, sc.proveedor);
 
     // Build preview with matching
     const preview = {
@@ -581,7 +581,10 @@ export async function importarArchivo(req: AuthRequest, res: Response) {
       archivo_nombre: file.originalname,
       numero_cov: parsed.numero_cov,
       proveedor_nombre: parsed.proveedor_nombre,
+      proveedor_esperado: sc.proveedor,
+      monto_total: parsed.monto_total,
       items: parsed.items,
+      warnings: parsed.warnings || [],
       datos_importados: parsed.datos_raw,
     };
 
@@ -645,8 +648,8 @@ export async function confirmarImportacion(req: AuthRequest, res: Response) {
         await scModel.updateSCNumeroCov(solicitud_cotizacion_id, numero_cov, client);
       }
 
-      // Mark SC as RESPONDIDA
-      await scModel.updateSolicitudCotizacionEstado(solicitud_cotizacion_id, 'Respondida', client);
+      // Mark SC as RESPONDIDA — con trazabilidad de quién lo hizo
+      await scModel.updateSolicitudCotizacionEstado(solicitud_cotizacion_id, 'Respondida', (req as AuthRequest).user?.id || null, client);
 
       await client.query('COMMIT');
 
@@ -719,10 +722,12 @@ export async function enviarProveedor(req: AuthRequest, res: Response) {
       entidadId: id,
     });
 
+    // Marcar como Enviada después de enviar email exitosamente
+    await scModel.updateSolicitudCotizacionEstado(id, 'Enviada', req.user?.id || null);
+
     res.json({ ok: true, enviado_a: emailDestino });
   } catch (err: any) {
     console.error('Error al enviar SC al proveedor:', err);
     res.status(500).json({ error: err.message || 'Error al enviar SC al proveedor' });
   }
-}
 }

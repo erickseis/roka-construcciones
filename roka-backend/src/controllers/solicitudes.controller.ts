@@ -9,7 +9,7 @@ import {
   NotificationInput,
 } from '../lib/notifications';
 import pool from '../db';
-import { isEventEnabled, sendEmail, getUserEmailsByRoles, buildSolicitudCreadaHtml } from '../lib/email';
+import { isEventEnabled, sendEmail, getUserEmailsByPermission, getUserEmailById, buildSolicitudCreadaHtml, buildSolicitudCotizandoHtml, buildSolicitudRechazadaHtml } from '../lib/email';
 
 async function userHasPermission(rolId: number, permissionCode: string): Promise<boolean> {
   const { rows } = await pool.query(
@@ -103,25 +103,23 @@ export async function create(req: Request, res: Response) {
     // Fire-and-forget: email notification
     isEventEnabled('solicitud.creada').then(async (enabled) => {
       if (!enabled) return;
-      const destinatarios = await getUserEmailsByRoles(['Adquisiciones']);
+      const creatorId = user?.id ?? null;
+      const destinatarios = await getUserEmailsByPermission('cotizaciones.view', creatorId);
       if (!destinatarios.length) return;
-      const proyectoNombre = result.solicitud?.proyecto_nombre || undefined;
       const html = buildSolicitudCreadaHtml({
-        id: result.solicitud?.id || result.id,
+        id: result.id,
         solicitante,
-        proyecto_nombre: proyectoNombre,
         fecha_requerida: fecha_requerida || undefined,
         itemCount: items?.length,
       });
-      const solicitudId = result.solicitud?.id || result.id;
-      const folio = `SOL-${String(solicitudId).padStart(3, '0')}`;
+      const folio = `SOL-${String(result.id).padStart(3, '0')}`;
       sendEmail({
         to: destinatarios,
         subject: `Nueva solicitud de material: ${folio}`,
         html,
         eventoCodigo: 'solicitud.creada',
         entidadTipo: 'solicitud',
-        entidadId: solicitudId,
+        entidadId: result.id,
       }).catch(console.error);
     }).catch(console.error);
   } catch (error) {
@@ -142,25 +140,28 @@ export async function changeEstado(req: Request, res: Response) {
       return res.status(400).json({ error: 'Estado invalido' });
     }
 
-    const updated = await solicitudModel.updateSolicitudEstado(id, estado);
+    const userId = (req as AuthRequest).user?.id || null;
+    const updated = await solicitudModel.updateSolicitudEstado(id, estado, userId);
     if (!updated) {
       return res.status(404).json({ error: 'Solicitud no encontrada' });
     }
+
+    // Obtener datos de la solicitud (necesario para notificaciones y email)
+    const solicitud = await solicitudModel.getSolicitudById(id);
 
     // Notificar cambio de estado a Cotizando o Aprobado
     if (estado === 'Cotizando' || estado === 'Aprobado') {
       try {
         const actorId = (req as any).user?.id || null;
         const actorName = actorId ? await getActorDisplayName(actorId) : 'Sistema';
-
-        // Obtener datos de la solicitud para la notificación
-        const solicitud = await solicitudModel.getSolicitudById(id);
         const proyectoNombre = solicitud?.proyecto_nombre || 'Proyecto';
         const solicitudFolio = `SOL-${String(id).padStart(3, '0')}`;
 
         const recipients = await resolveRecipientUserIds({
           creatorUserId: solicitud?.created_by_usuario_id || null,
-          roleNames: ['Director de Obra', 'Adquisiciones'],
+          permissionCodes: estado === 'Cotizando'
+            ? ['solicitudes.view', 'cotizaciones.view']
+            : ['solicitudes.view'],
           excludeUserId: actorId,
         });
 
@@ -186,6 +187,27 @@ export async function changeEstado(req: Request, res: Response) {
         console.error('Error al enviar notificación de cambio de estado:', notifError);
         // No fallar el cambio de estado si la notificación falla
       }
+
+      // Fire-and-forget: email al creador cuando cambia a Cotizando
+      if (estado === 'Cotizando' && solicitud?.created_by_usuario_id) {
+        getUserEmailById(solicitud.created_by_usuario_id).then(async (correo) => {
+          if (!correo) return;
+          const html = buildSolicitudCotizandoHtml({
+            solicitudId: id,
+            solicitante: solicitud.solicitante,
+            proyectoNombre: solicitud.proyecto_nombre,
+          });
+          const folio = `SOL-${String(id).padStart(3, '0')}`;
+          sendEmail({
+            to: correo,
+            subject: `Solicitud en cotización: ${folio}`,
+            html,
+            eventoCodigo: 'solicitud.cotizando',
+            entidadTipo: 'solicitud',
+            entidadId: id,
+          }).catch(console.error);
+        }).catch(console.error);
+      }
     }
 
     res.json(updated);
@@ -202,8 +224,9 @@ export async function remove(req: Request, res: Response) {
       return res.status(400).json({ error: 'ID invalido' });
     }
 
-    // Verificar permiso view_all para eliminar solicitudes ajenas
     const user = (req as AuthRequest).user;
+
+    // Verificar permiso view_all para eliminar solicitudes ajenas
     if (user?.rol_id) {
       const canViewAll = await userHasPermission(user.rol_id, 'solicitudes.view_all');
       if (!canViewAll) {
@@ -214,12 +237,54 @@ export async function remove(req: Request, res: Response) {
       }
     }
 
-    const deleted = await solicitudModel.deleteSolicitud(id);
+    const solicitud = await solicitudModel.getSolicitudById(id);
+    if (!solicitud) {
+      return res.status(404).json({ error: 'Solicitud no encontrada' });
+    }
+
+    const isAnulling = solicitud.estado !== 'Anulada';
+    const creatorId = solicitud.created_by_usuario_id;
+
+    const deleted = await solicitudModel.deleteSolicitud(id, user?.id || null);
     if (!deleted) {
       return res.status(404).json({ error: 'Solicitud no encontrada' });
     }
 
     res.json({ message: 'Solicitud eliminada exitosamente' });
+
+    // Fire-and-forget: notificar al creador si la solicitud fue anulada
+    if (isAnulling && creatorId) {
+      const actorName = user ? await getActorDisplayName(user.id) : 'Sistema';
+      const solicitudFolio = `SOL-${String(id).padStart(3, '0')}`;
+      const proyectoNombre = solicitud.proyecto_nombre || 'Proyecto';
+
+      // In-app notification
+      createNotifications([{
+        usuario_destino_id: creatorId,
+        tipo: 'solicitud.rechazada',
+        titulo: 'Solicitud rechazada',
+        mensaje: `Tu solicitud ${solicitudFolio} del proyecto ${proyectoNombre} ha sido rechazada y anulada por ${actorName}.`,
+        entidad_tipo: 'solicitud',
+        entidad_id: id,
+        payload: { estado_anterior: solicitud.estado },
+        enviado_por_usuario_id: user?.id || null,
+      }]).catch(console.error);
+
+      // Email
+      getUserEmailById(creatorId).then(correo => {
+        if (!correo) return;
+        sendEmail({
+          to: correo,
+          subject: `Solicitud rechazada: ${solicitudFolio}`,
+          html: buildSolicitudRechazadaHtml({
+            solicitudId: id, proyectoNombre, rechazadoPor: actorName,
+          }),
+          eventoCodigo: 'solicitud.rechazada',
+          entidadTipo: 'solicitud',
+          entidadId: id,
+        }).catch(console.error);
+      }).catch(console.error);
+    }
   } catch (error) {
     console.error('Error al eliminar solicitud:', error);
     res.status(500).json({ error: 'Error al eliminar solicitud' });

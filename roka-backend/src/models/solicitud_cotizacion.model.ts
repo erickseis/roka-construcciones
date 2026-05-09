@@ -44,10 +44,18 @@ export async function getSolicitudCotizacionById(id: number): Promise<(Solicitud
     SELECT sc.*, sm.solicitante, p.nombre AS proyecto_nombre, p.numero_obra,
            sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
            (SELECT COUNT(*) FROM solicitud_cotizacion_detalle WHERE solicitud_cotizacion_id = sc.id) AS total_items,
-           (SELECT oc.id FROM ordenes_compra oc WHERE oc.solicitud_cotizacion_id = sc.id LIMIT 1) AS orden_id
+           (SELECT oc.id FROM ordenes_compra oc WHERE oc.solicitud_cotizacion_id = sc.id LIMIT 1) AS orden_id,
+           NULLIF(CONCAT(u_env.nombre, ' ', u_env.apellido), ' ') AS enviado_by_nombre,
+           NULLIF(CONCAT(u_res.nombre, ' ', u_res.apellido), ' ') AS respondido_by_nombre,
+           NULLIF(CONCAT(u_apr.nombre, ' ', u_apr.apellido), ' ') AS aprobado_by_nombre,
+           NULLIF(CONCAT(u_rec.nombre, ' ', u_rec.apellido), ' ') AS rechazado_by_nombre
     FROM solicitud_cotizacion sc
     JOIN solicitudes_material sm ON sm.id = sc.solicitud_id
     JOIN proyectos p ON p.id = sm.proyecto_id
+    LEFT JOIN usuarios u_env ON u_env.id = sc.enviado_by_usuario_id
+    LEFT JOIN usuarios u_res ON u_res.id = sc.respondido_by_usuario_id
+    LEFT JOIN usuarios u_apr ON u_apr.id = sc.aprobado_by_usuario_id
+    LEFT JOIN usuarios u_rec ON u_rec.id = sc.rechazado_by_usuario_id
     WHERE sc.id = $1
   `, [id]);
   return sc || null;
@@ -109,11 +117,28 @@ export async function createBatchSolicitudCotizacionDetalle(
   }
 }
 
-export async function updateSolicitudCotizacionEstado(id: number, estado: string, db?: Queryable): Promise<SolicitudCotizacion | null> {
+export async function updateSolicitudCotizacionEstado(id: number, estado: string, changedByUsuarioId?: number | null, db?: Queryable): Promise<SolicitudCotizacion | null> {
   const conn = getDb(db);
+  let setClauses = `estado = $1, updated_at = NOW()`;
+  const params: any[] = [estado, id];
+  
+  if (changedByUsuarioId != null) {
+    const paramIdx = params.length + 1;
+    if (estado === 'Enviada') {
+      setClauses += `, enviado_by_usuario_id = $${paramIdx}, enviado_at = NOW()`;
+      params.push(changedByUsuarioId);
+    } else if (estado === 'Respondida') {
+      setClauses += `, respondido_by_usuario_id = $${paramIdx}, respondido_at = NOW()`;
+      params.push(changedByUsuarioId);
+    } else if (estado === 'Anulada') {
+      setClauses += `, rechazado_by_usuario_id = $${paramIdx}, rechazado_at = NOW()`;
+      params.push(changedByUsuarioId);
+    }
+  }
+  
   const { rows: [sc] } = await conn.query(
-    `UPDATE solicitud_cotizacion SET estado = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
-    [estado, id]
+    `UPDATE solicitud_cotizacion SET ${setClauses} WHERE id = $2 RETURNING *`,
+    params
   );
   return sc || null;
 }
@@ -174,12 +199,18 @@ export async function checkAllItemsCovered(solicitudId: number, db?: Queryable):
   return Number(covered) >= Number(total);
 }
 
-export async function updateSolicitudEstadoIfPendiente(solicitudId: number, db?: Queryable): Promise<void> {
+export async function updateSolicitudEstadoIfPendiente(
+  solicitudId: number,
+  changedByUsuarioId?: number | null,
+  db?: Queryable
+): Promise<void> {
   const conn = getDb(db);
   await conn.query(
-    `UPDATE solicitudes_material SET estado = 'Cotizando', updated_at = NOW()
+    `UPDATE solicitudes_material 
+     SET estado = 'Cotizando', updated_at = NOW(), 
+         estado_changed_by_usuario_id = $2, estado_changed_at = NOW()
      WHERE id = $1 AND estado = 'Pendiente'`,
-    [solicitudId]
+    [solicitudId, changedByUsuarioId ?? null]
   );
 }
 

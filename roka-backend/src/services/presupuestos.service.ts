@@ -83,7 +83,7 @@ export async function comprometerPresupuesto(input: ComprometerInput, usuarioId:
     if (crossedThreshold || crossedExceeded) {
       const recipients = await resolveRecipientUserIds(
         {
-          roleNames: ['Director de Obra', 'Adquisiciones'],
+          permissionCodes: ['presupuestos.view'],
           excludeUserId: actorId,
         },
         client

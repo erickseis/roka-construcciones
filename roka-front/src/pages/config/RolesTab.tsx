@@ -132,23 +132,34 @@ export default function RolesTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h4 className="flex items-center gap-2 text-lg font-bold text-slate-800">
-          <ShieldCheck className="text-emerald-500" size={20} />
-          Niveles de Acceso
-        </h4>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setIncluirInactivos(!incluirInactivos)}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all ${incluirInactivos
-              ? 'bg-slate-200 text-slate-700'
-              : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600'
-              }`}>
-            <EyeOff size={13} />
-            {incluirInactivos ? 'Mostrando todos' : 'Ver desactivados'}
+      <div className="flex items-end justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
+            <ShieldCheck size={20} />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Configuración de Seguridad</span>
+          </div>
+          <h4 className="text-2xl font-black tracking-tight text-slate-800 dark:text-slate-100">
+            Niveles de Acceso
+          </h4>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIncluirInactivos(!incluirInactivos)}
+            className={`
+              flex items-center gap-2 rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-wider transition-all
+              ${incluirInactivos
+                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'}
+            `}
+          >
+            {incluirInactivos ? <Eye size={14} /> : <EyeOff size={14} />}
+            {incluirInactivos ? 'Ocultar Inactivos' : 'Ver Inactivos'}
           </button>
+          
           <button onClick={openCreate}
-            className="p-1.5 rounded-lg bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors">
-            <Plus size={18} />
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 hover:scale-105 active:scale-95 transition-all">
+            <Plus size={20} />
           </button>
         </div>
       </div>
@@ -160,58 +171,69 @@ export default function RolesTab() {
             <div key={role.id}
               onClick={() => !isInactive && setSelectedRoleId(selectedRoleId === role.id ? null : role.id)}
               className={`
-              group relative overflow-hidden rounded-2xl border p-6 shadow-sm transition-all
-              ${isInactive ? 'opacity-50 border-slate-200 bg-slate-50 cursor-default' : 'cursor-pointer'}
-              ${selectedRoleId === role.id && !isInactive
-                  ? 'border-amber-300 ring-2 ring-amber-100 bg-amber-50/30'
-                  : 'border-slate-100 bg-white hover:shadow-md'}
-            `}>
-              <div className="relative z-10 flex items-center justify-between">
-                <span className={`text-sm font-black uppercase tracking-tight ${isInactive ? 'text-slate-400' : 'text-slate-900'}`}>
-                  {role.nombre}
-                </span>
-                <div className={`
-                flex h-8 w-8 items-center justify-center rounded-lg transition-colors
-                ${isInactive ? 'bg-slate-200 text-slate-400' : selectedRoleId === role.id ? 'bg-amber-500 text-white' : 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white'}
+                group relative overflow-hidden rounded-2xl border p-5 transition-all duration-300
+                ${isInactive ? 'opacity-50 border-slate-200 bg-slate-50 cursor-default dark:border-slate-800 dark:bg-slate-900/50' : 'cursor-pointer'}
+                ${selectedRoleId === role.id && !isInactive
+                  ? 'border-amber-400 ring-4 ring-amber-400/10 bg-amber-50/30 dark:border-amber-500/50 dark:bg-amber-500/5'
+                  : 'border-slate-200 bg-white hover:border-amber-200 hover:shadow-xl hover:shadow-slate-200/50 dark:border-slate-800 dark:bg-[#111827]/40 dark:hover:border-slate-700 dark:hover:shadow-none'}
               `}>
-                  <ShieldCheck size={16} />
+              
+              <div className="relative z-10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className={`
+                    flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300
+                    ${isInactive ? 'bg-slate-200 text-slate-400' : selectedRoleId === role.id ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400 group-hover:scale-110'}
+                  `}>
+                    <ShieldCheck size={20} />
+                  </div>
+                  
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
+                    {isInactive ? (
+                      <button onClick={(e) => { e.stopPropagation(); handleReactivate(role.id); }}
+                        className="rounded-lg p-1.5 bg-white shadow-sm border border-slate-100 text-emerald-500 hover:bg-emerald-50 dark:bg-slate-800 dark:border-slate-700 dark:text-emerald-400" title="Reactivar">
+                        <RotateCcw size={14} />
+                      </button>
+                    ) : (
+                      <>
+                        <button onClick={(e) => { e.stopPropagation(); openEdit(role); }}
+                          className="rounded-lg p-1.5 bg-white shadow-sm border border-slate-100 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-blue-400"><Pencil size={14} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteRole(role); }}
+                          className="rounded-lg p-1.5 bg-white shadow-sm border border-slate-100 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-red-400"><Trash2 size={14} /></button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              {isInactive ? (
-                <span className="inline-block mt-3 px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-slate-200 text-slate-500">Desactivado</span>
-              ) : (
-                <p className="relative z-10 mt-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                  {role.descripcion || 'Permisos de Lectura/Escritura'}
-                </p>
-              )}
+                <div>
+                  <h5 className={`text-base font-bold tracking-tight ${isInactive ? 'text-slate-400' : 'text-slate-900 dark:text-slate-100'}`}>
+                    {role.nombre}
+                  </h5>
+                  {isInactive ? (
+                    <span className="mt-1 inline-block px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400">Desactivado</span>
+                  ) : (
+                    <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
+                      {role.descripcion || 'Configuración de permisos y niveles de acceso al sistema.'}
+                    </p>
+                  )}
+                </div>
 
-              <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                {isInactive ? (
-                  <button onClick={(e) => { e.stopPropagation(); handleReactivate(role.id); }}
-                    className="rounded-lg p-1.5 bg-white shadow-sm text-emerald-500 hover:bg-emerald-50" title="Reactivar">
-                    <RotateCcw size={14} />
-                  </button>
-                ) : (
-                  <>
-                    <button onClick={(e) => { e.stopPropagation(); openEdit(role); }}
-                      className="rounded-lg p-1.5 bg-white shadow-sm text-slate-400 hover:text-blue-600 hover:bg-blue-50"><Pencil size={14} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDeleteRole(role); }}
-                      className="rounded-lg p-1.5 bg-white shadow-sm text-slate-400 hover:text-red-500 hover:bg-red-50"><Trash2 size={14} /></button>
-                  </>
+                {!isInactive && (
+                  <div className="flex items-center justify-between pt-2">
+                    <span className={`text-[10px] font-bold uppercase tracking-widest ${selectedRoleId === role.id ? 'text-amber-600' : 'text-slate-400'}`}>
+                      {selectedRoleId === role.id ? 'Cerrar Permisos' : 'Ver Permisos'}
+                    </span>
+                    <div className={`${selectedRoleId === role.id ? 'text-amber-500 rotate-180' : 'text-slate-300'} transition-transform duration-300`}>
+                      <ChevronDown size={16} />
+                    </div>
+                  </div>
                 )}
               </div>
 
+              {/* Decoración de fondo */}
               <div className={`
-              absolute -bottom-6 -right-6 h-20 w-20 rounded-full blur-2xl transition-all
-              ${selectedRoleId === role.id ? 'bg-amber-500/10' : 'bg-emerald-500/5 group-hover:bg-emerald-500/10'}
-            `} />
-
-              {!isInactive && (
-                <div className="absolute bottom-4 right-4 text-slate-400">
-                  {selectedRoleId === role.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                </div>
-              )}
+                absolute -bottom-4 -right-4 h-24 w-24 rounded-full blur-3xl transition-all duration-500
+                ${selectedRoleId === role.id ? 'bg-amber-500/20' : 'bg-emerald-500/5 group-hover:bg-emerald-500/10'}
+              `} />
             </div>
           );
         })}

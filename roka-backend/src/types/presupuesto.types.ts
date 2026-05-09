@@ -7,6 +7,8 @@ export interface PresupuestoProyecto {
   estado: string;
   created_at: Date;
   updated_at: Date;
+  created_by_usuario_id?: number | null;
+  created_by_nombre?: string;
   proyecto_nombre?: string;
   proyecto_estado?: string;
   gasto_total?: number;
@@ -42,6 +44,7 @@ export interface CreatePresupuestoInput {
   monto_total: number;
   umbral_alerta?: number;
   estado?: string;
+  created_by_usuario_id?: number | null;
   categorias?: Array<{ nombre: string; monto_asignado: number }>;
 }
 

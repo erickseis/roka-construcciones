@@ -108,7 +108,7 @@ export function DataTable<T extends Record<string, any>>({
                 {columns.map(col => (
                   <th
                     key={col.key}
-                    className={`px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500 ${col.sortable ? 'cursor-pointer select-none hover:text-slate-700' : ''} ${col.className || ''} dark:text-slate-400`}
+                    className={`px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500 ${col.sortable ? 'cursor-pointer select-none hover:text-slate-700' : ''} ${col.className || ''} dark:text-slate-300`}
                     onClick={() => col.sortable && handleSort(col.key)}
                   >
                     <span className="flex items-center gap-1">

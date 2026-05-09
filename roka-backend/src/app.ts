@@ -15,6 +15,7 @@ import proveedoresRouter from './routes/proveedores.routes';
 import solicitudCotizacionRouter from './routes/solicitud_cotizacion.routes';
 import chatRouter from './routes/chat.routes';
 import emailConfigRouter from './routes/email-config.routes';
+import { startAlertScheduler } from './lib/email-alertas';
 
 // const CORS_ORIGIN =
 // process.env.CORS_ORIGIN || 'http://localhost:3000' || 'http://localhost:4173';
@@ -31,6 +32,7 @@ export function createRokaApp(): express.Application {
   app.use('/api/dashboard', dashboardRouter);
   app.use('/api/auth', authRouter);
   app.use('/api/users', usersRouter);
+  app.use('/api/config/email', emailConfigRouter);
   app.use('/api/config', configRouter);
   app.use('/api/proyectos', proyectosRouter);
   app.use('/api/presupuestos', presupuestosRouter);
@@ -39,11 +41,13 @@ export function createRokaApp(): express.Application {
   app.use('/api/proveedores', proveedoresRouter);
   app.use('/api/solicitud-cotizacion', solicitudCotizacionRouter);
   app.use('/api/chat', chatRouter);
-  app.use('/api/config/email', emailConfigRouter);
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
+
+  // Iniciar scheduler de alertas de email (guardia interna evita múltiples instancias)
+  startAlertScheduler();
 
   return app;
 }

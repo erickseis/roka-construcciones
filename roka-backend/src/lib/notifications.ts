@@ -46,10 +46,36 @@ export async function getUsersByRoleNames(roleNames: string[], db?: Queryable): 
   return rows.map(r => r.id as number);
 }
 
+export async function getUsersByPermission(codigo: string, db?: Queryable): Promise<number[]> {
+  const conn = getDb(db);
+  const { rows } = await conn.query(
+    `SELECT DISTINCT u.id FROM usuarios u
+     JOIN rol_permisos rp ON rp.rol_id = u.rol_id
+     JOIN permisos p ON p.id = rp.permiso_id
+     WHERE u.is_active = TRUE AND p.codigo = $1`,
+    [codigo]
+  );
+  return rows.map(r => r.id as number);
+}
+
+export async function getUsersByPermissions(codigos: string[], db?: Queryable): Promise<number[]> {
+  if (!codigos.length) return [];
+  const conn = getDb(db);
+  const { rows } = await conn.query(
+    `SELECT DISTINCT u.id FROM usuarios u
+     JOIN rol_permisos rp ON rp.rol_id = u.rol_id
+     JOIN permisos p ON p.id = rp.permiso_id
+     WHERE u.is_active = TRUE AND p.codigo = ANY($1::text[])`,
+    [codigos]
+  );
+  return rows.map(r => r.id as number);
+}
+
 export async function resolveRecipientUserIds(
   options: {
     creatorUserId?: number | null;
     roleNames?: string[];
+    permissionCodes?: string[];
     excludeUserId?: number | null;
   },
   db?: Queryable
@@ -63,9 +89,13 @@ export async function resolveRecipientUserIds(
   const roleNames = options.roleNames || [];
   if (roleNames.length > 0) {
     const roleUsers = await getUsersByRoleNames(roleNames, db);
-    for (const id of roleUsers) {
-      recipients.add(id);
-    }
+    for (const id of roleUsers) recipients.add(id);
+  }
+
+  const permissionCodes = options.permissionCodes || [];
+  if (permissionCodes.length > 0) {
+    const permUsers = await getUsersByPermissions(permissionCodes, db);
+    for (const id of permUsers) recipients.add(id);
   }
 
   if (options.excludeUserId) {

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Upload, 
   FileSpreadsheet, 
@@ -13,6 +13,7 @@ import * as XLSX from 'xlsx-js-style';
 import { Modal } from '../ui/Modal';
 import { createSolicitud } from '@/lib/api';
 import { showAlert, showToast } from '@/lib/alerts';
+import { useAuth } from '@/context/AuthContext';
 
 interface BulkImportModalProps {
   isOpen: boolean;
@@ -29,6 +30,9 @@ export default function BulkImportModal({
   masterMateriales,
   onSuccess 
 }: BulkImportModalProps) {
+  const { user } = useAuth();
+  const userName = user ? `${user.nombre} ${user.apellido}`.trim() : '';
+
   const [file, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,6 +45,12 @@ export default function BulkImportModal({
   const [submitting, setSubmitting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSolicitante(userName);
+    }
+  }, [isOpen, userName]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];

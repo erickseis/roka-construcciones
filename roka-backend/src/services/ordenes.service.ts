@@ -246,7 +246,7 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
     const recipients = await resolveRecipientUserIds(
       {
         creatorUserId: sc.created_by_usuario_id,
-        roleNames: ['Director de Obra', 'Adquisiciones'],
+        permissionCodes: ['ordenes.view', 'solicitudes.view'],
         excludeUserId: actorId,
       },
       client
@@ -347,7 +347,7 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
         solicitudId: sc.solicitud_id,
         proyectoNombre: sc.proyecto_nombre,
         ordenNumero: orden.folio || `OC-${String(orden.id).padStart(3, '0')}`,
-        proveedorNombre: sc.proveedor,
+        proveedorNombre: (sc as any).proveedor,
         total: totalFinal,
       });
       sendEmail({

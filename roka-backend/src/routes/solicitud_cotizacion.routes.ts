@@ -18,8 +18,8 @@ import {
 
 const router = Router();
 
-router.get('/', list);
-router.get('/:id', getById);
+router.get('/', authMiddleware, list);
+router.get('/:id', authMiddleware, getById);
 router.post('/', authMiddleware, create);
 router.post('/batch', authMiddleware, createBatch);
 router.patch('/:id/estado', authMiddleware, changeEstado);

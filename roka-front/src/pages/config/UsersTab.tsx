@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus, UserPlus, Trash2, Key, Pencil, ShieldAlert, BadgeCheck } from 'lucide-react';
+import { Plus, UserPlus, Trash2, Key, Pencil, ShieldAlert, BadgeCheck, Users } from 'lucide-react';
 import { DataTable } from '../../components/ui/DataTable';
 import { Modal } from '../../components/ui/Modal';
 import { useApi } from '../../hooks/useApi';
@@ -182,11 +182,18 @@ export default function UsersTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xl font-bold text-slate-900 dark:text-white">Personal Registrado</h3>
+      <div className="flex items-end justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
+            <Users size={20} />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Recursos Humanos</span>
+          </div>
+          <h3 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">Personal Registrado</h3>
+        </div>
+        
         <button onClick={openCreateForm}
-          className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg hover:bg-amber-600 active:scale-[0.98]">
-          <UserPlus size={18} />
+          className="group flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-amber-500/20 hover:bg-amber-600 hover:scale-[1.02] active:scale-[0.98] transition-all">
+          <UserPlus size={18} className="transition-transform group-hover:rotate-12" />
           Registrar Usuario
         </button>
       </div>

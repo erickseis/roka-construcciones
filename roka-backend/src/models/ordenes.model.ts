@@ -56,13 +56,15 @@ export async function getOrdenById(id: number): Promise<OrdenCompraDetalle | nul
            pr.contacto_nombre AS proveedor_contacto_nombre,
            pr.contacto_telefono AS proveedor_contacto_telefono,
            pr.contacto_correo AS proveedor_contacto_correo,
-           CONCAT(ua.nombre, ' ', ua.apellido) AS autorizado_por_nombre
+           CONCAT(ua.nombre, ' ', ua.apellido) AS autorizado_por_nombre,
+           NULLIF(CONCAT(u_ent.nombre, ' ', u_ent.apellido), ' ') AS entrega_updated_by_nombre
     FROM ordenes_compra oc
     LEFT JOIN solicitud_cotizacion sc ON sc.id = oc.solicitud_cotizacion_id
     LEFT JOIN solicitudes_material sm ON sm.id = COALESCE(oc.solicitud_id, sc.solicitud_id)
     LEFT JOIN proyectos p ON p.id = COALESCE(sm.proyecto_id, oc.proyecto_id)
     LEFT JOIN proveedores pr ON pr.id = sc.proveedor_id
     LEFT JOIN usuarios ua ON ua.id = COALESCE(oc.autorizado_por_usuario_id, oc.created_by_usuario_id)
+    LEFT JOIN usuarios u_ent ON u_ent.id = oc.entrega_updated_by_usuario_id
     WHERE oc.id = $1
   `, [id]);
 
@@ -216,12 +218,12 @@ export async function updateFolio(id: number, folio: string, db?: Queryable): Pr
   return orden || null;
 }
 
-export async function updateEstadoEntrega(id: number, estado: string): Promise<OrdenCompra | null> {
+export async function updateEstadoEntrega(id: number, estado: string, updatedByUsuarioId?: number | null): Promise<OrdenCompra | null> {
   const db = getDb();
   const { rows: [updated] } = await db.query(
-    `UPDATE ordenes_compra SET estado_entrega = $1, updated_at = NOW()
+    `UPDATE ordenes_compra SET estado_entrega = $1, updated_at = NOW(), entrega_updated_by_usuario_id = $3, entrega_updated_at = NOW()
      WHERE id = $2 RETURNING *`,
-    [estado, id]
+    [estado, id, updatedByUsuarioId || null]
   );
 
   return updated || null;

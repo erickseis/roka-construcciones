@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 
 import { createRokaApp } from './app.js';
 import { runMigrations } from './lib/migrations';
+import { startAlertScheduler } from './lib/email-alertas';
 
 dotenv.config();
 
@@ -13,6 +14,7 @@ const app = createRokaApp();
 
 runMigrations()
   .then(() => {
+    startAlertScheduler();
     app.listen(PORT, () => {
       console.log(
         `🏗️  Roka Construcciones API corriendo en http://localhost:${PORT}`,

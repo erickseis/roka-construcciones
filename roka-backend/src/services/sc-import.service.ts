@@ -12,7 +12,7 @@ import OpenAI from 'openai';
 // ================================================
 
 const NVIDIA_BASE_URL = 'https://integrate.api.nvidia.com/v1';
-const NVIDIA_MODEL = 'nvidia/llama-3.1-nemotron-nano-vl-8b-v1';
+const NVIDIA_MODEL = 'nvidia/nemotron-nano-12b-v2-vl';
 
 // Supported image formats for the model
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp'];
@@ -116,10 +116,33 @@ function cleanupTempFiles(dir: string): void {
   }
 }
 
+// Normaliza texto: lowercase, sin tildes, sin puntuación, palabras ≥3 chars
+function normalizeWords(s: string): Set<string> {
+  if (!s) return new Set();
+  const cleaned = s
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // tildes
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return new Set(cleaned.split(' ').filter(w => w.length >= 3));
+}
+
+// Jaccard similarity entre dos strings
+function jaccardSimilarity(a: string, b: string): number {
+  const setA = normalizeWords(a);
+  const setB = normalizeWords(b);
+  if (setA.size === 0 || setB.size === 0) return 0;
+  const intersection = new Set([...setA].filter(x => setB.has(x)));
+  const union = new Set([...setA, ...setB]);
+  return intersection.size / union.size;
+}
+
 // Main function: Parse a vendor quotation file and extract items with prices
 export async function parseCotizacionArchivo(
   archivoPath: string,
-  scItems: Array<{ id: number; solicitud_item_id: number; nombre_material: string; cantidad_requerida: number; unidad: string }>
+  scItems: Array<{ id: number; solicitud_item_id: number; nombre_material: string; cantidad_requerida: number; unidad: string }>,
+  proveedorEsperado?: string
 ): Promise<{
   items: Array<{
     solicitud_item_id: number | null;
@@ -139,6 +162,7 @@ export async function parseCotizacionArchivo(
   condiciones_pago?: string;
   plazo_entrega?: string;
   datos_raw?: any;
+  warnings?: string[];
 }> {
   const ext = path.extname(archivoPath).toLowerCase();
 
@@ -148,7 +172,8 @@ export async function parseCotizacionArchivo(
   ).join('\n');
 
   // System prompt — structured JSON extraction from vendor quotation documents
-  const systemPrompt = `Eres un extractor de datos de cotizaciones de proveedores de materiales de construcción en Chile.
+  const systemPrompt = `/no_think
+Eres un extractor de datos de cotizaciones de proveedores de materiales de construcción en Chile.
 Responde EXCLUSIVAMENTE con JSON válido. Sin texto adicional, sin markdown, sin explicaciones.
 
 FORMATO NUMÉRICO CHILENO — LEE ESTO CUIDADOSAMENTE:
@@ -414,15 +439,73 @@ REGLAS:
       };
     });
 
+    // ---------------------------------------------------------------
+    // VALIDACIONES POST-LLM: detectar hallucinations
+    // ---------------------------------------------------------------
+    const warnings: string[] = [];
+
+    // 1. Validación de proveedor esperado vs extraído
+    if (proveedorEsperado && parsed.proveedor_nombre) {
+      const provSim = jaccardSimilarity(proveedorEsperado, parsed.proveedor_nombre);
+      if (provSim < 0.2) {
+        warnings.push(
+          `El proveedor del documento ("${parsed.proveedor_nombre}") no coincide con el proveedor de la SC ("${proveedorEsperado}"). Verifica que el archivo corresponda a esta cotización.`
+        );
+      }
+    }
+
+    // 2. Validación semántica por item: forzar match='none' si Jaccard < 0.3
+    const scItemsById = new Map(scItems.map(it => [it.solicitud_item_id, it]));
+    let invalidatedMatches = 0;
+    for (const item of items) {
+      if (item.solicitud_item_id != null) {
+        const scItem = scItemsById.get(item.solicitud_item_id);
+        if (scItem) {
+          const sim = jaccardSimilarity(scItem.nombre_material, item.nombre_extraido);
+          if (sim < 0.3) {
+            item.solicitud_item_id = null;
+            item.match_confidence = 'none';
+            invalidatedMatches++;
+          }
+        }
+      }
+    }
+    if (invalidatedMatches > 0) {
+      warnings.push(
+        `Se descartaron ${invalidatedMatches} match(es) automáticos porque los nombres extraídos no coinciden con los items de la SC. Revisa manualmente o sube otro archivo.`
+      );
+    }
+
+    // 3. Validación de monto total: comparar con suma de subtotales
+    const sumSubtotales = items.reduce((s, it) => s + (Number(it.subtotal_linea) || 0), 0);
+    const montoTotal = parsed.monto_total != null ? Number(parsed.monto_total) : null;
+    if (montoTotal && sumSubtotales > 0) {
+      const diff = Math.abs(montoTotal - sumSubtotales) / Math.max(montoTotal, sumSubtotales);
+      if (diff > 0.05) {
+        warnings.push(
+          `Discrepancia: monto total del documento ($${montoTotal.toLocaleString('es-CL')}) no coincide con suma de subtotales ($${sumSubtotales.toLocaleString('es-CL')}).`
+        );
+      }
+    }
+
+    // 4. Si TODOS los items quedaron sin match → archivo probablemente no corresponde
+    const itemsConMatch = items.filter(it => it.solicitud_item_id != null).length;
+    if (items.length > 0 && itemsConMatch === 0 && scItems.length > 0) {
+      warnings.unshift(
+        `⚠️ Ningún item del documento coincidió con los items de esta SC. Verifica que el archivo corresponda a la cotización correcta.`
+      );
+    }
+
     return {
       items,
       numero_cov: parsed.numero_cov || undefined,
       proveedor_nombre: parsed.proveedor_nombre || undefined,
       proveedor_rut: parsed.proveedor_rut || undefined,
-      monto_total: parsed.monto_total != null ? Number(parsed.monto_total) : undefined,
+      monto_total: montoTotal ?? undefined,
       condiciones_pago: parsed.condiciones_pago || undefined,
       plazo_entrega: parsed.plazo_entrega || undefined,
       datos_raw: parsed,
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
   } finally {
     // Clean up temporary files

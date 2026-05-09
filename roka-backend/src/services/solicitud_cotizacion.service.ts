@@ -13,6 +13,7 @@ import {
   getActorDisplayName,
   NotificationInput,
 } from '../lib/notifications';
+import { isEventEnabled, sendEmail, getUserEmailById, buildSolicitudCotizandoHtml } from '../lib/email';
 
 export async function crearSolicitudCotizacion(input: CreateSolicitudCotizacionInput, usuarioId: number | null) {
   const { solicitud_id, proveedor_id, proveedor, solicitud_item_ids, observaciones } = input;
@@ -70,7 +71,7 @@ export async function crearSolicitudCotizacion(input: CreateSolicitudCotizacionI
     if (solicitud.estado === 'Pendiente') {
       const allCovered = await checkAllItemsCovered(solicitud_id, client);
       if (allCovered) {
-        await updateSolicitudEstadoIfPendiente(solicitud_id, client);
+        await updateSolicitudEstadoIfPendiente(solicitud_id, usuarioId, client);
       }
     }
 
@@ -91,7 +92,7 @@ export async function crearSolicitudCotizacion(input: CreateSolicitudCotizacionI
 
           const recipients = await resolveRecipientUserIds({
             creatorUserId: solicitud.created_by_usuario_id || null,
-            roleNames: ['Director de Obra', 'Adquisiciones'],
+            permissionCodes: ['solicitudes.view', 'cotizaciones.view'],
             excludeUserId: usuarioId,
           });
 
@@ -111,6 +112,27 @@ export async function crearSolicitudCotizacion(input: CreateSolicitudCotizacionI
             }));
 
             await createNotifications(notifications);
+          }
+
+          // Fire-and-forget: email al creador cuando la solicitud pasa a Cotizando
+          if (solicitud.created_by_usuario_id) {
+            getUserEmailById(solicitud.created_by_usuario_id).then(async (correo) => {
+              if (!correo) return;
+              const html = buildSolicitudCotizandoHtml({
+                solicitudId: solicitud_id,
+                solicitante: solicitud.solicitante,
+                proyectoNombre: proyectoNombre,
+              });
+              const folio = `SOL-${String(solicitud_id).padStart(3, '0')}`;
+              sendEmail({
+                to: correo,
+                subject: `Solicitud en cotización: ${folio}`,
+                html,
+                eventoCodigo: 'solicitud.cotizando',
+                entidadTipo: 'solicitud',
+                entidadId: solicitud_id,
+              }).catch(console.error);
+            }).catch(console.error);
           }
         }
       } catch (notifError) {
@@ -199,7 +221,7 @@ export async function crearBatchSolicitudesCotizacion(input: BatchCreateSolicitu
     if (solicitud.estado === 'Pendiente') {
       const allCovered = await checkAllItemsCovered(solicitud_id, client);
       if (allCovered) {
-        await updateSolicitudEstadoIfPendiente(solicitud_id, client);
+        await updateSolicitudEstadoIfPendiente(solicitud_id, usuarioId, client);
       }
     }
 
@@ -220,7 +242,7 @@ export async function crearBatchSolicitudesCotizacion(input: BatchCreateSolicitu
 
           const recipients = await resolveRecipientUserIds({
             creatorUserId: solicitud.created_by_usuario_id || null,
-            roleNames: ['Director de Obra', 'Adquisiciones'],
+            permissionCodes: ['solicitudes.view', 'cotizaciones.view'],
             excludeUserId: usuarioId,
           });
 
@@ -240,6 +262,27 @@ export async function crearBatchSolicitudesCotizacion(input: BatchCreateSolicitu
             }));
 
             await createNotifications(notifications);
+          }
+
+          // Fire-and-forget: email al creador cuando la solicitud pasa a Cotizando
+          if (solicitud.created_by_usuario_id) {
+            getUserEmailById(solicitud.created_by_usuario_id).then(async (correo) => {
+              if (!correo) return;
+              const html = buildSolicitudCotizandoHtml({
+                solicitudId: solicitud_id,
+                solicitante: solicitud.solicitante,
+                proyectoNombre: proyectoNombre,
+              });
+              const folio = `SOL-${String(solicitud_id).padStart(3, '0')}`;
+              sendEmail({
+                to: correo,
+                subject: `Solicitud en cotización: ${folio}`,
+                html,
+                eventoCodigo: 'solicitud.cotizando',
+                entidadTipo: 'solicitud',
+                entidadId: solicitud_id,
+              }).catch(console.error);
+            }).catch(console.error);
           }
         }
       } catch (notifError) {
@@ -262,9 +305,29 @@ export async function cambiarEstadoSolicitudCotizacion(id: number, estado: strin
     throw Object.assign(new Error('Estado no válido'), { statusCode: 400 });
   }
 
-  const sc = await updateSolicitudCotizacionEstado(id, estado);
+  // Validación para estado Respondida
+  if (estado === 'Respondida') {
+    const { rows: [sc] } = await pool.query(
+      `SELECT archivo_adjunto_path, 
+              (SELECT COUNT(*) FROM solicitud_cotizacion_detalle 
+               WHERE solicitud_cotizacion_id = $1 AND precio_unitario > 0) as has_prices
+       FROM solicitud_cotizacion WHERE id = $1`,
+      [id]
+    );
+
+    if (!sc) {
+      throw Object.assign(new Error('Solicitud de cotización no encontrada'), { statusCode: 404 });
+    }
+
+    if (!sc.archivo_adjunto_path && Number(sc.has_prices) === 0) {
+      throw Object.assign(new Error('No se puede marcar como Respondida sin haber cargado la respuesta del vendedor (precios o archivo)'), { statusCode: 400 });
+    }
+  }
+
+  const sc = await updateSolicitudCotizacionEstado(id, estado, usuarioId);
   if (!sc) {
     throw Object.assign(new Error('Solicitud de cotización no encontrada'), { statusCode: 404 });
   }
   return sc;
 }
+
