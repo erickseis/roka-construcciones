@@ -123,24 +123,31 @@ export default function SolicitudCotizacionModal({ isOpen, onClose, onSuccess, i
   }));
 
   const customStyles = {
-    control: (base: any) => ({
+    control: (base: any, state: any) => ({
       ...base,
       minHeight: '32px',
       fontSize: '12px',
       borderRadius: '0.5rem',
-      borderColor: '#e2e8f0',
+      borderColor: state.isFocused ? '#f59e0b' : '#e2e8f0',
+      backgroundColor: 'transparent',
+      boxShadow: 'none',
       '&:hover': {
-        borderColor: '#fbbf24',
+        borderColor: state.isFocused ? '#f59e0b' : '#cbd5e1',
       },
     }),
-    valueContainer: (base: any) => ({
+    singleValue: (base: any) => ({
       ...base,
-      padding: '0 8px',
+      color: 'inherit',
+    }),
+    placeholder: (base: any) => ({
+      ...base,
+      color: '#94a3b8',
     }),
     input: (base: any) => ({
       ...base,
       margin: '0',
       padding: '0',
+      color: 'inherit',
     }),
     indicatorSeparator: () => ({
       display: 'none',
@@ -158,11 +165,16 @@ export default function SolicitudCotizacionModal({ isOpen, onClose, onSuccess, i
       fontSize: '12px',
       borderRadius: '0.5rem',
       overflow: 'hidden',
+      backgroundColor: '#1e293b',
+      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.2)',
+      border: '1px solid #334155',
     }),
     option: (base: any, state: { isFocused: boolean; isSelected: boolean }) => ({
       ...base,
-      backgroundColor: state.isSelected ? '#f59e0b' : state.isFocused ? '#fff7ed' : 'transparent',
-      color: state.isSelected ? 'white' : '#1e293b',
+      backgroundColor: state.isSelected ? '#f59e0b' : state.isFocused ? '#334155' : 'transparent',
+      color: state.isSelected ? 'white' : '#f1f5f9',
+      padding: '8px 12px',
+      cursor: 'pointer',
       '&:active': {
         backgroundColor: '#f59e0b',
       },
@@ -182,10 +194,10 @@ export default function SolicitudCotizacionModal({ isOpen, onClose, onSuccess, i
         <div>
           <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Solicitud de Materiales</label>
           <select required value={solicitudId} onChange={e => handleSolicitudChange(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400">
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-amber-500/50">
             <option value="">Seleccionar solicitud...</option>
             {solicitudes.map((s: any) => (
-              <option key={s.id} value={s.id}>SOL-{String(s.id).padStart(3, '0')} — {s.proyecto_nombre} ({s.estado})</option>
+              <option key={s.id} value={s.id} className="dark:bg-slate-900">SOL-{String(s.id).padStart(3, '0')} — {s.proyecto_nombre} ({s.estado})</option>
             ))}
           </select>
         </div>
@@ -206,25 +218,25 @@ export default function SolicitudCotizacionModal({ isOpen, onClose, onSuccess, i
               </button>
             </div>
             <p className="mb-2 text-[10px] text-slate-400">Cada ítem indica a qué proveedor se le enviará la solicitud de cotización. El sistema agrupará automáticamente los ítems por proveedor.</p>
-            <div className="rounded-lg border border-slate-200 overflow-hidden">
+            <div className="rounded-lg border border-slate-200 overflow-hidden dark:border-slate-800">
               <table className="min-w-full text-sm">
-                <thead className="bg-slate-50">
+                <thead className="bg-slate-50 dark:bg-slate-900">
                   <tr>
-                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Material</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Código</th>
-                    <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Cant.</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Unidad</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Proveedor</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Material</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Código</th>
+                    <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Cant.</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Unidad</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Proveedor</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((item, idx) => (
-                    <tr key={item.solicitud_item_id} className="border-t border-slate-100">
-                      <td className="px-3 py-2 font-medium text-slate-800">{item.nombre_material}</td>
-                      <td className="px-3 py-2 font-mono text-xs text-slate-500">{item.codigo || '-'}</td>
-                      <td className="px-3 py-2 text-right font-mono text-slate-600">{Number(item.cantidad_requerida).toLocaleString()}</td>
-                      <td className="px-3 py-2 text-slate-500">{item.unidad}</td>
-                      <td className="px-3 py-2 min-w-[200px]">
+                    <tr key={item.solicitud_item_id} className="border-t border-slate-100 dark:border-slate-800 transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                      <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">{item.nombre_material}</td>
+                      <td className="px-3 py-2 font-mono text-xs text-slate-500 dark:text-slate-400">{item.codigo || '-'}</td>
+                      <td className="px-3 py-2 text-right font-mono text-slate-600 dark:text-slate-300">{Number(item.cantidad_requerida).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{item.unidad}</td>
+                      <td className="px-3 py-2 min-w-[200px] dark:text-slate-200">
                         <CreatableSelect
                           isClearable
                           menuPortalTarget={document.body}
@@ -253,14 +265,14 @@ export default function SolicitudCotizacionModal({ isOpen, onClose, onSuccess, i
           </div>
         )}
 
-        <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+        <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-900/20 dark:text-amber-200 dark:border dark:border-amber-800/50">
           <strong>Sin precios:</strong> La solicitud de cotización solo lista los materiales necesarios.
           El proveedor responderá con precios, los cuales se ingresarán como "Cotización de Venta" en el siguiente paso.
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
+        <div className="flex justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
           <button type="button" onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100">Cancelar</button>
+            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">Cancelar</button>
           <button type="submit" disabled={submitting || items.length === 0}
             className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 disabled:opacity-60">
             <Plus size={16} />

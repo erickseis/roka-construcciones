@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Plus, Eye, Send, Trash2, FileDown, Upload, ShoppingCart, FileText, Ban } from 'lucide-react';
 import { DataTable } from '../ui/DataTable';
@@ -23,6 +24,7 @@ const estadoColor: Record<string, string> = {
 export default function SolicitudCotizacionTab() {
   const [showForm, setShowForm] = useState(false);
   const [initialSolicitudId, setInitialSolicitudId] = useState<string | undefined>(undefined);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [detailId, setDetailId] = useState<number | null>(null);
   const [importData, setImportData] = useState<any>(null);
   const [showImport, setShowImport] = useState(false);
@@ -51,6 +53,15 @@ export default function SolicitudCotizacionTab() {
     setInitialSolicitudId(solId);
     setShowForm(true);
   };
+
+  // Auto-open form when coming from dashboard with solicitud_id param
+  useEffect(() => {
+    const solId = searchParams.get('solicitud_id');
+    if (solId) {
+      handleOpenForm(solId);
+      setSearchParams({}, { replace: true });
+    }
+  }, []);
 
   const handleEstado = async (id: number, estado: string) => {
     try {
@@ -113,7 +124,19 @@ export default function SolicitudCotizacionTab() {
       key: 'solicitud_id', header: 'Solicitud',
       render: (row: any) => <span className="font-mono text-xs text-slate-500 dark:text-slate-400">SOL-{String(row.solicitud_id).padStart(3, '0')}</span>,
     },
-    { key: 'proyecto_nombre', header: 'Proyecto', sortable: true },
+    { 
+      key: 'proyecto_nombre', 
+      header: 'Proyecto', 
+      sortable: true,
+      render: (row: any) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-slate-700 dark:text-slate-200">{row.proyecto_nombre}</span>
+          {row.proyecto_numero_obra && (
+            <span className="text-[10px] font-mono text-slate-400">N° {row.proyecto_numero_obra}</span>
+          )}
+        </div>
+      )
+    },
     {
       key: 'total_items', header: 'Ítems',
       render: (row: any) => (
@@ -236,9 +259,14 @@ export default function SolicitudCotizacionTab() {
                           <span className="text-[10px] text-slate-400">Sin fecha definida</span>
                         )}
                       </div>
-                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate" title={sol.proyecto_nombre}>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate" title={sol.proyecto_nombre}>
                         {sol.proyecto_nombre}
                       </p>
+                      {sol.proyecto_numero_obra && (
+                        <p className="text-[10px] font-mono text-slate-400">
+                          N° {sol.proyecto_numero_obra}
+                        </p>
+                      )}
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                         {sol.solicitante || 'Sin solicitante'}
                       </p>

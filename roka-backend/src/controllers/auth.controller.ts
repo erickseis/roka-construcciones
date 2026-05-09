@@ -6,7 +6,8 @@ import { findUserByEmail, findUserById } from '../models/auth.model';
 import { LoginResult, JwtPayload } from '../types/usuario.types';
 import pool from '../db';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'roka_super_secret_key_123';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
 
 export async function login(req: Request, res: Response) {
   const { correo, password } = req.body;

@@ -85,8 +85,9 @@ export function startAlertScheduler(): void {
          WHERE sm.estado IN ('Pendiente', 'Cotizando')
            AND sm.fecha_requerida IS NOT NULL
            AND sm.fecha_requerida >= $1::date
-           AND sm.fecha_requerida <= $2::date
-         ORDER BY sm.fecha_requerida ASC`,
+          AND sm.fecha_requerida <= $2::date
+          ORDER BY sm.fecha_requerida ASC
+          LIMIT 50`,
         [nowStr, windowStr]
       );
 
@@ -199,6 +200,12 @@ async function sendAlertaEmail(
   if (!email) {
     console.warn(
       `[AlertasEmail] Usuario ID ${userId} sin correo — omitiendo`
+    );
+    await pool.query(
+      `INSERT INTO alerta_email_log (solicitud_id, usuario_destino_id, tipo_alerta, numero_envio)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT DO NOTHING`,
+      [sol.id, userId, tipoAlerta, numeroEnvio]
     );
     return;
   }

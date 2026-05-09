@@ -13,6 +13,7 @@ export async function getAllOrdenes(filters: OrdenFilters): Promise<OrdenCompra[
            COALESCE(sc.proveedor, oc.proveedor) AS proveedor,
            sc.solicitud_id,
            p.nombre AS proyecto_nombre,
+           p.numero_obra AS proyecto_numero_obra,
            COALESCE(sm.proyecto_id, oc.proyecto_id) AS proyecto_id
     FROM ordenes_compra oc
     LEFT JOIN solicitud_cotizacion sc ON sc.id = oc.solicitud_cotizacion_id
@@ -56,8 +57,10 @@ export async function getOrdenById(id: number): Promise<OrdenCompraDetalle | nul
            pr.contacto_nombre AS proveedor_contacto_nombre,
            pr.contacto_telefono AS proveedor_contacto_telefono,
            pr.contacto_correo AS proveedor_contacto_correo,
-           CONCAT(ua.nombre, ' ', ua.apellido) AS autorizado_por_nombre,
-           NULLIF(CONCAT(u_ent.nombre, ' ', u_ent.apellido), ' ') AS entrega_updated_by_nombre
+            CONCAT(ua.nombre, ' ', ua.apellido) AS autorizado_por_nombre,
+            COALESCE(oc.numero_cov, sc.numero_cov) AS numero_cov,
+           NULLIF(CONCAT(u_ent.nombre, ' ', u_ent.apellido), ' ') AS entrega_updated_by_nombre,
+           NULLIF(CONCAT(ur.nombre, ' ', ur.apellido), ' ') AS responsable_nombre
     FROM ordenes_compra oc
     LEFT JOIN solicitud_cotizacion sc ON sc.id = oc.solicitud_cotizacion_id
     LEFT JOIN solicitudes_material sm ON sm.id = COALESCE(oc.solicitud_id, sc.solicitud_id)
@@ -65,6 +68,7 @@ export async function getOrdenById(id: number): Promise<OrdenCompraDetalle | nul
     LEFT JOIN proveedores pr ON pr.id = sc.proveedor_id
     LEFT JOIN usuarios ua ON ua.id = COALESCE(oc.autorizado_por_usuario_id, oc.created_by_usuario_id)
     LEFT JOIN usuarios u_ent ON u_ent.id = oc.entrega_updated_by_usuario_id
+    LEFT JOIN usuarios ur ON ur.id = p.responsable_usuario_id
     WHERE oc.id = $1
   `, [id]);
 
@@ -160,6 +164,7 @@ export async function createOrden(data: {
   solicitud_id?: number | null;
   codigo_obra?: string | null;
   folio: string | null;
+  numero_cov?: string | null;
   descuento_tipo: string;
   descuento_valor: number;
   descuento_monto: number;
@@ -176,11 +181,11 @@ export async function createOrden(data: {
     `INSERT INTO ordenes_compra (
         solicitud_cotizacion_id, condiciones_pago, total, created_by_usuario_id,
         autorizado_por_usuario_id, solicitud_id, codigo_obra,
-        folio, descuento_tipo, descuento_valor, descuento_monto,
+        folio, numero_cov, descuento_tipo, descuento_valor, descuento_monto,
         subtotal_neto, impuesto_monto, total_final,
         plazo_entrega, condiciones_entrega, atencion_a, observaciones
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
      RETURNING *`,
     [
       data.solicitud_cotizacion_id,
@@ -191,6 +196,7 @@ export async function createOrden(data: {
       data.solicitud_id ?? null,
       data.codigo_obra ?? null,
       data.folio,
+      data.numero_cov ?? null,
       data.descuento_tipo,
       data.descuento_valor,
       data.descuento_monto,

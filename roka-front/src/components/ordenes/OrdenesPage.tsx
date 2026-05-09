@@ -60,7 +60,19 @@ export default function OrdenesPage() {
       ),
     },
     { key: 'proveedor', header: 'Proveedor', sortable: true },
-    { key: 'proyecto_nombre', header: 'Proyecto', sortable: true },
+    { 
+      key: 'proyecto_nombre', 
+      header: 'Proyecto', 
+      sortable: true,
+      render: (row: any) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-slate-700 dark:text-slate-200">{row.proyecto_nombre}</span>
+          {row.proyecto_numero_obra && (
+            <span className="text-[10px] font-mono text-slate-400">N° {row.proyecto_numero_obra}</span>
+          )}
+        </div>
+      )
+    },
     {
       key: 'fecha_emision',
       header: 'Emisión',
@@ -234,7 +246,12 @@ export default function OrdenesPage() {
             </div>
             <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
               <p className="text-[10px] font-bold uppercase text-slate-400">Proyecto</p>
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{showDetail.proyecto_nombre}</p>
+              <div className="flex flex-col">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{showDetail.proyecto_nombre}</p>
+                {showDetail.proyecto_numero_obra && (
+                  <p className="text-[10px] font-mono text-slate-400">N° {showDetail.proyecto_numero_obra}</p>
+                )}
+              </div>
             </div>
           </div>
         )}

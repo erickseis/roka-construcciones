@@ -34,8 +34,12 @@ Puedes responder sobre:
 function getFallbackResponse(message: string, stats: any): string {
   const msg = (message || '').toLowerCase();
 
-  if (msg.includes('solicitudes') || msg.includes('pendientes')) {
-    return `Actualmente el sistema registra **${stats.pendientes} solicitudes pendientes** de atencion este mes. Se han atendido un total de ${stats.atendidas} solicitudes satisfactoriamente.`;
+  if (msg.includes('solicitudes') || msg.includes('pendientes') || msg.includes('anuladas')) {
+    const scope = stats.solo_mis_solicitudes ? 'tuyas' : 'del sistema';
+    if (msg.includes('anuladas')) {
+      return `Actualmente hay **${stats.anuladas} solicitudes anuladas** ${scope} este mes.`;
+    }
+    return `Actualmente el sistema registra **${stats.pendientes} solicitudes pendientes** ${scope} este mes. Se han atendido un total de ${stats.atendidas} solicitudes satisfactoriamente.`;
   } else if (msg.includes('gasto') || msg.includes('dinero') || msg.includes('cuanto') || msg.includes('total')) {
     return `El gasto total aprobado en ordenes de compra es de **$${stats.total_gastado.toLocaleString('es-ES')}**. El proyecto con mayor ejecucion presupuestaria hasta ahora es "${stats.proyecto_top}".`;
   } else if (msg.includes('proyecto') || msg.includes('obra')) {
@@ -130,6 +134,7 @@ export async function getChatResponse(message: string, userId: number | null, ro
       if (!userPermisos.includes('proyectos.view')) filtrosPorRol.push('- PROYECTOS: NO visible para este rol');
       if (!userPermisos.includes('proveedores.view')) filtrosPorRol.push('- PROVEEDORES: NO visible para este rol');
       if (!userPermisos.includes('notificaciones.view')) filtrosPorRol.push('- NOTIFICACIONES: NO visible para este rol');
+      if (!userPermisos.includes('solicitudes.view_all')) filtrosPorRol.push('- SOLICITUDES: Solo visible las propias');
 
       const contextMessage = `
 Eres RokAI, asistente virtual del sistema de gestion de compras para construccion ROKA.
@@ -146,7 +151,9 @@ SOLICITUDES DE MATERIALES
 ========================================
 - Pendientes: ${stats.pendientes}
 - Atendidas este mes: ${stats.atendidas}
+- Anuladas este mes: ${stats.anuladas}
 - Total del mes: ${stats.total_mensual}
+${stats.solo_mis_solicitudes ? '- Nota: Solo se muestran las solicitudes creadas por este usuario' : '- Nota: Se muestran todas las solicitudes del sistema'}
 
 ${userPermisos.includes('presupuestos.view') ? `
 ========================================

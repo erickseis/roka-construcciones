@@ -269,3 +269,12 @@ export async function getLicitacionArchivo(id: number, db?: Queryable): Promise<
   );
   return rows[0] || null;
 }
+
+export async function getMaterialesArchivo(id: number, db?: Queryable): Promise<{ archivo_materiales_path: string | null; archivo_materiales_nombre: string | null } | null> {
+  const conn = getDb(db);
+  const { rows } = await conn.query(
+    'SELECT archivo_materiales_path, archivo_materiales_nombre FROM proyectos WHERE id = $1',
+    [id]
+  );
+  return rows[0] || null;
+}

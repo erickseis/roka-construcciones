@@ -5,7 +5,7 @@ import FlowStepper from '../ui/FlowStepper';
 import AuditTrailBadge from '../ui/AuditTrailBadge';
 import { getSolicitudCotizacion, changeSolicitudCotizacionEstado, deleteSolicitudCotizacion, descargarSolicitudCotizacionPdf, getOrden, enviarSCProveedor } from '@/lib/api';
 import { formatCLP } from '@/lib/utils';
-import { Send, Trash2, FileDown, Upload, ShoppingCart, FileText, MailCheck, Ban } from 'lucide-react';
+import { Send, Trash2, FileDown, Upload, ShoppingCart, FileText, MailCheck, Ban, Building2, FileCheck2 } from 'lucide-react';
 import ImportarRespuestaSCModal from './ImportarRespuestaSCModal';
 import { CrearOCModal } from '../ordenes/CrearOCModal';
 import OCPreviewModal from '../ordenes/OCPreviewModal';
@@ -148,19 +148,120 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-lg bg-slate-50 p-3">
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Solicitud de Materiales</p>
-                <p className="text-sm font-bold text-slate-800">SOL-{String(data.solicitud_id).padStart(3, '0')}</p>
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">SOL-{String(data.solicitud_id).padStart(3, '0')}</p>
               </div>
-              <div className="rounded-lg bg-slate-50 p-3">
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Estado</p>
                 <StatusBadge status={data.estado === 'Enviada' ? 'Cotizando' : data.estado} size="md" />
               </div>
             </div>
-            <div className="rounded-lg bg-slate-50 p-3">
+            <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
               <p className="text-[10px] font-bold uppercase text-slate-400">Proyecto</p>
-              <p className="text-sm font-bold text-slate-800">{data.proyecto_nombre}</p>
+              <div className="flex flex-col">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{data.proyecto_nombre}</p>
+                {data.proyecto_numero_obra && (
+                  <p className="text-[10px] font-mono text-slate-400">N° {data.proyecto_numero_obra}</p>
+                )}
+              </div>
             </div>
+
+            {/* Datos del Proveedor */}
+            {data.proveedor_id && (
+              <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 px-3 py-2 border-b border-slate-200 dark:border-slate-700">
+                  <Building2 size={13} className="text-slate-400" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Datos del Proveedor</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 p-3">
+                  <div className="col-span-2">
+                    <p className="text-[10px] font-bold uppercase text-slate-400">Razón Social</p>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{data.proveedor}</p>
+                  </div>
+                  {data.prov_rut && (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase text-slate-400">RUT</p>
+                      <p className="text-xs font-mono text-slate-700 dark:text-slate-300">{data.prov_rut}</p>
+                    </div>
+                  )}
+                  {data.prov_contacto_nombre && (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase text-slate-400">Contacto</p>
+                      <p className="text-xs text-slate-700 dark:text-slate-300">{data.prov_contacto_nombre}</p>
+                    </div>
+                  )}
+                  {(data.prov_correo || data.prov_contacto_correo) && (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase text-slate-400">Email</p>
+                      <p className="text-xs text-slate-700 dark:text-slate-300">{data.prov_contacto_correo || data.prov_correo}</p>
+                    </div>
+                  )}
+                  {(data.prov_telefono || data.prov_contacto_telefono) && (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase text-slate-400">Teléfono</p>
+                      <p className="text-xs text-slate-700 dark:text-slate-300">{data.prov_contacto_telefono || data.prov_telefono}</p>
+                    </div>
+                  )}
+                  {data.prov_condiciones_pago && (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase text-slate-400">Cond. de Pago</p>
+                      <p className="text-xs text-slate-700 dark:text-slate-300">{data.prov_condiciones_pago}</p>
+                    </div>
+                  )}
+                  {data.prov_plazo_entrega && (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase text-slate-400">Plazo Entrega</p>
+                      <p className="text-xs text-slate-700 dark:text-slate-300">{data.prov_plazo_entrega}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Datos de la Cotización de Venta (solo cuando Respondida) */}
+            {data.estado?.toUpperCase() === 'RESPONDIDA' && (data.numero_cov || data.condiciones_pago_cov || data.plazo_entrega_cov) && (
+              <div className="rounded-lg border border-emerald-200 dark:border-emerald-800/50 overflow-hidden">
+                <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 border-b border-emerald-200 dark:border-emerald-800/50">
+                  <FileCheck2 size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Cotización de Venta del Proveedor</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 p-3">
+                  {data.numero_cov && (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase text-slate-400">N° Cotización de Venta</p>
+                      <p className="text-sm font-mono font-bold text-emerald-700 dark:text-emerald-400">{data.numero_cov}</p>
+                    </div>
+                  )}
+                  {data.condiciones_pago_cov && (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase text-slate-400">Condiciones de Pago</p>
+                      <p className="text-xs text-slate-700 dark:text-slate-300">{data.condiciones_pago_cov}</p>
+                    </div>
+                  )}
+                  {data.plazo_entrega_cov && (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase text-slate-400">Plazo de Entrega</p>
+                      <p className="text-xs text-slate-700 dark:text-slate-300">{data.plazo_entrega_cov}</p>
+                    </div>
+                  )}
+                  {data.items && data.items.some((i: any) => i.precio_unitario != null) && (() => {
+                    const total = data.items.reduce((sum: number, item: any) => {
+                      const punit = Number(item.precio_unitario || 0);
+                      const cant = Number(item.cantidad_requerida || 0);
+                      const desc = Number(item.descuento_porcentaje || 0);
+                      return sum + Math.round(punit * cant * (desc > 0 ? (1 - desc / 100) : 1) * 100) / 100;
+                    }, 0);
+                    return (
+                      <div>
+                        <p className="text-[10px] font-bold uppercase text-slate-400">Total Neto</p>
+                        <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{total.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}</p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
 
             {/* Items con precios si existen */}
             {data.items && data.items.length > 0 && (
@@ -168,35 +269,53 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
                 <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
                   Ítems ({data.items.length})
                 </p>
-                <div className="rounded-lg border border-slate-200 overflow-hidden">
+                <div className="rounded-lg border border-slate-200 overflow-hidden dark:border-slate-700">
                   <table className="min-w-full text-sm">
-                    <thead className="bg-slate-50">
+                    <thead className="bg-slate-50 dark:bg-slate-900">
                       <tr>
-                        <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Material</th>
-                        <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Código</th>
-                        <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Cantidad</th>
-                        <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Unidad</th>
+                        <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Material</th>
+                        <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Código</th>
+                        <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Cantidad</th>
+                        <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Unidad</th>
                         {data.items.some((item: any) => item.precio_unitario != null) && (
                           <>
-                            <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">P. Unitario</th>
-                            <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Subtotal</th>
+                            <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">P. Unitario</th>
+                            {data.items.some((item: any) => Number(item.descuento_porcentaje) > 0) && (
+                              <th className="px-3 py-2 text-center text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Desc.</th>
+                            )}
+                            <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Subtotal</th>
                           </>
                         )}
                       </tr>
                     </thead>
                     <tbody>
                       {data.items.map((item: any) => (
-                        <tr key={item.id} className="border-t border-slate-100">
-                          <td className="px-3 py-2 font-medium text-slate-800">{item.nombre_material}</td>
-                          <td className="px-3 py-2 font-mono text-xs text-slate-500">{item.codigo_proveedor || item.codigo || '-'}</td>
-                          <td className="px-3 py-2 text-right font-mono text-slate-600">{Number(item.cantidad_requerida).toLocaleString()}</td>
-                          <td className="px-3 py-2 text-slate-500">{item.unidad}</td>
-                          {item.precio_unitario != null && (
-                            <>
-                              <td className="px-3 py-2 text-right font-mono text-slate-800 dark:text-slate-200">{formatCLP(Number(item.precio_unitario))}</td>
-                              <td className="px-3 py-2 text-right font-mono font-bold text-slate-800 dark:text-slate-100">{formatCLP(Number(item.subtotal || item.precio_unitario * item.cantidad_requerida))}</td>
-                            </>
-                          )}
+                        <tr key={item.id} className="border-t border-slate-100 dark:border-slate-800">
+                          <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">{item.nombre_material}</td>
+                          <td className="px-3 py-2 font-mono text-xs text-slate-500 dark:text-slate-400">{item.codigo_proveedor || item.codigo || '-'}</td>
+                          <td className="px-3 py-2 text-right font-mono text-slate-600 dark:text-slate-300">{Number(item.cantidad_requerida).toLocaleString()}</td>
+                          <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{item.unidad}</td>
+                          {item.precio_unitario != null && (() => {
+                            const punit = Number(item.precio_unitario);
+                            const cant = Number(item.cantidad_requerida);
+                            const desc = Number(item.descuento_porcentaje || 0);
+                            const hasAnyDesc = data.items.some((i: any) => Number(i.descuento_porcentaje) > 0);
+                            const subtotalLinea = Math.round(punit * cant * (desc > 0 ? (1 - desc / 100) : 1) * 100) / 100;
+                            return (
+                              <>
+                                <td className="px-3 py-2 text-right font-mono text-slate-800 dark:text-slate-200">{formatCLP(punit)}</td>
+                                {hasAnyDesc && (
+                                  <td className="px-3 py-2 text-center font-mono text-xs">
+                                    {desc > 0
+                                      ? <span className="rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 font-bold">{desc}%</span>
+                                      : <span className="text-slate-400">-</span>
+                                    }
+                                  </td>
+                                )}
+                                <td className="px-3 py-2 text-right font-mono font-bold text-slate-800 dark:text-slate-100">{formatCLP(subtotalLinea)}</td>
+                              </>
+                            );
+                          })()}
                         </tr>
                       ))}
                     </tbody>
@@ -206,28 +325,28 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
             )}
 
             {/* Actions */}
-            <div className="flex justify-between border-t border-slate-100 pt-4">
+            <div className="flex justify-between border-t border-slate-100 pt-4 dark:border-slate-800">
               <div className="flex gap-2">
                 <button onClick={() => descargarSolicitudCotizacionPdf(id!)}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100">
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
                   <FileDown size={14} /> Descargar PDF
                 </button>
                 <button
                   onClick={handleEnviarProveedor}
                   disabled={sendingEmail}
                   title="Enviar solicitud de cotización al proveedor por email"
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
                 >
                   <MailCheck size={14} /> {sendingEmail ? 'Enviando...' : 'Enviar a Proveedor'}
                 </button>
                 {(data.estado === 'Borrador') && (
                   <>
                     <button onClick={handleAnular}
-                      className="rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-100">
+                      className="rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
                       <Ban size={14} className="inline mr-1" />Anular
                     </button>
                     <button onClick={handleDelete}
-                      className="rounded-lg px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-50">
+                      className="rounded-lg px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30">
                       <Trash2 size={14} className="inline mr-1" />Eliminar
                     </button>
                   </>
@@ -263,13 +382,13 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
 
                 {data.estado === 'Respondida' && (
                   <button onClick={handleAnular}
-                    className="rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-100">
+                    className="rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
                     Anular
                   </button>
                 )}
                 {data.estado === 'Enviada' && (
                   <button onClick={() => handleEstado('Borrador')}
-                    className="rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-100">
+                    className="rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
                     Volver a Borrador
                   </button>
                 )}

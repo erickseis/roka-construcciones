@@ -106,7 +106,7 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Orden de Compra Manual" subtitle="Para urgencias de terreno sin solicitud previa" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title="Orden de Compra Manual" subtitle="Para urgencias de terreno sin solicitud previa" size="xl">
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-xs text-red-700">
@@ -117,26 +117,26 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Proyecto *</label>
-            <select value={proyectoId} onChange={e => setProyectoId(e.target.value)} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400">
-              <option value="">Seleccionar proyecto</option>
+            <select value={proyectoId} onChange={e => setProyectoId(e.target.value)} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 dark:focus:border-amber-500/50">
+              <option value="" className="dark:bg-slate-900">Seleccionar proyecto</option>
               {proyectos?.filter((p: any) => p.is_active).map((p: any) => (
-                <option key={p.id} value={p.id}>{p.nombre}</option>
+                <option key={p.id} value={p.id} className="dark:bg-slate-900">{p.nombre}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Folio (opcional)</label>
-            <input type="text" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400" disabled placeholder="Auto-generado" />
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">N° de Orden de Compra (opcional)</label>
+            <input type="text" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100" disabled placeholder="Auto-generado" />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Solicitud de Materiales</label>
-            <select value={solicitudId} onChange={e => setSolicitudId(e.target.value)} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400">
-              <option value="">Sin solicitud (opcional)</option>
+            <select value={solicitudId} onChange={e => setSolicitudId(e.target.value)} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 dark:focus:border-amber-500/50">
+              <option value="" className="dark:bg-slate-900">Sin solicitud (opcional)</option>
               {solicitudes.map((s: any) => (
-                <option key={s.id} value={s.id}>
+                <option key={s.id} value={s.id} className="dark:bg-slate-900">
                   SM-{String(s.id).padStart(3, '0')} — {s.solicitante} ({s.estado})
                 </option>
               ))}
@@ -145,12 +145,12 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
           </div>
           <div>
             <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Código de Obra</label>
-            <input type="text" value={codigoObra} onChange={e => setCodigoObra(e.target.value)} placeholder="Se auto-carga al seleccionar proyecto" className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-amber-400 bg-slate-100" readOnly />
+            <input type="text" value={codigoObra} onChange={e => setCodigoObra(e.target.value)} placeholder="Se auto-carga al seleccionar proyecto" className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-amber-400 bg-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100" readOnly />
             <p className="mt-1 text-[10px] text-slate-400">Se auto-carga desde el N° de obra del proyecto.</p>
           </div>
         </div>
 
-        <div className="border-t border-slate-200 pt-4">
+        <div className="border-t border-slate-200 pt-4 dark:border-slate-800">
           <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Proveedor</p>
           <div className="space-y-4">
             <div>
@@ -195,12 +195,29 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
                     minHeight: '38px',
                     borderRadius: '0.375rem',
                     borderColor: state.isFocused ? '#fbbf24' : '#e2e8f0',
+                    backgroundColor: 'transparent',
                     boxShadow: state.isFocused ? '0 0 0 1px #fbbf24' : 'none',
                     '&:hover': { borderColor: state.isFocused ? '#fbbf24' : '#cbd5e1' },
                     fontSize: '0.875rem',
                   }),
+                  singleValue: (base) => ({ ...base, color: 'inherit' }),
+                  input: (base) => ({ ...base, color: 'inherit' }),
+                  placeholder: (base) => ({ ...base, color: '#94a3b8' }),
                   menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-                  menu: (base) => ({ ...base, fontSize: '0.875rem' }),
+                  menu: (base) => ({
+                    ...base,
+                    fontSize: '0.875rem',
+                    backgroundColor: '#1e293b',
+                    border: '1px solid #334155',
+                    borderRadius: '0.5rem',
+                    overflow: 'hidden',
+                  }),
+                  option: (base, state) => ({
+                    ...base,
+                    backgroundColor: state.isSelected ? '#f59e0b' : state.isFocused ? '#334155' : 'transparent',
+                    color: state.isSelected ? 'white' : '#f1f5f9',
+                    '&:active': { backgroundColor: '#f59e0b' },
+                  }),
                 }}
               />
             </div>
@@ -212,13 +229,13 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
                 onChange={e => setSelectedProveedor(prev => ({ ...prev, rut: e.target.value }))}
                 placeholder={selectedProveedor.id ? 'Cargado desde catálogo' : '12.345.678-9'}
                 readOnly={!!selectedProveedor.id}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-amber-400 bg-slate-100"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-amber-400 bg-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500"
               />
             </div>
           </div>
         </div>
 
-        <div className="border-t border-slate-200 pt-4">
+        <div className="border-t border-slate-200 pt-4 dark:border-slate-800">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Ítems</p>
             <button type="button" onClick={addItem} className="flex items-center gap-1 text-xs font-medium text-amber-600 hover:text-amber-700">
@@ -227,68 +244,68 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
           </div>
           <div className="space-y-3">
             {items.map((item, idx) => (
-              <div key={item.id} className="flex items-end gap-2 rounded-lg border border-slate-200 p-3 bg-slate-50/50">
+              <div key={item.id} className="flex items-end gap-2 rounded-lg border border-slate-200 p-3 bg-slate-50/50 dark:bg-slate-900/40 dark:border-slate-800">
                 <div className="flex-1 grid grid-cols-5 gap-3">
                   <div className="col-span-2">
                     <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Material / Descripción</label>
-                    <input type="text" value={item.nombre_material} onChange={e => updateItem(item.id, 'nombre_material', e.target.value)} placeholder="Ej: Cemento" className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs outline-none focus:border-amber-400" />
+                    <input type="text" value={item.nombre_material} onChange={e => updateItem(item.id, 'nombre_material', e.target.value)} placeholder="Ej: Cemento" className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100" />
                   </div>
                   <div>
                     <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Cant.</label>
-                    <input type="number" step="0.01" min="0" value={item.cantidad} onChange={e => updateItem(item.id, 'cantidad', Number(e.target.value))} placeholder="0" className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs outline-none focus:border-amber-400" />
+                    <input type="number" step="0.01" min="0" value={item.cantidad} onChange={e => updateItem(item.id, 'cantidad', Number(e.target.value))} placeholder="0" className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100" />
                   </div>
                   <div>
                     <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Unidad</label>
-                    <select 
-                      value={item.unidad} 
-                      onChange={e => updateItem(item.id, 'unidad', e.target.value)} 
-                      className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs outline-none focus:border-amber-400"
+                    <select
+                      value={item.unidad}
+                      onChange={e => updateItem(item.id, 'unidad', e.target.value)}
+                      className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                     >
-                      <option value="">Seleccionar</option>
+                      <option value="" className="dark:bg-slate-800">Seleccionar</option>
                       {masterUnidades?.map((u: any) => (
-                        <option key={u.id} value={u.abreviatura}>{u.nombre} ({u.abreviatura})</option>
+                        <option key={u.id} value={u.abreviatura} className="dark:bg-slate-800">{u.nombre} ({u.abreviatura})</option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Precio Unit. ($)</label>
-                    <input type="number" step="0.01" min="0" value={item.precio_unitario} onChange={e => updateItem(item.id, 'precio_unitario', Number(e.target.value))} placeholder="0" className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs outline-none focus:border-amber-400" />
+                    <input type="number" step="0.01" min="0" value={item.precio_unitario} onChange={e => updateItem(item.id, 'precio_unitario', Number(e.target.value))} placeholder="0" className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100" />
                   </div>
                 </div>
-                <button type="button" onClick={() => removeItem(item.id)} className="mb-1 rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors" title="Eliminar ítem">
+                <button type="button" onClick={() => removeItem(item.id)} className="mb-1 rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors dark:hover:bg-red-900/20 dark:hover:text-red-400" title="Eliminar ítem">
                   <Trash2 size={16} />
                 </button>
               </div>
             ))}
           </div>
-          <div className="mt-2 text-right text-sm font-bold text-slate-700">
+          <div className="mt-2 text-right text-sm font-bold text-slate-700 dark:text-slate-200">
             Total: {formatCLP(total)}
           </div>
         </div>
 
-        <div className="border-t border-slate-200 pt-4">
+        <div className="border-t border-slate-200 pt-4 dark:border-slate-800">
           <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Condiciones</p>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Condiciones de Pago</label>
-              <input type="text" value={condicionesPago} onChange={e => setCondicionesPago(e.target.value)} placeholder="Contado, Neto 30 días" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400" />
+              <input type="text" value={condicionesPago} onChange={e => setCondicionesPago(e.target.value)} placeholder="Contado, Neto 30 días" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100" />
             </div>
             <div>
               <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Plazo de Entrega</label>
-              <input type="text" value={plazoEntrega} onChange={e => setPlazoEntrega(e.target.value)} placeholder="Inmediata, 5 días hábiles" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400" />
+              <input type="text" value={plazoEntrega} onChange={e => setPlazoEntrega(e.target.value)} placeholder="Inmediata, 5 días hábiles" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100" />
             </div>
             <div>
               <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Atención a</label>
-              <input type="text" value={atencionA} onChange={e => setAtencionA(e.target.value)} placeholder="Nombre de contacto" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400" />
+              <input type="text" value={atencionA} onChange={e => setAtencionA(e.target.value)} placeholder="Nombre de contacto" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100" />
             </div>
             <div>
               <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Observaciones</label>
-              <input type="text" value={observaciones} onChange={e => setObservaciones(e.target.value)} placeholder="Notas adicionales" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400" />
+              <input type="text" value={observaciones} onChange={e => setObservaciones(e.target.value)} placeholder="Notas adicionales" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100" />
             </div>
           </div>
         </div>
 
-        <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+        <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-900/20 dark:text-amber-200 dark:border dark:border-amber-800/50">
           <strong>Constancia:</strong> Esta OC se crea sin respaldo de solicitud de materiales ni cotización previa.
         </div>
 
@@ -302,9 +319,9 @@ export default function OCManualModal({ isOpen, onClose, onSuccess }: { isOpen: 
           }}
         />
 
-        <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
-          <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100">Cancelar</button>
-          <button type="submit" disabled={submitting} className="flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-600 disabled:opacity-60">
+        <div className="flex justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+          <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">Cancelar</button>
+          <button type="submit" disabled={submitting} className="flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-600 active:scale-95 disabled:opacity-60">
             {submitting ? 'Creando...' : 'Crear OC Manual'}
           </button>
         </div>

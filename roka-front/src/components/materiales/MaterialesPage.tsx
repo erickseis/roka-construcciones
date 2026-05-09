@@ -238,25 +238,28 @@ export default function MaterialesPage() {
               </button>
             ))}
           </div>
-
-          <button
-            onClick={() => {
-              if (activeTab === 'materiales') {
-                setEditingMaterial(null);
-                setIsModalOpen(true);
-              } else if (activeTab === 'categorias') {
-                setEditingCategory(null);
-                setIsCategoryModalOpen(true);
-              } else if (activeTab === 'unidades') {
-                setEditingUnidad(null);
-                setIsUnidadModalOpen(true);
-              }
-            }}
-            className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-black text-white shadow-xl transition-all hover:bg-slate-800 active:scale-95 dark:bg-white dark:text-slate-900 w-full sm:w-auto"
-          >
-            <Plus size={18} />
-            {activeTab === 'materiales' ? 'Registrar Material' : activeTab === 'categorias' ? 'Nueva Categoría' : activeTab === 'unidades' ? 'Nueva Unidad' : 'Registrar'}
-          </button>
+          {activeTab === 'solicitados' ? (
+            null
+          ) : (
+            <button
+              onClick={() => {
+                if (activeTab === 'materiales') {
+                  setEditingMaterial(null);
+                  setIsModalOpen(true);
+                } else if (activeTab === 'categorias') {
+                  setEditingCategory(null);
+                  setIsCategoryModalOpen(true);
+                } else if (activeTab === 'unidades') {
+                  setEditingUnidad(null);
+                  setIsUnidadModalOpen(true);
+                }
+              }}
+              className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-black text-white shadow-xl transition-all hover:bg-slate-800 active:scale-95 dark:bg-white dark:text-slate-900 w-full sm:w-auto"
+            >
+              <Plus size={18} />
+              {activeTab === 'materiales' ? 'Registrar Material' : activeTab === 'categorias' ? 'Nueva Categoría' : activeTab === 'unidades' ? 'Nueva Unidad' : 'Registrar'}
+            </button>
+          )}
         </div>
       </div>
 

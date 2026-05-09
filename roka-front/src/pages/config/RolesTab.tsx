@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, ChevronDown, ChevronUp, Save, Check, Plus, Pencil, Trash2, AlertTriangle, EyeOff, RotateCcw } from 'lucide-react';
+import { ShieldCheck, ChevronDown, ChevronUp, Save, Check, Plus, Pencil, Trash2, AlertTriangle, Eye, EyeOff, RotateCcw } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import { getRoles, createRole, updateRole, deleteRole, reactivateRole, getPermisosByRol, updatePermisosByRol } from '../../lib/api';
 import { Modal } from '../../components/ui/Modal';
@@ -293,10 +293,10 @@ export default function RolesTab() {
         <form onSubmit={handleSaveRole} className="space-y-4">
           <input required type="text" placeholder="Nombre del Rol" value={roleName}
             onChange={e => setRoleName(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm" />
+            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100" />
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setShowForm(false)}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100">Cancelar</button>
+              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">Cancelar</button>
             <button type="submit" disabled={submitting}
               className="rounded-lg bg-emerald-600 px-6 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60">
               {submitting ? 'Guardando...' : editingRole ? 'Guardar Cambios' : 'Crear Rol'}
@@ -322,7 +322,7 @@ export default function RolesTab() {
           <div>
             <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Migrar usuarios a:</label>
             <select value={migrarAId} onChange={e => setMigrarAId(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 p-2.5 text-sm mt-1">
+              className="w-full rounded-lg border border-slate-200 p-2.5 text-sm mt-1 outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100">
               <option value="">Seleccionar destino...</option>
               {migrationModal?.disponibles?.map((d: any) => (
                 <option key={d.id} value={d.id}>{d.nombre}</option>
@@ -331,7 +331,7 @@ export default function RolesTab() {
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setMigrationModal(null)}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100">Cancelar</button>
+              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">Cancelar</button>
             <button disabled={!migrarAId || submitting} onClick={handleConfirmMigration}
               className="flex items-center gap-2 rounded-lg bg-red-500 px-6 py-2 text-sm font-bold text-white hover:bg-red-600 disabled:opacity-60">
               {submitting ? 'Procesando...' : 'Migrar y Desactivar'}

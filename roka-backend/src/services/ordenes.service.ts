@@ -34,6 +34,7 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
     observaciones,
     autorizado_por_usuario_id,
     codigo_obra,
+    numero_cov,
   } = input;
 
   if (!solicitud_cotizacion_id) {
@@ -175,6 +176,7 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
         solicitud_id: sc.solicitud_id ?? null,
         codigo_obra: codigo_obra ?? null,
         folio: folioTemporal,
+        numero_cov: numero_cov ?? sc.numero_cov ?? null,
         descuento_tipo: descuentoTipo,
         descuento_valor: descuentoTipo === 'none' ? 0 : Number(descuentoValorNumerico.toFixed(2)),
         descuento_monto: descuentoMontoFinal,

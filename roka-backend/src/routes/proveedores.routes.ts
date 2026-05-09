@@ -1,7 +1,10 @@
 import { Router } from 'express';
+import { authMiddleware } from '../middleware/authMiddleware';
 import * as proveedorCtrl from '../controllers/proveedores.controller';
 
 const router = Router();
+
+router.use(authMiddleware);
 
 router.get('/', proveedorCtrl.list);
 router.get('/:id', proveedorCtrl.getById);

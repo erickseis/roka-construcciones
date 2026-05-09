@@ -79,7 +79,7 @@ const CATALOG_STEPS = [
   },
 ];
 
-function getStepStatus(currentPath: string, stepPath: string, stepIndex: number, visibleSteps: typeof STEPS): 'completed' | 'active' | 'pending' {
+function getStepStatus(currentPath: string, stepPath: string, stepIndex: number, visibleSteps: typeof STEPS, visibleCatalog: typeof CATALOG_STEPS): 'completed' | 'active' | 'pending' {
   const exactMatch = currentPath === stepPath;
   const startsWith = currentPath.startsWith(stepPath + '/') || currentPath.startsWith(stepPath);
 
@@ -148,7 +148,7 @@ export function CopilotPanel({ onClose }: CopilotPanelProps) {
       <div className="flex-1 overflow-y-auto px-5 py-4">
         <div className="space-y-0">
           {visibleSteps.map((step, index) => {
-            const status = getStepStatus(currentPath, step.path, index, visibleSteps);
+            const status = getStepStatus(currentPath, step.path, index, visibleSteps, visibleCatalog);
             const Icon = step.icon;
 
             return (

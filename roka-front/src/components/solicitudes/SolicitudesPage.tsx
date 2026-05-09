@@ -17,7 +17,8 @@ import {
   getProyectos,
   getMaterialesMaster,
   getUnidadesMedida,
-  createMaterialMaster
+  createMaterialMaster,
+  exportarSolicitudHtml
 } from '@/lib/api';
 import { showConfirm, showAlert, showToast } from '@/lib/alerts';
 import { usePermissions } from '@/context/PermissionsContext';
@@ -56,7 +57,7 @@ export default function SolicitudesPage() {
   }, [solicitudes]);
   const { data: masterMateriales, refetch: refetchMateriales } = useApi(() => getMaterialesMaster(), []);
   const { data: masterUnidades } = useApi(() => getUnidadesMedida(), []);
-  
+
   // Material Modal state
   const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
 
@@ -121,19 +122,21 @@ export default function SolicitudesPage() {
   const handleDelete = async (id: number, currentEstado: string) => {
     if (currentEstado !== 'Anulada') {
       const result = await showConfirm({
-        title: '¿Anular Solicitud?',
-        text: 'La solicitud se marcará como anulada y se ocultará de los procesos activos (Cotizaciones, OC).',
-        confirmButtonText: 'Sí, anular',
-        cancelButtonText: 'No, cancelar'
+        title: '¿Descartar Solicitud?',
+        text: 'La solicitud se marcará como descartada y se ocultará de los procesos activos.',
+        confirmButtonText: 'Sí, descartar',
+        cancelButtonText: 'No, cancelar',
+        confirmButtonColor: '#ef4444'
       });
       if (!result.isConfirmed) return;
     } else {
       const result = await showConfirm({
         title: '¿Eliminar Permanentemente?',
-        text: 'Esta acción borrará definitivamente el registro de la base de datos y toda su trazabilidad relacionada. ¡No se puede deshacer!',
+        text: 'Esta acción borrará definitivamente el registro de la base de datos. ¡No se puede deshacer!',
         icon: 'error',
-        confirmButtonText: 'Sí, eliminar permanentemente',
-        cancelButtonText: 'Cancelar'
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#ef4444'
       });
       if (!result.isConfirmed) return;
     }
@@ -141,8 +144,9 @@ export default function SolicitudesPage() {
     try {
       await deleteSolicitud(id);
       refetch();
+      if (showDetail && showDetail.id === id) setShowDetail(null);
       showToast({
-        title: currentEstado === 'Anulada' ? 'Eliminada permanentemente' : 'Solicitud anulada',
+        title: currentEstado === 'Anulada' ? 'Eliminada permanentemente' : 'Solicitud descartada',
         icon: 'success'
       });
     } catch (err: any) {
@@ -163,7 +167,19 @@ export default function SolicitudesPage() {
         <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400">SOL-{String(row.id).padStart(3, '0')}</span>
       ),
     },
-    { key: 'proyecto_nombre', header: 'Proyecto', sortable: true },
+    { 
+      key: 'proyecto_nombre', 
+      header: 'Proyecto', 
+      sortable: true,
+      render: (row: any) => (
+        <div className="flex flex-col">
+          <span className="font-semibold text-slate-800 dark:text-slate-200">{row.proyecto_nombre}</span>
+          {row.proyecto_numero_obra && (
+            <span className="text-[10px] font-mono text-slate-400">N° {row.proyecto_numero_obra}</span>
+          )}
+        </div>
+      )
+    },
     { key: 'solicitante', header: 'Solicitante', sortable: true },
     {
       key: 'fecha',
@@ -193,6 +209,13 @@ export default function SolicitudesPage() {
       render: (row: any) => (
         <div className="flex gap-1">
           <button
+            onClick={(e) => { e.stopPropagation(); exportarSolicitudHtml(row.id); }}
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-500 transition-colors"
+            title="Descargar PDF"
+          >
+            <Download size={14} />
+          </button>
+          <button
             onClick={async (e) => {
               e.stopPropagation();
               setLoadingDetail(true);
@@ -214,12 +237,11 @@ export default function SolicitudesPage() {
           {row.estado !== 'Aprobado' && (
             <button
               onClick={(e) => { e.stopPropagation(); handleDelete(row.id, row.estado); }}
-              className={`rounded-lg p-1.5 transition-colors ${
-                row.estado === 'Anulada' 
-                  ? 'text-red-600 hover:bg-red-100' 
-                  : 'text-slate-400 hover:bg-amber-50 hover:text-amber-500'
-              }`}
-              title={row.estado === 'Anulada' ? 'Eliminar permanentemente' : 'Anular solicitud'}
+              className={`rounded-lg p-1.5 transition-colors ${row.estado === 'Anulada'
+                ? 'text-red-600 hover:bg-red-100'
+                : 'text-slate-400 hover:bg-amber-50 hover:text-amber-500'
+                }`}
+              title={row.estado === 'Anulada' ? 'Eliminar permanentemente' : 'Descartar solicitud'}
             >
               {row.estado === 'Anulada' ? <Trash2 size={14} /> : <Ban size={14} />}
             </button>
@@ -239,7 +261,7 @@ export default function SolicitudesPage() {
       { 'Material': 'Arena de Río', 'Cantidad': 5.5, 'Unidad': 'm3', 'SKU': '' },
       { 'Material': 'Grava 3/4', 'Cantidad': 3, 'Unidad': 'm3', 'SKU': '' },
     ];
-    
+
     // Hoja de Instrucciones
     const instructionData = [
       { 'Campo': 'Material', 'Descripción': 'Nombre del material o insumo (Obligatorio)', 'Ejemplo': 'Cemento Gris' },
@@ -291,7 +313,7 @@ export default function SolicitudesPage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Datos para Importar');
     XLSX.utils.book_append_sheet(wb, wsIns, 'Instrucciones');
-    
+
     XLSX.writeFile(wb, 'Plantilla_Solicitud_Materiales.xlsx');
   };
 
@@ -329,7 +351,7 @@ export default function SolicitudesPage() {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
               onClick={downloadTemplate}
-              className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+              className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               title="Descargar plantilla Excel para importación"
             >
               <Download size={18} className="text-amber-500" />
@@ -338,18 +360,17 @@ export default function SolicitudesPage() {
             <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={() => setShowAnuladas(!showAnuladas)}
-                className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
-                  showAnuladas 
-                    ? 'bg-slate-800 text-white shadow-lg' 
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 shadow-sm'
-                }`}
+                className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${showAnuladas
+                  ? 'bg-slate-800 text-white shadow-lg dark:bg-slate-700 cursor-pointer'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 shadow-sm dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 dark:hover:bg-slate-800 cursor-pointer'
+                  }`}
               >
                 {showAnuladas ? 'Ver Activas' : 'Ver Anuladas'}
               </button>
 
               <button
                 onClick={() => setShowBulkImport(true)}
-                className="flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
+                className="cursor-pointer flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98] dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 dark:hover:bg-slate-800"
               >
                 <Upload size={18} className="text-slate-400" />
                 Importación Masiva
@@ -360,7 +381,7 @@ export default function SolicitudesPage() {
                 setForm(prev => ({ ...prev, solicitante: userName }));
                 setShowForm(true);
               }}
-              className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 hover:shadow-amber-500/30 active:scale-[0.98]"
+              className="cursor-pointer flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 hover:shadow-amber-500/30 active:scale-[0.98]"
             >
               <Plus size={18} />
               Nueva Solicitud
@@ -455,7 +476,7 @@ export default function SolicitudesPage() {
                 value={form.fecha_requerida}
                 onChange={e => setForm({ ...form, fecha_requerida: e.target.value })}
                 title="Fecha en que se necesita el material físicamente en terreno"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
           </div>
@@ -464,9 +485,9 @@ export default function SolicitudesPage() {
           <div>
             <div className="mb-3 flex items-center justify-between">
               <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Materiales</label>
-              <button 
-                type="button" 
-                onClick={addItem} 
+              <button
+                type="button"
+                onClick={addItem}
                 className="flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-600 shadow-sm border border-amber-100 transition-all hover:bg-amber-100 hover:shadow-md active:scale-95 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400 dark:hover:bg-amber-500/20"
               >
                 <Plus size={14} /> Agregar ítem
@@ -481,13 +502,13 @@ export default function SolicitudesPage() {
                 })) || [];
 
                 return form.items.map((item, idx) => {
-                  const selectedOption = item.material_id 
+                  const selectedOption = item.material_id
                     ? materialOptions.find((opt: any) => opt.value === item.material_id)
                     : item.nombre_material ? { value: item.nombre_material, label: item.nombre_material, isManual: true } : null;
 
                   return (
                     <div key={idx} className="flex flex-col md:flex-row items-stretch md:items-start gap-2 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
-                      
+
                       {/* Búsqueda o Entrada Manual */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
@@ -622,18 +643,18 @@ export default function SolicitudesPage() {
 
                         {/* Unidad */}
                         <div className="w-24">
-                           <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Unidad</label>
-                           <select
+                          <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Unidad</label>
+                          <select
                             value={item.unidad}
-                             onChange={e => updateItem(idx, 'unidad', e.target.value)}
-                             className="w-full h-[38px] rounded-md border border-slate-200 bg-white px-2 py-1 text-sm outline-none focus:border-amber-400 transition-colors dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-amber-500/50 dark:focus:bg-slate-800"
+                            onChange={e => updateItem(idx, 'unidad', e.target.value)}
+                            className="w-full h-[38px] rounded-md border border-slate-200 bg-white px-2 py-1 text-sm outline-none focus:border-amber-400 transition-colors dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-amber-500/50 dark:focus:bg-slate-800"
                           >
                             {masterUnidades?.map((u: any) => (
                               <option key={u.id} value={u.abreviatura}>{u.abreviatura}</option>
                             )) || unidadesStatic.map(u => <option key={u} value={u}>{u}</option>)}
                           </select>
                         </div>
-                        
+
                         {/* Botón Eliminar */}
                         <div className="flex items-end pb-[6px]">
                           {form.items.length > 1 ? (
@@ -677,7 +698,7 @@ export default function SolicitudesPage() {
         isOpen={!!showDetail}
         onClose={() => setShowDetail(null)}
         title={showDetail ? `Solicitud SOL-${String(showDetail.id).padStart(3, '0')}` : ''}
-        subtitle={showDetail?.proyecto_nombre}
+        subtitle={showDetail?.proyecto_nombre + (showDetail?.proyecto_numero_obra ? ` (N° ${showDetail.proyecto_numero_obra})` : '')}
         size="lg"
       >
         {showDetail && (
@@ -720,65 +741,76 @@ export default function SolicitudesPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="rounded-lg bg-slate-50 p-3">
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Solicitante</p>
-                <p className="text-sm font-bold text-slate-800">{showDetail.solicitante}</p>
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{showDetail.solicitante}</p>
               </div>
-              <div className="rounded-lg bg-slate-50 p-3">
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Fecha</p>
-                <p className="text-sm font-bold text-slate-800">{new Date(showDetail.fecha).toLocaleDateString('es-ES')}</p>
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{new Date(showDetail.fecha).toLocaleDateString('es-ES')}</p>
               </div>
-              <div className="rounded-lg bg-slate-50 p-3">
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Estado</p>
                 <StatusBadge status={showDetail.estado} size="md" />
               </div>
             </div>
 
             {showDetail.fecha_requerida && (
-              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
-                <p className="text-[10px] font-bold uppercase text-amber-600">Fecha requerida en terreno</p>
-                <p className="text-sm font-bold text-amber-800">{new Date(showDetail.fecha_requerida + 'T12:00:00').toLocaleDateString('es-ES')}</p>
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 dark:bg-amber-900/20 dark:border-amber-800">
+                <p className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-500">Fecha requerida en terreno</p>
+                <p className="text-sm font-bold text-amber-800 dark:text-amber-200">
+                  {(() => {
+                    const d = new Date(showDetail.fecha_requerida + 'T12:00:00');
+                    return isNaN(d.getTime()) ? showDetail.fecha_requerida : d.toLocaleDateString('es-ES');
+                  })()}
+                </p>
               </div>
             )}
 
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-2">Ítems de la solicitud</p>
-            <div className="rounded-lg border border-slate-200 overflow-x-auto">
+            <div className="rounded-lg border border-slate-200 overflow-x-auto dark:border-slate-700">
               <table className="min-w-full text-sm">
-                <thead className="bg-slate-50"><tr>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Material</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Código/SKU</th>
-                  <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Cantidad</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Unidad</th>
+                <thead className="bg-slate-50 dark:bg-slate-900"><tr>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Material</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Código/SKU</th>
+                  <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Cantidad</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Unidad</th>
                 </tr></thead>
                 <tbody>
                   {loadingDetail ? (
                     <tr><td colSpan={4} className="px-3 py-4 text-center text-xs text-slate-400">Cargando ítems...</td></tr>
                   ) : showDetail.items ? showDetail.items.map((item: any) => (
-                      <tr key={item.id} className="border-t border-slate-100">
-                        <td className="px-3 py-2 font-medium text-slate-800">
-                          {item.material_oficial_nombre || item.nombre_material}
-                        </td>
-                        <td className="px-3 py-2 font-mono text-xs text-slate-500">
-                          {item.material_sku || item.codigo || '—'}
-                        </td>
-                        <td className="px-3 py-2 text-right font-mono text-slate-600">{Number(item.cantidad_requerida).toLocaleString()}</td>
-                        <td className="px-3 py-2 text-slate-500">{item.unidad_abreviatura || item.unidad}</td>
-                      </tr>
-                    )) : (
+                    <tr key={item.id} className="border-t border-slate-100 dark:border-slate-800">
+                      <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">
+                        {item.material_oficial_nombre || item.nombre_material}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs text-slate-500 dark:text-slate-400">
+                        {item.material_sku || item.codigo || '—'}
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono text-slate-600 dark:text-slate-300">{Number(item.cantidad_requerida).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{item.unidad_abreviatura || item.unidad}</td>
+                    </tr>
+                  )) : (
                     <tr><td colSpan={4} className="px-3 py-4 text-center text-xs text-slate-400">Sin ítems</td></tr>
                   )}
                 </tbody>
               </table>
-            </div>
-
-
-
-
+            </div>            {showDetail.estado !== 'Aprobado' && showDetail.estado !== 'Anulada' && (
+              <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  onClick={() => handleDelete(showDetail.id, showDetail.estado)}
+                  className="flex items-center gap-2 rounded-xl bg-red-50 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-100 transition-all active:scale-95 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40"
+                >
+                  <Ban size={16} />
+                  Descartar Solicitud
+                </button>
+              </div>
+            )}
           </div>
         )}
       </Modal>
 
-      <MaterialModal 
+      <MaterialModal
         isOpen={isMaterialModalOpen}
         onClose={() => setIsMaterialModalOpen(false)}
         onSave={onNewMaterialSaved}

@@ -12,6 +12,9 @@ router.get('/', authMiddleware, requirePermission('proyectos.view'), proyectoCtr
 // Download licitacion file (before :id to avoid route conflict with 'licitacion-archivo' as id)
 router.get('/:id/licitacion-archivo', authMiddleware, requirePermission('proyectos.view'), proyectoCtrl.downloadLicitacion);
 
+// Download materiales file
+router.get('/:id/materiales-archivo', authMiddleware, requirePermission('proyectos.view'), proyectoCtrl.downloadMateriales);
+
 // Get proyecto by ID with budget summary and metrics
 router.get('/:id', authMiddleware, requirePermission('proyectos.view'), proyectoCtrl.getById);
 

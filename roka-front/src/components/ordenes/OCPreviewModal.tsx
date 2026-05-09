@@ -138,7 +138,7 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '10px', opacity: 0.85 }}>Folio</div>
+            <div style={{ fontSize: '10px', opacity: 0.85 }}>Orden de Compra N°: </div>
             <div style={{ fontSize: '16px', fontWeight: 800 }}>{folio}</div>
             <div style={{ fontSize: '10px' }}>Fecha: {fmtDate(orden?.fecha_emision)}</div>
           </div>
@@ -152,6 +152,10 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
                 <tr>
                   <td style={headerLabelStyle}>Señor(es)</td>
                   <td style={headerValueStyle}>{orden?.proveedor || '-'}</td>
+                </tr>
+                <tr>
+                  <td style={headerLabelStyle}>N° Cotiz. Venta</td>
+                  <td style={headerValueStyle}>{orden?.numero_cov || '-'}</td>
                 </tr>
                 <tr>
                   <td style={headerLabelStyle}>Atención</td>
@@ -191,7 +195,7 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
                 </tr>
                 <tr>
                   <td style={headerLabelStyle}>Cód. Obra</td>
-                  <td style={headerValueStyle}>{orden?.proyecto_numero_licitacion || '-'}</td>
+                  <td style={headerValueStyle}>{orden?.codigo_obra || orden?.proyecto_numero_obra || orden?.proyecto_numero_licitacion || '-'}</td>
                 </tr>
                 <tr>
                   <td style={headerLabelStyle}>Obra</td>
@@ -207,7 +211,7 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
                 </tr>
                 <tr>
                   <td style={headerLabelStyle}>Encargado</td>
-                  <td style={headerValueStyle}>{atencion}</td>
+                  <td style={headerValueStyle}>{orden?.responsable_nombre || orden?.solicitante || '-'}</td>
                 </tr>
                 <tr>
                   <td style={headerLabelStyle}>Forma de Pago</td>
@@ -250,7 +254,10 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
           {items.map((item: any, index: number) => {
             const cantidad = Number(item?.cantidad_requerida ?? item?.cantidad_extraida ?? 0);
             const unitario = Number(item?.precio_unitario || 0);
-            const subtotal = cantidad * unitario;
+            const desc = Number(item?.descuento_porcentaje || 0);
+            const subtotal = (item?.subtotal != null && Number(item.subtotal) > 0)
+              ? Number(item.subtotal)
+              : Math.round(cantidad * unitario * (desc > 0 ? (1 - desc / 100) : 1) * 100) / 100;
             return (
               <tr key={item?.id ?? index}>
                 <td style={{ border: '1px solid #e2e8f0', padding: '5px', fontSize: '9px', textAlign: 'center' }}>{index + 1}</td>
@@ -413,7 +420,7 @@ const OCPreviewModal: React.FC<OCPreviewModalProps> = ({ isOpen, onClose, orden 
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-slate-950/70 flex flex-col items-center py-6 overflow-y-auto">
+      <div className="fixed inset-0 z-[150] bg-slate-950/70 flex flex-col items-center py-6 overflow-y-auto">
         <div className="w-[980px] max-w-[96vw] bg-white rounded-t-xl border-b border-slate-200 flex items-center justify-between px-5 py-3 sticky top-0 z-10 shadow-sm">
           <div>
             <h2 className="font-bold text-slate-800 text-base">Vista Previa - Orden de Compra</h2>

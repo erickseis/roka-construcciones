@@ -12,6 +12,7 @@ import {
   updateProyectoActive,
   getUsers,
   downloadLicitacionArchivo,
+  downloadMaterialesArchivo,
 } from '@/lib/api';
 
 export default function ProyectosPage() {
@@ -362,7 +363,7 @@ export default function ProyectosPage() {
                 value={form.ubicacion}
                 onChange={(e) => setForm({ ...form, ubicacion: e.target.value })}
                 title="Dirección o ubicación física donde se desarrolla el proyecto"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
             <div>
@@ -388,7 +389,7 @@ export default function ProyectosPage() {
                 value={form.fecha_inicio}
                 onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })}
                 title="Fecha de inicio prevista para el proyecto"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
             <div>
@@ -398,7 +399,7 @@ export default function ProyectosPage() {
                 value={form.fecha_fin}
                 onChange={(e) => setForm({ ...form, fecha_fin: e.target.value })}
                 title="Fecha de término prevista para el proyecto"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
             <div>
@@ -436,7 +437,7 @@ export default function ProyectosPage() {
                     value={form.numero_licitacion}
                     onChange={(e) => setForm({ ...form, numero_licitacion: e.target.value })}
                     placeholder="Ej: LIC-2024-001"
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                   />
                 </div>
 
@@ -447,7 +448,7 @@ export default function ProyectosPage() {
                     onChange={(e) => setForm({ ...form, descripcion_licitacion: e.target.value })}
                     placeholder="Detalles de la licitación..."
                     rows={2}
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                   />
                 </div>
 
@@ -458,7 +459,7 @@ export default function ProyectosPage() {
                       type="date"
                       value={form.fecha_apertura_licitacion}
                       onChange={(e) => setForm({ ...form, fecha_apertura_licitacion: e.target.value })}
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                     />
                   </div>
                   <div>
@@ -469,7 +470,7 @@ export default function ProyectosPage() {
                       value={form.monto_referencial_licitacion}
                       onChange={(e) => setForm({ ...form, monto_referencial_licitacion: e.target.value })}
                       placeholder="0.00"
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                     />
                   </div>
                 </div>
@@ -482,7 +483,7 @@ export default function ProyectosPage() {
                       value={form.mandante}
                       onChange={(e) => setForm({ ...form, mandante: e.target.value })}
                       placeholder="Nombre del mandante o entidad financiadora"
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                     />
                   </div>
                   <div>
@@ -492,7 +493,7 @@ export default function ProyectosPage() {
                       value={form.moneda}
                       onChange={(e) => setForm({ ...form, moneda: e.target.value })}
                       placeholder="CLP, USD, UF, UTM"
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                     />
                   </div>
                 </div>
@@ -505,13 +506,13 @@ export default function ProyectosPage() {
                     value={form.plazo_ejecucion_dias}
                     onChange={(e) => setForm({ ...form, plazo_ejecucion_dias: e.target.value })}
                     placeholder="Ej: 365"
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                   />
                 </div>
 
                 <div>
                   <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Archivo de Licitación</label>
-                  <div className="rounded-lg border-2 border-dashed border-slate-300 p-4">
+                  <div className="rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 p-4">
                     <input
                       type="file"
                       accept=".pdf,.xlsx,.xls,.csv"
@@ -540,7 +541,7 @@ export default function ProyectosPage() {
 
                 <div>
                   <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Archivo de Materiales (Excel)</label>
-                  <div className="rounded-lg border-2 border-dashed border-slate-300 p-4">
+                  <div className="rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 p-4">
                     <input
                       type="file"
                       accept=".xlsx,.xls,.csv"
@@ -550,6 +551,18 @@ export default function ProyectosPage() {
                     <p className="mt-2 text-[10px] text-slate-500">Sube el listado de materiales en Excel para importar</p>
                     {archivo_materiales && (
                       <p className="mt-2 text-xs text-green-600 font-medium">✓ {archivo_materiales.name}</p>
+                    )}
+                    {editing?.archivo_materiales_nombre && !archivo_materiales && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-xs text-slate-600">Archivo actual: {editing.archivo_materiales_nombre}</span>
+                        <button
+                          type="button"
+                          onClick={() => downloadMaterialesArchivo(editing.id, editing.archivo_materiales_nombre)}
+                          className="text-xs font-semibold text-amber-600 hover:text-amber-700 dark:text-amber-400 flex items-center gap-1"
+                        >
+                          ⬇ Descargar
+                        </button>
+                      </div>
                     )}
                     <label className="mt-3 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
                       <input
@@ -569,7 +582,7 @@ export default function ProyectosPage() {
                           placeholder="Nombre del solicitante"
                           value={form.solicitante || ''}
                           onChange={(e) => setForm({ ...form, solicitante: e.target.value })}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                         />
                         <p className="mt-1 text-[10px] text-amber-600">
                           Se importarán los materiales como una solicitud nueva
@@ -583,7 +596,7 @@ export default function ProyectosPage() {
           </div>
 
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
-            <button type="button" onClick={() => setShowForm(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100">
+            <button type="button" onClick={() => setShowForm(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
               Cancelar
             </button>
             <button

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Clock, Calendar, Users, Save, ToggleLeft, ToggleRight, CheckCircle, X, Plus } from 'lucide-react';
+import { Bell, Clock, Calendar, Users, Save, ToggleLeft, ToggleRight, CheckCircle, X, Plus, Search } from 'lucide-react';
 import { getEmailAlertasConfig, updateEmailAlertasConfig, getUsuariosAlertas, type AlertaEmailConfig, type UsuarioAlerta } from '../../lib/api';
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -38,6 +38,7 @@ export default function EmailAlertasTab() {
   const [usuarios, setUsuarios] = useState<UsuarioAlerta[]>([]);
   const [loadingUsuarios, setLoadingUsuarios] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
 
   // Form state
   const [habilitada, setHabilitada] = useState(false);
@@ -133,11 +134,11 @@ export default function EmailAlertasTab() {
   return (
     <div className="space-y-6">
       {/* Sección: Configuración de Alertas */}
-      <Section title="Configuración de Alertas">
+      <Section title="Configuración de Alertas (Solicitudes de Materiales)">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Bell size={20} className="text-amber-500" />
-            <span className="font-semibold text-slate-800 dark:text-white">Habilitar alertas de fecha de entrega</span>
+            <span className="font-semibold text-slate-800 dark:text-white">Alertas de proximidad de fecha requerida</span>
           </div>
           <div className="flex items-center gap-2">
             <Toggle checked={habilitada} onChange={setHabilitada} />
@@ -179,7 +180,7 @@ export default function EmailAlertasTab() {
             </div>
             <div className="flex items-start gap-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-600 dark:bg-slate-800/50 dark:text-slate-300">
               <Calendar size={16} className="mt-0.5 flex-shrink-0 text-slate-400" />
-              <p>Se enviará una alerta <strong>{umbralValor} {umbralTipo}</strong> antes de la fecha requerida de cada solicitud.</p>
+              <p>Se enviará una alerta <strong>{umbralValor} {umbralTipo}</strong> antes de que se cumpla la <strong>fecha requerida en terreno</strong> de cada solicitud de materiales pendiente.</p>
             </div>
           </div>
         )}
@@ -190,7 +191,7 @@ export default function EmailAlertasTab() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Clock size={20} className="text-amber-500" />
-            <span className="font-semibold text-slate-800 dark:text-white">Habilitar recordatorios</span>
+            <span className="font-semibold text-slate-800 dark:text-white">Recordatorios de solicitudes sin procesar</span>
           </div>
           <div className="flex items-center gap-2">
             <Toggle checked={recordatoriosHabilitados} onChange={setRecordatoriosHabilitados} />
@@ -233,7 +234,7 @@ export default function EmailAlertasTab() {
             </div>
             <div className="flex items-start gap-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-600 dark:bg-slate-800/50 dark:text-slate-300">
               <Clock size={16} className="mt-0.5 flex-shrink-0 text-slate-400" />
-              <p>Se enviarán <strong>{recordatoriosCantidad}</strong> recordatorios cada <strong>{recordatoriosFrecuencia} horas</strong> después de la alerta inicial.</p>
+              <p>Se enviarán hasta <strong>{recordatoriosCantidad}</strong> recordatorios cada <strong>{recordatoriosFrecuencia} horas</strong> si la solicitud aún no ha sido gestionada (cotizada/aprobada) después de la alerta inicial.</p>
             </div>
           </div>
         )}
@@ -246,10 +247,10 @@ export default function EmailAlertasTab() {
             <Users size={20} className="text-amber-500" />
             <span className="font-semibold text-slate-800 dark:text-white">Usuarios que recibirán las alertas</span>
           </div>
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
-          >
+            <button
+              onClick={() => { setShowModal(true); setBusqueda(''); }}
+              className="flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+            >
             <Plus size={14} />
             Seleccionar usuarios
           </button>
@@ -305,7 +306,7 @@ export default function EmailAlertasTab() {
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-800 dark:text-white">Seleccionar destinatarios</h3>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => { setShowModal(false); setBusqueda(''); }}
                 className="rounded-full p-1 hover:bg-slate-100 dark:hover:bg-slate-700"
               >
                 <X size={20} className="text-slate-500" />
@@ -321,37 +322,58 @@ export default function EmailAlertasTab() {
             ) : usuarios.length === 0 ? (
               <p className="py-6 text-center text-sm text-slate-400">No hay usuarios disponibles</p>
             ) : (
-              <div className="max-h-64 space-y-2 overflow-y-auto">
-                {usuarios.map(u => (
-                  <label
-                    key={u.id}
-                    className={`flex cursor-pointer items-center gap-3 rounded-lg p-3 transition-colors
-                      ${destinatarioIds.includes(u.id) ? 'bg-amber-50 dark:bg-amber-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={destinatarioIds.includes(u.id)}
-                      onChange={() => toggleUsuario(u.id)}
-                      className="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
-                    />
-                    <div className="flex-1">
-                      <p className="font-medium text-slate-800 dark:text-white">{u.nombre} {u.apellido}</p>
-                      <p className="text-xs text-slate-500">{u.correo}</p>
-                    </div>
-                  </label>
-                ))}
-              </div>
+              <>
+                <div className="relative mb-3">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre o correo..."
+                    value={busqueda}
+                    onChange={e => setBusqueda(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm focus:border-amber-400 focus:outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                  />
+                </div>
+                <div className="max-h-52 space-y-2 overflow-y-auto">
+                  {usuarios.filter(u => {
+                    const q = busqueda.toLowerCase();
+                    return !q || u.nombre.toLowerCase().includes(q) || u.apellido.toLowerCase().includes(q) || u.correo.toLowerCase().includes(q);
+                  }).map(u => (
+                    <label
+                      key={u.id}
+                      className={`flex cursor-pointer items-center gap-3 rounded-lg p-3 transition-colors
+                        ${destinatarioIds.includes(u.id) ? 'bg-amber-50 dark:bg-amber-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={destinatarioIds.includes(u.id)}
+                        onChange={() => toggleUsuario(u.id)}
+                        className="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium text-slate-800 dark:text-white">{u.nombre} {u.apellido}</p>
+                        <p className="text-xs text-slate-500">{u.correo}</p>
+                      </div>
+                    </label>
+                  ))}
+                  {usuarios.filter(u => {
+                    const q = busqueda.toLowerCase();
+                    return q && !u.nombre.toLowerCase().includes(q) && !u.apellido.toLowerCase().includes(q) && !u.correo.toLowerCase().includes(q);
+                  }).length === usuarios.length && (
+                    <p className="py-4 text-center text-sm text-slate-400">Sin resultados</p>
+                  )}
+                </div>
+              </>
             )}
 
             <div className="mt-4 flex justify-end gap-2">
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => { setShowModal(false); setBusqueda(''); }}
                 className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
               >
                 Cancelar
               </button>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => { setShowModal(false); setBusqueda(''); }}
                 className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-white hover:bg-amber-600"
               >
                 Aceptar

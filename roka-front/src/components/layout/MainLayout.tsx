@@ -5,10 +5,12 @@ import { Sidebar } from '../Sidebar';
 import { Header } from '../Header';
 import { CopilotButton } from '../copilot/CopilotButton';
 import { RokaChatbot } from '../chat/RokaChatbot';
+import { UserProfileModal } from '../profile/UserProfileModal';
 
 export function MainLayout() {
   const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   if (loading) {
     return (
@@ -23,8 +25,12 @@ export function MainLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7fafc] dark:bg-[#0b0e14]">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <div className="min-h-screen bg-slate-50 dark:bg-[#05070a]">
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        onClose={() => setSidebarOpen(false)} 
+        onProfileClick={() => setProfileOpen(true)}
+      />
       
       {/* Mobile Backdrop */}
       {sidebarOpen && (
@@ -44,6 +50,8 @@ export function MainLayout() {
       
       <CopilotButton />
       <RokaChatbot />
+
+      <UserProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} />
     </div>
   );
 }

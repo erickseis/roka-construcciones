@@ -4,7 +4,7 @@ import { SolicitudCotizacion, SolicitudCotizacionDetalle, SolicitudCotizacionFil
 export async function getAllSolicitudesCotizacion(filters: SolicitudCotizacionFilters): Promise<SolicitudCotizacion[]> {
   const db = getDb();
   let query = `
-    SELECT sc.*, sm.solicitante, p.nombre AS proyecto_nombre, p.numero_obra,
+    SELECT sc.*, sm.solicitante, p.nombre AS proyecto_nombre, p.numero_obra AS proyecto_numero_obra,
            sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
            (SELECT COUNT(*) FROM solicitud_cotizacion_detalle WHERE solicitud_cotizacion_id = sc.id) AS total_items,
            (SELECT oc.id FROM ordenes_compra oc WHERE oc.solicitud_cotizacion_id = sc.id LIMIT 1) AS orden_id
@@ -41,8 +41,18 @@ export async function getAllSolicitudesCotizacion(filters: SolicitudCotizacionFi
 export async function getSolicitudCotizacionById(id: number): Promise<(SolicitudCotizacion & { total_items?: number }) | null> {
   const db = getDb();
   const { rows: [sc] } = await db.query(`
-    SELECT sc.*, sm.solicitante, p.nombre AS proyecto_nombre, p.numero_obra,
+    SELECT sc.*, sm.solicitante, p.nombre AS proyecto_nombre, p.numero_obra AS proyecto_numero_obra,
            sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
+           prov.rut AS prov_rut,
+           prov.correo AS prov_correo,
+           prov.telefono AS prov_telefono,
+           prov.direccion AS prov_direccion,
+           prov.condiciones_pago AS prov_condiciones_pago,
+           prov.condicion_despacho AS prov_condicion_despacho,
+           prov.plazo_entrega AS prov_plazo_entrega,
+           prov.contacto_nombre AS prov_contacto_nombre,
+           prov.contacto_correo AS prov_contacto_correo,
+           prov.contacto_telefono AS prov_contacto_telefono,
            (SELECT COUNT(*) FROM solicitud_cotizacion_detalle WHERE solicitud_cotizacion_id = sc.id) AS total_items,
            (SELECT oc.id FROM ordenes_compra oc WHERE oc.solicitud_cotizacion_id = sc.id LIMIT 1) AS orden_id,
            NULLIF(CONCAT(u_env.nombre, ' ', u_env.apellido), ' ') AS enviado_by_nombre,
@@ -52,6 +62,7 @@ export async function getSolicitudCotizacionById(id: number): Promise<(Solicitud
     FROM solicitud_cotizacion sc
     JOIN solicitudes_material sm ON sm.id = sc.solicitud_id
     JOIN proyectos p ON p.id = sm.proyecto_id
+    LEFT JOIN proveedores prov ON prov.id = sc.proveedor_id
     LEFT JOIN usuarios u_env ON u_env.id = sc.enviado_by_usuario_id
     LEFT JOIN usuarios u_res ON u_res.id = sc.respondido_by_usuario_id
     LEFT JOIN usuarios u_apr ON u_apr.id = sc.aprobado_by_usuario_id
@@ -271,5 +282,22 @@ export async function updateSCNumeroCov(scId: number, numeroCov: string, db?: Qu
   await conn.query(
     `UPDATE solicitud_cotizacion SET numero_cov = $1, updated_at = NOW() WHERE id = $2`,
     [numeroCov, scId]
+  );
+}
+
+export async function updateSCRespuestaProveedor(
+  scId: number,
+  data: { numero_cov?: string | null; condiciones_pago_cov?: string | null; plazo_entrega_cov?: string | null },
+  db?: Queryable
+): Promise<void> {
+  const conn = getDb(db);
+  await conn.query(
+    `UPDATE solicitud_cotizacion
+     SET numero_cov = COALESCE($1, numero_cov),
+         condiciones_pago_cov = COALESCE($2, condiciones_pago_cov),
+         plazo_entrega_cov = COALESCE($3, plazo_entrega_cov),
+         updated_at = NOW()
+     WHERE id = $4`,
+    [data.numero_cov || null, data.condiciones_pago_cov || null, data.plazo_entrega_cov || null, scId]
   );
 }

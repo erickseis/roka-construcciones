@@ -1,16 +1,15 @@
-import { Response } from 'express';
+import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/authMiddleware';
 import * as presupuestosModel from '../models/presupuestos.model';
 import { comprometerPresupuesto } from '../services/presupuestos.service';
 import pool from '../db';
 
-export async function list(_req: AuthRequest, res: Response) {
+export async function list(_req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const rows = await presupuestosModel.getAllPresupuestos();
     res.json(rows);
   } catch (error) {
-    console.error('Error al listar presupuestos:', error);
-    res.status(500).json({ error: 'Error al listar presupuestos' });
+    next(error);
   }
 }
 
@@ -199,13 +198,11 @@ export async function alertasListado(_req: AuthRequest, res: Response) {
   }
 }
 
-export async function comprometer(req: AuthRequest, res: Response) {
+export async function comprometer(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const result = await comprometerPresupuesto(req.body, req.user?.id || null);
     res.status(201).json(result);
-  } catch (error: any) {
-    const statusCode = error.statusCode || 500;
-    console.error('Error al comprometer presupuesto:', error);
-    res.status(statusCode).json({ error: error.message || 'Error al comprometer presupuesto' });
+  } catch (error) {
+    next(error);
   }
 }

@@ -10,6 +10,7 @@ export interface SolicitudRow {
   created_at: Date;
   updated_at: Date;
   proyecto_nombre?: string;
+  proyecto_numero_obra?: string;
   total_items?: number;
   presupuesto_categoria_id?: number | null;
   created_by_usuario_id?: number | null;
@@ -62,7 +63,7 @@ export async function getAllSolicitudes(
 ): Promise<SolicitudRow[]> {
   const conn = getDb(db);
   let query = `
-    SELECT sm.*, p.nombre AS proyecto_nombre,
+    SELECT sm.*, p.nombre AS proyecto_nombre, p.numero_obra AS proyecto_numero_obra,
       (SELECT COUNT(*) FROM solicitud_items si WHERE si.solicitud_id = sm.id) AS total_items
     FROM solicitudes_material sm
     JOIN proyectos p ON p.id = sm.proyecto_id
@@ -98,7 +99,7 @@ export async function getAllSolicitudes(
 export async function getSolicitudById(id: number, db?: Queryable): Promise<SolicitudRow | null> {
   const conn = getDb(db);
   const { rows } = await conn.query(
-    `SELECT sm.*, p.nombre AS proyecto_nombre,
+    `SELECT sm.*, p.nombre AS proyecto_nombre, p.numero_obra AS proyecto_numero_obra,
             NULLIF(CONCAT(u_apr.nombre, ' ', u_apr.apellido), ' ') AS aprobado_by_nombre,
             NULLIF(CONCAT(u_rec.nombre, ' ', u_rec.apellido), ' ') AS rechazado_by_nombre,
             NULLIF(CONCAT(u_chg.nombre, ' ', u_chg.apellido), ' ') AS estado_changed_by_nombre

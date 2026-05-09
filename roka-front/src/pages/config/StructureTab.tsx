@@ -200,13 +200,13 @@ export default function StructureTab() {
         <form onSubmit={handleSaveDept} className="space-y-4">
           <input required type="text" placeholder="Nombre" value={deptForm.nombre}
             onChange={e => setDeptForm({...deptForm, nombre: e.target.value})}
-            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm" />
+            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100" />
           <textarea placeholder="Descripción" value={deptForm.descripcion}
             onChange={e => setDeptForm({...deptForm, descripcion: e.target.value})}
-            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm" />
+            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100" />
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setShowDeptModal(false)}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100">Cancelar</button>
+              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">Cancelar</button>
             <button type="submit" disabled={submitting}
               className="rounded-lg bg-amber-500 px-6 py-2 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-60">
               {submitting ? 'Guardando...' : editingDept ? 'Guardar Cambios' : 'Crear'}
@@ -222,16 +222,16 @@ export default function StructureTab() {
         <form onSubmit={handleSaveCargo} className="space-y-4">
           <input required type="text" placeholder="Nombre del Cargo" value={cargoForm.nombre}
             onChange={e => setCargoForm({...cargoForm, nombre: e.target.value})}
-            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm" />
+            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100" />
           <select required value={cargoForm.departamento_id}
             onChange={e => setCargoForm({...cargoForm, departamento_id: e.target.value})}
-            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm">
+            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100">
             <option value="">Seleccionar Departamento...</option>
             {departamentos?.map((d: any) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
           </select>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setShowCargoModal(false)}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100">Cancelar</button>
+              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">Cancelar</button>
             <button type="submit" disabled={submitting}
               className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60">
               {submitting ? 'Guardando...' : editingCargo ? 'Guardar Cambios' : 'Crear Cargo'}
@@ -263,7 +263,7 @@ export default function StructureTab() {
               Migrar a:
             </label>
             <select value={migrarAId} onChange={e => setMigrarAId(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 p-2.5 text-sm mt-1">
+              className="w-full rounded-lg border border-slate-200 p-2.5 text-sm mt-1 outline-none focus:border-amber-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100">
               <option value="">Seleccionar destino...</option>
               {migrationModal?.disponibles?.map((d: any) => (
                 <option key={d.id} value={d.id}>{d.nombre}</option>
@@ -273,7 +273,7 @@ export default function StructureTab() {
 
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setMigrationModal(null)}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100">Cancelar</button>
+              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">Cancelar</button>
             <button type="button" disabled={!migrarAId || submitting} onClick={handleConfirmMigration}
               className="flex items-center gap-2 rounded-lg bg-red-500 px-6 py-2 text-sm font-bold text-white hover:bg-red-600 disabled:opacity-60">
               {submitting ? 'Procesando...' : 'Migrar y Eliminar'}

@@ -176,6 +176,20 @@ router.put('/alertas', async (req: Request, res: Response) => {
       }
     }
 
+    if (habilitada === true && (!destinatarios_usuario_ids || destinatarios_usuario_ids.length === 0)) {
+      return res.status(400).json({ error: 'Se requiere al menos un destinatario cuando las alertas están habilitadas' });
+    }
+
+    if (destinatarios_usuario_ids?.length) {
+      const { rows: existing } = await pool.query(
+        'SELECT id FROM usuarios WHERE id = ANY($1) AND is_active = true',
+        [destinatarios_usuario_ids]
+      );
+      if (existing.length !== destinatarios_usuario_ids.length) {
+        return res.status(400).json({ error: 'Uno o más usuarios destinatarios no existen o están inactivos' });
+      }
+    }
+
     const { rows } = await pool.query(
       `UPDATE alerta_email_config
        SET habilitada = COALESCE($1, habilitada),
@@ -219,6 +233,26 @@ router.get('/alertas/usuarios', async (_req: Request, res: Response) => {
   } catch (err) {
     console.error('Error al obtener usuarios para alertas:', err);
     res.status(500).json({ error: 'Error al obtener usuarios' });
+  }
+});
+
+// GET /api/config/email/alertas/historial — historial de alertas enviadas
+router.get('/alertas/historial', async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 50, 100);
+    const { rows } = await pool.query(
+      `SELECT ael.*, sm.solicitante, p.nombre AS proyecto_nombre
+       FROM alerta_email_log ael
+       JOIN solicitudes_material sm ON sm.id = ael.solicitud_id
+       JOIN proyectos p ON p.id = sm.proyecto_id
+       ORDER BY ael.enviado_at DESC
+       LIMIT $1`,
+      [limit]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Error al obtener historial de alertas:', err);
+    res.status(500).json({ error: 'Error al obtener historial de alertas' });
   }
 });
 

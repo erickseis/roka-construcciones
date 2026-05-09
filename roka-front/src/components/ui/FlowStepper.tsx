@@ -35,7 +35,7 @@ const FlowStepper: React.FC<FlowStepperProps> = ({ currentStep, estado, tipo = '
   const activeStep = getStepIndex();
 
   return (
-    <div className="flex items-center justify-between w-full bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200">
+    <div className="flex items-center justify-between w-full bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200 dark:from-slate-800 dark:to-slate-900 dark:border-slate-700">
       {steps.map((step, index) => (
         <React.Fragment key={step.number}>
           <div className="flex flex-col items-center">
@@ -43,7 +43,7 @@ const FlowStepper: React.FC<FlowStepperProps> = ({ currentStep, estado, tipo = '
               className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                 index <= activeStep
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-600'
+                  : 'bg-gray-200 text-gray-600 dark:bg-slate-700 dark:text-slate-400'
               }`}
             >
               {index < activeStep ? (
@@ -52,7 +52,7 @@ const FlowStepper: React.FC<FlowStepperProps> = ({ currentStep, estado, tipo = '
                 <span className="font-semibold">{step.number}</span>
               )}
             </div>
-            <span className="text-xs font-medium mt-2 text-center text-gray-700 max-w-[80px]">
+            <span className="text-xs font-medium mt-2 text-center text-gray-700 dark:text-slate-300 max-w-[80px]">
               {step.label}
             </span>
           </div>
@@ -60,7 +60,7 @@ const FlowStepper: React.FC<FlowStepperProps> = ({ currentStep, estado, tipo = '
           {index < steps.length - 1 && (
             <div
               className={`flex-1 h-1 mx-2 transition-all ${
-                index < activeStep ? 'bg-blue-600' : 'bg-gray-200'
+                index < activeStep ? 'bg-blue-600' : 'bg-gray-200 dark:bg-slate-700'
               }`}
             />
           )}

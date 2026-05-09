@@ -1,4 +1,5 @@
-import pool from '../db';
+import { withTransaction } from '../lib/db-utils';
+import { BadRequest, NotFound, Conflict } from '../lib/errors';
 import { ComprometerInput } from '../types/presupuesto.types';
 import {
   getPresupuestoForUpdate,
@@ -17,18 +18,14 @@ export async function comprometerPresupuesto(input: ComprometerInput, usuarioId:
   const { presupuesto_id, categoria_id, monto, descripcion } = input;
 
   if (!presupuesto_id || !monto) {
-    throw Object.assign(new Error('presupuesto_id y monto son requeridos'), { statusCode: 400 });
+    throw BadRequest('presupuesto_id y monto son requeridos');
   }
 
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
+  return withTransaction(async (client) => {
     const presupuesto = await getPresupuestoForUpdate(presupuesto_id, client);
 
     if (!presupuesto) {
-      await client.query('ROLLBACK');
-      throw Object.assign(new Error('Presupuesto no encontrado'), { statusCode: 404 });
+      throw NotFound('Presupuesto no encontrado');
     }
 
     const disponible = Number(presupuesto.monto_total) - Number(presupuesto.monto_comprometido);
@@ -40,22 +37,19 @@ export async function comprometerPresupuesto(input: ComprometerInput, usuarioId:
     const umbral = Number(presupuesto.umbral_alerta);
 
     if (Number(monto) > disponible) {
-      await client.query('ROLLBACK');
-      throw Object.assign(new Error('El monto excede el disponible del presupuesto'), { statusCode: 409 });
+      throw Conflict('El monto excede el disponible del presupuesto');
     }
 
     if (categoria_id) {
       const categoria = await getCategoriaForUpdate(categoria_id, presupuesto_id, client);
 
       if (!categoria) {
-        await client.query('ROLLBACK');
-        throw Object.assign(new Error('Categoría no encontrada para este presupuesto'), { statusCode: 404 });
+        throw NotFound('Categoría no encontrada para este presupuesto');
       }
 
       const disponibleCategoria = Number(categoria.monto_asignado) - Number(categoria.monto_comprometido);
       if (Number(monto) > disponibleCategoria) {
-        await client.query('ROLLBACK');
-        throw Object.assign(new Error('El monto excede el disponible de la categoría'), { statusCode: 409 });
+        throw Conflict('El monto excede el disponible de la categoría');
       }
 
       await commitCategoria(categoria_id, monto, client);
@@ -113,12 +107,6 @@ export async function comprometerPresupuesto(input: ComprometerInput, usuarioId:
       );
     }
 
-    await client.query('COMMIT');
     return { message: 'Compromiso registrado correctamente' };
-  } catch (error: any) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
+  });
 }

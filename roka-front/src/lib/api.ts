@@ -170,6 +170,27 @@ export const downloadLicitacionArchivo = (id: number, nombreArchivo: string) => 
     });
 };
 
+export const downloadMaterialesArchivo = (id: number, nombreArchivo: string) => {
+  const token = localStorage.getItem('roka_token');
+  const headers: HeadersInit = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return fetch(`${API_BASE}/proyectos/${id}/materiales-archivo`, { headers })
+    .then(res => {
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      return res.blob();
+    })
+    .then(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = nombreArchivo;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    });
+};
+
 // ---- Presupuestos ----
 export const getPresupuestos = () => fetchApi<any[]>('/presupuestos');
 export const getPresupuestoProyecto = (proyectoId: number) =>
@@ -208,6 +229,31 @@ export const updateSolicitudEstado = (id: number, estado: string) =>
 
 export const deleteSolicitud = (id: number) =>
   fetchApi<any>(`/solicitudes/${id}`, { method: 'DELETE' });
+
+export const exportarSolicitudHtml = (id: number) => {
+  const baseUrl = import.meta.env.VITE_API_URL + '/roka/api';
+  const token = localStorage.getItem('roka_token') || '';
+  const url = `${baseUrl}/solicitudes/${id}/html`;
+
+  const win = window.open('', '_blank');
+  if (!win) {
+    alert('Por favor permite ventanas emergentes para imprimir el documento.');
+    return;
+  }
+
+  fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    .then(r => r.text())
+    .then(html => {
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+      win.addEventListener('load', () => { win.focus(); win.print(); });
+    })
+    .catch(() => {
+      win.close();
+      alert('Error al generar el documento para imprimir.');
+    });
+};
 
 // ---- Solicitudes de Cotización ----
 export const getSolicitudesCotizacion = (params?: { solicitud_id?: number; estado?: string; proveedor?: string; proyecto_id?: number }) => {
@@ -294,6 +340,7 @@ export const generarOrden = (data: {
   solicitud_cotizacion_id: number;
   condiciones_pago?: string;
   folio?: string;
+  numero_cov?: string;
   descuento_tipo?: 'none' | 'porcentaje' | 'monto';
   descuento_valor?: number;
   plazo_entrega?: string;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
+import DOMPurify from 'dompurify';
 import './RokaChatbot.css';
 
 interface Message {
@@ -10,38 +11,21 @@ interface Message {
   time: string;
 }
 
-const QUICK_ACTIONS_BY_ROLE: Record<number, Array<{ label: string; query: string }>> = {
-  1: [ // Admin — todas las acciones
-    { label: '📋 Solicitudes pendientes', query: '¿Cuántas solicitudes hay pendientes?' },
-    { label: '💲 Gasto total OC', query: '¿Cuál es el gasto total en órdenes de compra?' },
-    { label: '📊 Proyectos activos', query: 'Muéstrame el resumen de proyectos activos' },
-    { label: '⏱ Tiempo conversión', query: '¿Cuál es el tiempo de conversión promedio?' },
-    { label: '🚨 Alertas de presupuesto', query: '¿Hay alertas de presupuesto activas?' },
-    { label: '📦 Últimas OC', query: '¿Cuáles son las últimas órdenes de compra?' },
-  ],
-  2: [ // Director de Obra — operaciones + proyectos
-    { label: '📋 Solicitudes pendientes', query: '¿Cuántas solicitudes hay pendientes?' },
-    { label: '💲 Gasto por proyecto', query: '¿Cuál es el gasto por proyecto?' },
-    { label: '📊 Proyectos activos', query: 'Muéstrame el resumen de proyectos activos' },
-    { label: '⏱ Tiempo conversión', query: '¿Cuál es el tiempo de conversión promedio?' },
-    { label: '🏗 Estado de presupuestos', query: '¿Cómo va el estado de los presupuestos?' },
-    { label: '🤝 Proveedores frecuentes', query: '¿Quiénes son los proveedores registrados?' },
-  ],
-  3: [ // Adquisiciones — compras + proveedores
-    { label: '📋 Solicitudes pendientes', query: '¿Cuántas solicitudes hay pendientes?' },
-    { label: '🤝 Proveedores disponibles', query: '¿Qué proveedores están registrados?' },
-    { label: '📄 Cotizaciones por responder', query: '¿Hay solicitudes de cotización enviadas?' },
-    { label: '💲 Gasto total OC', query: '¿Cuál es el gasto total en órdenes de compra?' },
-    { label: '📦 Últimas OC', query: '¿Cuáles son las últimas órdenes de compra?' },
-    { label: '⏱ Tiempo conversión', query: '¿Cuál es el tiempo de conversión promedio?' },
-  ],
-  4: [ // Bodega — materiales + entregas
-    { label: '📦 Materiales en catálogo', query: '¿Cuántos materiales hay en el catálogo?' },
-    { label: '📋 Solicitudes con fecha', query: '¿Cuáles son las solicitudes con fecha próxima?' },
-    { label: '📄 Últimas órdenes de compra', query: '¿Cuáles son las últimas OC registradas?' },
-    { label: '🚚 Estado de entregas', query: '¿Cómo están las entregas de las OC?' },
-  ],
-};
+const QUICK_ACTIONS: Array<{ label: string; query: string; requiredPermission: string }> = [
+  { label: '📋 Solicitudes pendientes', query: '¿Cuántas solicitudes hay pendientes?', requiredPermission: 'solicitudes.view' },
+  { label: '💲 Gasto total OC', query: '¿Cuál es el gasto total en órdenes de compra?', requiredPermission: 'ordenes.view' },
+  { label: '📊 Proyectos activos', query: 'Muéstrame el resumen de proyectos activos', requiredPermission: 'proyectos.view' },
+  { label: '💲 Gasto por proyecto', query: '¿Cuál es el gasto por proyecto?', requiredPermission: 'proyectos.view' },
+  { label: '🏗 Estado de presupuestos', query: '¿Cómo va el estado de los presupuestos?', requiredPermission: 'presupuestos.view' },
+  { label: '🚨 Alertas de presupuesto', query: '¿Hay alertas de presupuesto activas?', requiredPermission: 'presupuestos.view' },
+  { label: '📦 Últimas OC', query: '¿Cuáles son las últimas órdenes de compra?', requiredPermission: 'ordenes.view' },
+  { label: '⏱ Tiempo conversión', query: '¿Cuál es el tiempo de conversión promedio?', requiredPermission: 'dashboard.view' },
+  { label: '🤝 Proveedores', query: '¿Qué proveedores están registrados?', requiredPermission: 'proveedores.view' },
+  { label: '📄 Cotizaciones por responder', query: '¿Hay solicitudes de cotización enviadas?', requiredPermission: 'cotizaciones.view' },
+  { label: '📦 Materiales en catálogo', query: '¿Cuántos materiales hay en el catálogo?', requiredPermission: 'materiales.view' },
+  { label: '📋 Solicitudes con fecha', query: '¿Cuáles son las solicitudes con fecha próxima?', requiredPermission: 'solicitudes.view' },
+  { label: '🚚 Estado de entregas', query: '¿Cómo están las entregas de las OC?', requiredPermission: 'ordenes.view' },
+];
 
 const API_URL = import.meta.env.VITE_API_URL + '/roka/api';
 
@@ -55,10 +39,11 @@ export function RokaChatbot() {
   const [hasUnread, setHasUnread] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isInitialized = useRef(false);
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const token = localStorage.getItem('roka_token');
-  const rolId = user?.rol_id ?? 0;
-  const quickActions = QUICK_ACTIONS_BY_ROLE[rolId] || QUICK_ACTIONS_BY_ROLE[1];
+  const quickActions = QUICK_ACTIONS.filter(a => hasPermission(a.requiredPermission));
 
   // Solo inicializar una vez al cargar el componente
   useEffect(() => {
@@ -74,7 +59,28 @@ export function RokaChatbot() {
         time: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }),
       }
     ]);
+    
+    // Auto-hide suggestions after 4s
+    startHideTimer();
+
+    return () => {
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+    };
   }, []);
+
+  const startHideTimer = () => {
+    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+    hideTimeoutRef.current = setTimeout(() => {
+      setShowSuggestions(false);
+    }, 4000);
+  };
+
+  const clearHideTimer = () => {
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
+  };
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -134,6 +140,8 @@ export function RokaChatbot() {
       setMessages(prev => [...prev, errorMsg]);
     } finally {
       setIsTyping(false);
+      setShowSuggestions(true);
+      startHideTimer();
     }
   };
 
@@ -254,7 +262,7 @@ export function RokaChatbot() {
               <div className="msg-content">
                 <div
                   className="msg-bubble"
-                  dangerouslySetInnerHTML={{ __html: formatMessage(msg.text) }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatMessage(msg.text)) }}
                 />
                 <div className="msg-time">{msg.time}</div>
               </div>
@@ -273,8 +281,17 @@ export function RokaChatbot() {
           <div ref={messagesEndRef} />
         </div>
 
-        {!isTyping && messages.length < 5 && (
-          <div className="quick-actions">
+        {!isTyping && (
+          <div 
+            className={`quick-actions ${showSuggestions ? 'visible' : 'hidden-chips'}`}
+            onMouseEnter={() => {
+              clearHideTimer();
+              setShowSuggestions(true);
+            }}
+            onMouseLeave={() => {
+              startHideTimer();
+            }}
+          >
             {quickActions.map(action => (
               <div key={action.label} className="quick-chip" onClick={() => handleSend(action.query)}>
                 {action.label}

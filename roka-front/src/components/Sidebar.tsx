@@ -52,15 +52,16 @@ const secondaryItems = ALL_MODULES.filter(m => !PRIMARY_PATHS.includes(m.to)).ma
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
+  onProfileClick: () => void;
 }
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, onProfileClick }: SidebarProps) {
   const { user, logout } = useAuth();
   const { hasPermission } = usePermissions();
 
   return (
     <aside className={cn(
-      "fixed left-0 top-0 z-50 flex h-screen w-64 flex-col overflow-y-auto border-r border-slate-200 bg-slate-100 transition-transform duration-300 ease-in-out dark:border-[#1e293b] dark:bg-[#0b0e14] lg:translate-x-0",
+      "fixed left-0 top-0 z-50 flex h-screen w-64 flex-col overflow-y-auto border-r border-slate-200 bg-slate-100 transition-transform duration-300 ease-in-out dark:border-slate-800/60 dark:bg-[#080a0f] lg:translate-x-0",
       isOpen ? "translate-x-0" : "-translate-x-full"
     )}>
       <div className="px-6 py-8 flex-1">
@@ -136,8 +137,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                       : "text-slate-500 hover:bg-slate-200/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#141b2d]/50 dark:hover:text-slate-100"
                   )}
                 >
-                  <item.icon size={18} />
-                  <span className="text-sm">{item.label}</span>
+                  {({ isActive }) => (
+                    <>
+                      <item.icon size={18} className={isActive ? "text-amber-500" : "text-slate-400 group-hover:text-slate-100"} />
+                      <span className="text-sm">{item.label}</span>
+                    </>
+                  )}
                 </NavLink>
               ))}
             </nav>
@@ -147,13 +152,19 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       <div className="border-t border-slate-200 bg-slate-200/30 p-4 dark:border-[#1e293b] dark:bg-[#0b0e14]/40">
         <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-500/10 dark:text-amber-500">
-            <User size={20} />
-          </div>
-          <div className="overflow-hidden">
-            <p className="truncate text-xs font-black text-slate-900 dark:text-slate-50">{user?.nombre} {user?.apellido}</p>
-            <p className="truncate text-[10px] font-bold uppercase tracking-tighter text-slate-400 dark:text-slate-300">{user?.rol_nombre || 'Usuario'}</p>
-          </div>
+          <button
+            type="button"
+            onClick={onProfileClick}
+            className="flex items-center gap-3 text-left overflow-hidden flex-1 group cursor-pointer"
+          >
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors dark:bg-amber-500/10 dark:text-amber-500 dark:group-hover:bg-amber-500/20">
+              <User size={20} />
+            </div>
+            <div className="overflow-hidden">
+              <p className="truncate text-xs font-black text-slate-900 group-hover:text-amber-600 transition-colors dark:text-slate-50 dark:group-hover:text-amber-500">{user?.nombre} {user?.apellido}</p>
+              <p className="truncate text-[10px] font-bold uppercase tracking-tighter text-slate-400 dark:text-slate-300">{user?.rol_nombre || 'Usuario'}</p>
+            </div>
+          </button>
           <button
             type="button"
             onClick={() => {

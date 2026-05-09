@@ -164,15 +164,15 @@ export default function UsersTab() {
       render: (row: any) => (
         <div className="flex gap-1">
           <button onClick={() => openEditForm(row)}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition-colors" title="Editar usuario">
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition-colors dark:hover:bg-slate-800 dark:hover:text-blue-400" title="Editar usuario">
             <Pencil size={15} />
           </button>
           <button onClick={() => setPasswordTarget({ id: row.id, nombre: row.nombre, apellido: row.apellido })}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-colors" title="Cambiar contraseña">
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-colors dark:hover:bg-amber-900/20 dark:hover:text-amber-400" title="Cambiar contraseña">
             <Key size={15} />
           </button>
           <button onClick={() => handleDelete(row.id)}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors" title="Desactivar usuario">
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors dark:hover:bg-red-900/20 dark:hover:text-red-400" title="Desactivar usuario">
             <Trash2 size={15} />
           </button>
         </div>
@@ -305,7 +305,7 @@ export default function UsersTab() {
 
           <div className="flex justify-end gap-3 pt-6">
             <button type="button" onClick={() => { setShowForm(false); setEditingUser(null); }}
-              className="rounded-xl px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100">
+              className="rounded-xl px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
               Cerrar
             </button>
             <button type="submit" disabled={submitting}

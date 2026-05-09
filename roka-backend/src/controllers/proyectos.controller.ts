@@ -212,6 +212,26 @@ export async function downloadLicitacion(req: Request, res: Response) {
   }
 }
 
+export async function downloadMateriales(req: Request, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'ID invalido' });
+    }
+
+    const archivo = await proyectoModel.getMaterialesArchivo(id);
+    if (!archivo || !archivo.archivo_materiales_path) {
+      return res.status(404).json({ error: 'Archivo de materiales no encontrado' });
+    }
+
+    const filePath = path.join(process.cwd(), archivo.archivo_materiales_path);
+    res.download(filePath, archivo.archivo_materiales_nombre || undefined);
+  } catch (error) {
+    console.error('Error al descargar archivo de materiales:', error);
+    res.status(500).json({ error: 'Error al descargar archivo' });
+  }
+}
+
 export async function procesarMateriales(req: Request, res: Response) {
   try {
     const id = Number(req.params.id);

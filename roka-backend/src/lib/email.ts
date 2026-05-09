@@ -363,6 +363,7 @@ export function buildSCProveedorHtml(sc: {
       <tbody>${itemsHtml}</tbody>
     </table>
     <p style="font-size:13px;color:#666">Por favor responda este correo con sus precios y condiciones, o comuníquese con nosotros para coordinar la entrega de cotización.</p>
+    <p style="font-size:13px;color:#444;margin-top:12px"><strong>📎 Encuentra adjunta la Solicitud de Cotización en formato PDF.</strong></p>
   `;
   return baseEmailLayout(`Solicitud de Cotización ${folio} — ROKA Construcciones`, body);
 }
@@ -460,6 +461,7 @@ export function buildOCProveedorHtml(oc: {
       </tfoot>
     </table>
     <p style="font-size:13px;color:#666">Para consultas sobre esta orden de compra, comuníquese con el equipo de Adquisiciones.</p>
+    <p style="font-size:13px;color:#444;margin-top:12px"><strong>📎 Encuentra adjunta la Orden de Compra en formato PDF.</strong></p>
   `;
   return baseEmailLayout(`Orden de Compra ${folio} — ROKA Construcciones`, body);
 }

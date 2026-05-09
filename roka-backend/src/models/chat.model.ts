@@ -3,6 +3,7 @@ import pool from '../db';
 export interface SystemStats {
   pendientes: number;
   atendidas: number;
+  anuladas: number;
   total_mensual: number;
   total_gastado: number;
   proyectos: string[];
@@ -18,26 +19,42 @@ export interface SystemStats {
     comprometido: number;
     disponible: number;
   };
+  solo_mis_solicitudes: boolean;
 }
 
-export async function getSystemStats(_userId: number | null = null, _rolId: number | null = null, permisos: string[] = []): Promise<SystemStats> {
+export async function getSystemStats(userId: number | null = null, _rolId: number | null = null, permisos: string[] = []): Promise<SystemStats> {
   // Filtrar queries según permisos del usuario
   const canViewPresupuestos = permisos.length === 0 || permisos.includes('presupuestos.view');
   const canViewProyectos = permisos.length === 0 || permisos.includes('proyectos.view');
   const canViewProveedores = permisos.length === 0 || permisos.includes('proveedores.view');
   const canViewNotificaciones = permisos.length === 0 || permisos.includes('notificaciones.view');
   const canViewOrdenes = permisos.length === 0 || permisos.includes('ordenes.view');
+  const canViewAllSolicitudes = permisos.length === 0 || permisos.includes('solicitudes.view_all');
 
-  const queries: Promise<any>[] = [
-    // 1. Solicitudes (siempre visible)
-    pool.query(`
+  const solicitudesQuery = canViewAllSolicitudes
+    ? pool.query(`
       SELECT
         COUNT(*) FILTER (WHERE estado = 'Pendiente')::int AS pendientes,
         COUNT(*) FILTER (WHERE estado IN ('Cotizando', 'Aprobado'))::int AS atendidas,
+        COUNT(*) FILTER (WHERE estado = 'Anulada')::int AS anuladas,
         COUNT(*)::int AS total
       FROM solicitudes_material
       WHERE date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE)
-    `),
+    `)
+    : pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE estado = 'Pendiente')::int AS pendientes,
+        COUNT(*) FILTER (WHERE estado IN ('Cotizando', 'Aprobado'))::int AS atendidas,
+        COUNT(*) FILTER (WHERE estado = 'Anulada')::int AS anuladas,
+        COUNT(*)::int AS total
+      FROM solicitudes_material
+      WHERE date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE)
+        AND created_by_usuario_id = $1
+    `, [userId]);
+
+  const queries: Promise<any>[] = [
+    // 1. Solicitudes (filtradas por permiso view_all)
+    solicitudesQuery,
   ];
 
   // 2. Gasto en OC (si tiene permiso de ordenes)
@@ -147,6 +164,7 @@ export async function getSystemStats(_userId: number | null = null, _rolId: numb
   return {
     pendientes: solicitudes.rows[0]?.pendientes || 0,
     atendidas: solicitudes.rows[0]?.atendidas || 0,
+    anuladas: solicitudes.rows[0]?.anuladas || 0,
     total_mensual: solicitudes.rows[0]?.total || 0,
     total_gastado: gasto.rows.reduce((s: number, p: any) => s + Number(p.gasto_total), 0),
     proyectos: gasto.rows.map((r: any) => r.proyecto),
@@ -162,5 +180,6 @@ export async function getSystemStats(_userId: number | null = null, _rolId: numb
       comprometido: totalComprometido,
       disponible: totalDisponible,
     },
+    solo_mis_solicitudes: !canViewAllSolicitudes && userId != null,
   };
 }

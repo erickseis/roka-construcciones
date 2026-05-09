@@ -223,8 +223,15 @@ REGLAS:
 3. match_confidence: "high" = coincidencia exacta, "medium" = mismo tipo diferente variante, "low" = mismo material base, "none" = sin relación.
 4. Un solicitud_item_id solo puede asignarse a un ítem.
 5. NÚMEROS: Lee cuidadosamente. $3.500 = 3500, $2.000 = 2000, $324.000 = 324000. El punto en montos chilenos es separador de miles, NO decimal.
-6. Verifica: precio_unitario × cantidad = subtotal_linea.
-7. Extrae a nivel global: número de cotización, proveedor, RUT, monto total neto, condiciones, plazo.`;
+6. DESCUENTOS: Si un ítem tiene descuento, extrae el porcentaje en "descuento_porcentaje" (ej: 15 para 15%, 3.5 para 3.5%). Si no tiene, déjalo como null.
+7. Verifica con descuento: precio_unitario × cantidad × (1 - descuento/100) = subtotal_linea. Si no hay descuento: precio_unitario × cantidad = subtotal_linea.
+8. Extrae a nivel global los siguientes campos del encabezado del documento:
+   - numero_cov: el número o folio del documento del proveedor. Busca etiquetas como "N° Cotización", "Folio", "N° Documento", "Cot. N°", "Cotización N°", "N° Orden", "Referencia", "Número", "Doc. N°", o cualquier código identificador del documento. Si hay un número visible en el encabezado aunque no tenga etiqueta, úsalo.
+   - proveedor_nombre: razón social o nombre del proveedor.
+   - proveedor_rut: RUT del proveedor (formato XX.XXX.XXX-X o similar).
+   - monto_total: total neto sin IVA. Busca "Neto", "Total Neto", "Subtotal", "Afecto". Si solo hay total con IVA, divide por 1.19.
+   - condiciones_pago: forma o condición de pago (ej: "Transferencia 30 días", "Contado", "Crédito 60 días").
+   - plazo_entrega: plazo de entrega indicado en el documento.`;
 
   // Prepare image content for the model
   let content: any[];
@@ -366,9 +373,25 @@ REGLAS:
       return isNaN(n) ? 0 : n;
     }
 
-    function fixThousandsSeparator(precio: number, cantidad: number | undefined, subtotal: number | undefined): number {
+    function fixThousandsSeparator(precio: number, cantidad: number | undefined, subtotal: number | undefined, descuentoPorcentaje?: number): number {
       if (!precio || precio === 0) return precio;
-      // Si el precio parece un float con máximo 3 decimales (ej. 4.5, 324.0)
+      // Si hay descuento, verificar primero con el descuento aplicado
+      if (subtotal && cantidad && descuentoPorcentaje && descuentoPorcentaje > 0) {
+        const discountFactor = 1 - descuentoPorcentaje / 100;
+        const calcWithDiscount = precio * cantidad * discountFactor;
+        const diffWithDiscount = Math.abs(calcWithDiscount - subtotal) / subtotal;
+        if (diffWithDiscount < 0.01) {
+          // El precio es correcto, la diferencia se explica por el descuento
+          return precio;
+        }
+        // Probar con precio ×1000
+        const calcX1000 = precio * 1000 * cantidad * discountFactor;
+        const diffX1000wk = Math.abs(calcX1000 - subtotal) / subtotal;
+        if (diffX1000wk < 0.01) {
+          return precio * 1000;
+        }
+      }
+      // Sin descuento: lógica original de separador de miles
       // y tenemos subtotal, verificamos si precio*1000*cantidad ≈ subtotal
       if (subtotal && cantidad && subtotal > 0) {
         const calcNormal = precio * cantidad;
@@ -422,7 +445,9 @@ REGLAS:
         }
       }
 
-      const correctedPrecio = fixThousandsSeparator(rawPrecio, rawCantidad, correctedSubtotal);
+      const rawDescuento = item.descuento_porcentaje != null ? Number(item.descuento_porcentaje) : undefined;
+
+      const correctedPrecio = fixThousandsSeparator(rawPrecio, rawCantidad, correctedSubtotal, rawDescuento);
 
       return {
         solicitud_item_id: item.solicitud_item_id ?? null,
@@ -438,6 +463,20 @@ REGLAS:
           : 'none',
       };
     });
+
+    // ---------------------------------------------------------------
+    // VALIDACIÓN POST-LLM: descuentos
+    // ---------------------------------------------------------------
+    for (const item of items) {
+      if (item.descuento_porcentaje && item.descuento_porcentaje > 0 && item.subtotal_linea && item.cantidad_extraida) {
+        const expectedSubtotal = item.precio_unitario * item.cantidad_extraida * (1 - item.descuento_porcentaje / 100);
+        if (Math.abs(expectedSubtotal - item.subtotal_linea) / item.subtotal_linea > 0.05) {
+          warnings.push(
+            `Ítem "${item.nombre_extraido}": descuento del ${item.descuento_porcentaje}% no cuadra con el subtotal $${item.subtotal_linea}. Se esperaba $${Math.round(expectedSubtotal)}.`
+          );
+        }
+      }
+    }
 
     // ---------------------------------------------------------------
     // VALIDACIONES POST-LLM: detectar hallucinations

@@ -71,6 +71,13 @@ export default function EmailNotificationsTab() {
   const [logs, setLogs] = useState<EmailLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(true);
 
+  // Pagination & Filtering state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterSubject, setFilterSubject] = useState('');
+  const [filterDate, setFilterDate] = useState('');
+
   useEffect(() => {
     loadEventos();
     loadConfig();
@@ -104,7 +111,8 @@ export default function EmailNotificationsTab() {
   async function loadLogs() {
     try {
       setLoadingLogs(true);
-      const data = await getEmailLogs(20);
+      // Fetch more logs to allow client-side filtering/pagination
+      const data = await getEmailLogs(200);
       setLogs(data);
     } catch {
       /* silent */
@@ -174,6 +182,22 @@ export default function EmailNotificationsTab() {
     pendiente: <Clock size={14} className="text-amber-500" />,
   };
 
+  // Filtered and Paginated Logs
+  const filteredLogs = logs.filter(log => {
+    const matchStatus = !filterStatus || log.estado === filterStatus;
+    const matchSubject = !filterSubject || log.asunto.toLowerCase().includes(filterSubject.toLowerCase()) || log.destinatario.toLowerCase().includes(filterSubject.toLowerCase());
+    const matchDate = !filterDate || new Date(log.created_at).toLocaleDateString('en-CA') === filterDate;
+    return matchStatus && matchSubject && matchDate;
+  });
+
+  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
+  const paginatedLogs = filteredLogs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, filterSubject, filterDate]);
+
   return (
     <div className="space-y-6">
       {/* Configuración SMTP / OAuth2 */}
@@ -220,7 +244,7 @@ export default function EmailNotificationsTab() {
                       <button
                         type="button"
                         onClick={() => toggleShowSecret(key)}
-                        className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-600"
+                        className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                       >
                         {show ? <EyeOff size={14} /> : <Eye size={14} />}
                       </button>
@@ -320,59 +344,120 @@ export default function EmailNotificationsTab() {
 
       {/* Log de envíos */}
       <Section title="Historial de envíos recientes">
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-xs text-slate-500">Últimos 20 emails</p>
+        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-end justify-between">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 flex-1">
+            <div>
+              <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Estado</label>
+              <select
+                value={filterStatus}
+                onChange={e => setFilterStatus(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              >
+                <option value="">Todos</option>
+                <option value="enviado">Enviado</option>
+                <option value="fallido">Fallido</option>
+                <option value="pendiente">Pendiente</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Buscar asunto/dest.</label>
+              <input
+                type="text"
+                value={filterSubject}
+                onChange={e => setFilterSubject(e.target.value)}
+                placeholder="Filtrar..."
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Fecha</label>
+              <input
+                type="date"
+                value={filterDate}
+                onChange={e => setFilterDate(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              />
+            </div>
+          </div>
           <button
             onClick={loadLogs}
-            className="flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-700"
+            className="flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
           >
-            <RefreshCw size={12} />
+            <RefreshCw size={12} className={loadingLogs ? 'animate-spin' : ''} />
             Actualizar
           </button>
         </div>
+
         {loadingLogs ? (
           <div className="animate-pulse space-y-2">
-            {[1, 2, 3].map(i => <div key={i} className="h-10 rounded bg-slate-100 dark:bg-slate-700" />)}
+            {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-10 rounded bg-slate-100 dark:bg-slate-700" />)}
           </div>
-        ) : logs.length === 0 ? (
-          <p className="py-6 text-center text-sm text-slate-400">No hay registros de envíos</p>
+        ) : filteredLogs.length === 0 ? (
+          <p className="py-12 text-center text-sm text-slate-400 border rounded-xl border-dashed dark:border-slate-800">No hay registros que coincidan con los filtros</p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-100 dark:border-slate-800">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/50">
-                  <th className="px-3 py-2 text-left font-semibold text-slate-500">Estado</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-500">Evento</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-500">Destinatario</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-500">Asunto</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-500">Fecha</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map(log => (
-                  <tr key={log.id} className="border-b border-slate-50 dark:border-slate-700 last:border-0">
-                    <td className="px-3 py-2">
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold
-                        ${log.estado === 'enviado' ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' :
-                          log.estado === 'fallido' ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' :
-                          'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'}`}
-                      >
-                        {estadoIcon[log.estado as keyof typeof estadoIcon]}
-                        {log.estado}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 font-mono text-slate-500">{log.evento_codigo || '-'}</td>
-                    <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{log.destinatario}</td>
-                    <td className="px-3 py-2 max-w-[200px] truncate text-slate-600 dark:text-slate-300" title={log.asunto}>
-                      {log.asunto}
-                    </td>
-                    <td className="px-3 py-2 text-slate-400">
-                      {new Date(log.created_at).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' })}
-                    </td>
+          <div className="space-y-4">
+            <div className="overflow-x-auto rounded-xl border border-slate-100 dark:border-slate-800 max-h-[450px] overflow-y-auto custom-scrollbar">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-900">
+                  <tr className="border-b border-slate-100 dark:border-slate-800">
+                    <th className="px-3 py-2.5 text-left font-bold text-slate-500">Estado</th>
+                    <th className="px-3 py-2.5 text-left font-bold text-slate-500">Evento</th>
+                    <th className="px-3 py-2.5 text-left font-bold text-slate-500">Destinatario</th>
+                    <th className="px-3 py-2.5 text-left font-bold text-slate-500">Asunto</th>
+                    <th className="px-3 py-2.5 text-left font-bold text-slate-500">Fecha</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {paginatedLogs.map(log => (
+                    <tr key={log.id} className="border-b border-slate-50 dark:border-slate-800/50 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                      <td className="px-3 py-2.5">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold
+                          ${log.estado === 'enviado' ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' :
+                            log.estado === 'fallido' ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' :
+                            'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'}`}
+                        >
+                          {estadoIcon[log.estado as keyof typeof estadoIcon]}
+                          {log.estado}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 font-mono text-[10px] text-slate-500">{log.evento_codigo || '-'}</td>
+                      <td className="px-3 py-2.5 text-slate-600 dark:text-slate-300 truncate max-w-[150px]" title={log.destinatario}>{log.destinatario}</td>
+                      <td className="px-3 py-2.5 max-w-[250px] truncate text-slate-600 dark:text-slate-200 font-medium" title={log.asunto}>
+                        {log.asunto}
+                      </td>
+                      <td className="px-3 py-2.5 text-slate-400 whitespace-nowrap">
+                        {new Date(log.created_at).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Página {currentPage} de {totalPages} ({filteredLogs.length} resultados)
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(p => p - 1)}
+                    className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-30 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(p => p + 1)}
+                    className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-30 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Section>

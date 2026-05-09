@@ -89,6 +89,8 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
         archivo_path: preview.archivo_path,
         archivo_nombre: preview.archivo_nombre,
         numero_cov: preview.numero_cov,
+        condiciones_pago: preview.condiciones_pago,
+        plazo_entrega: preview.plazo_entrega,
         proveedor_nombre: preview.proveedor_nombre,
         items: confirmedItems,
       });
@@ -147,7 +149,7 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
     <Modal isOpen={isOpen} onClose={handleClose}
       title="Cargar Respuesta del Proveedor"
       subtitle="Importa la cotización de venta recibida del proveedor"
-      size={step === 'preview' ? '3xl' : 'lg'}>
+      size={step === 'preview' ? '3xl' : 'xl'}>
 
       {step === 'upload' && (
         <div className="space-y-4">
@@ -199,21 +201,22 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
         const unmatchedCount = scItems.length - matchedCount;
         const totalCalculated = preview.items?.reduce((sum: number, item: any, idx: number) => {
           const price = getItemPrice(item, idx);
-          return sum + price * (item.cantidad_extraida || 1);
+          const desc = (item.descuento_porcentaje || 0) / 100;
+          return sum + price * (item.cantidad_extraida || 1) * (1 - desc);
         }, 0) || 0;
 
         return (
           <div className="space-y-4">
             {/* Warnings de validación post-OCR */}
             {preview.warnings && preview.warnings.length > 0 && (
-              <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-4">
+              <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900/30 p-4">
                 <div className="flex items-start gap-2">
                   <span className="text-lg">⚠️</span>
                   <div className="flex-1">
-                    <p className="text-sm font-bold text-amber-900 dark:text-amber-200 mb-2">
+                    <p className="text-sm font-bold text-amber-900 dark:text-amber-400 mb-2">
                       Advertencias de validación
                     </p>
-                    <ul className="space-y-1 text-xs text-amber-800 dark:text-amber-300">
+                    <ul className="space-y-1 text-xs text-amber-800 dark:text-amber-500/80">
                       {preview.warnings.map((w: string, i: number) => (
                         <li key={i} className="flex gap-1.5">
                           <span>•</span>
@@ -236,10 +239,15 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="block text-[10px] text-slate-400">Proyecto</span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-200">{solicitudData?.proyecto_nombre || '-'}</span>
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-slate-700 dark:text-slate-200">{solicitudData?.proyecto_nombre || '-'}</span>
+                      {solicitudData?.proyecto_numero_obra && (
+                        <span className="text-[10px] font-mono text-slate-400">N° {solicitudData.proyecto_numero_obra}</span>
+                      )}
+                    </div>
                   </div>
                   <div>
-                    <span className="block text-[10px] text-slate-400">Solicitud Original</span>
+                    <span className="block text-[10px] text-slate-400">Solicitud de Materiales</span>
                     <span className="font-semibold text-blue-600 dark:text-blue-400">
                       {solicitudData ? `SOL-${String(solicitudData.solicitud_id).padStart(3, '0')}` : '-'}
                     </span>
@@ -253,7 +261,7 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
                 </div>
               </div>
 
-              <div className="rounded-xl bg-blue-50/50 dark:bg-blue-900/10 p-4 border border-blue-100 dark:border-blue-800">
+              <div className="rounded-xl bg-blue-50/50 dark:bg-blue-950/20 p-4 border border-blue-100 dark:border-blue-900/30">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <FileText size={14} className="text-blue-400" />
@@ -304,14 +312,14 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
               <table className="w-full text-left border-collapse">
                 <thead className="bg-slate-50 dark:bg-slate-800 text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 sticky top-0 z-10 shadow-sm">
                   <tr>
-                    <th colSpan={3} className="p-3 border-b border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20">📋 Solicitado por Proyecto</th>
-                    <th colSpan={5} className="p-3 border-b border-l border-slate-200 dark:border-slate-700 text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/20">🏷️ Cotizado por Proveedor</th>
+                    <th colSpan={3} className="p-3 border-b border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20">📋 Solicitado por Proyecto</th>
+                    <th colSpan={5} className="p-3 border-b border-l border-slate-200 dark:border-slate-700 text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20">🏷️ Cotizado por Proveedor</th>
                   </tr>
                   <tr className="border-b border-slate-200 dark:border-slate-700">
                     <th className="px-3 py-2">Material / Descripción</th>
                     <th className="px-3 py-2 w-16 text-center">Cant.</th>
                     <th className="px-3 py-2 w-16 text-center">Unidad</th>
-                    
+
                     <th className="px-3 py-2 border-l border-slate-200 dark:border-slate-700 w-24 text-center">Nivel Match</th>
                     <th className="px-3 py-2">Descripción Cotizada</th>
                     <th className="px-3 py-2 w-24 text-right">P. Unitario</th>
@@ -365,7 +373,7 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
                             <span className="text-slate-400 italic">No cotizado</span>
                           )}
                         </td>
-                        
+
                         {/* Precios */}
                         <td className="px-3 py-2 text-right">
                           {hasMatch ? (
@@ -378,7 +386,7 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
                                   const val = localInputs[provIdx].replace(/\./g, '').replace(',', '.');
                                   const parsed = parseFloat(val);
                                   if (!isNaN(parsed)) handlePriceEdit(provIdx, parsed);
-                                  setLocalInputs(prev => { const next = {...prev}; delete next[provIdx]; return next; });
+                                  setLocalInputs(prev => { const next = { ...prev }; delete next[provIdx]; return next; });
                                 }
                               }}
                               className="w-full max-w-[90px] text-right font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 focus:border-amber-500 focus:outline-none"
@@ -389,17 +397,17 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
                           {hasMatch && provItem.descuento_porcentaje ? `${provItem.descuento_porcentaje}%` : '-'}
                         </td>
                         <td className="px-3 py-3 text-right font-mono font-bold text-slate-800 dark:text-slate-200">
-                          {hasMatch ? formatCLP(getItemPrice(provItem, provIdx) * (provItem.cantidad_extraida || 1)) : '-'}
+                          {hasMatch ? formatCLP(getItemPrice(provItem, provIdx) * (provItem.cantidad_extraida || 1) * (1 - (provItem.descuento_porcentaje || 0) / 100)) : '-'}
                         </td>
                       </tr>
                     );
                   })}
-                  
+
                   {/* Ítems adicionales (No solicitados) */}
                   {unmatched.length > 0 && (
                     <>
                       <tr>
-                        <td colSpan={8} className="px-3 py-2 bg-orange-50 dark:bg-orange-900/20 text-[10px] font-bold uppercase text-orange-600 dark:text-orange-400">
+                        <td colSpan={8} className="px-3 py-2 bg-orange-50 dark:bg-orange-950/20 text-[10px] font-bold uppercase text-orange-600 dark:text-orange-400">
                           Ítems adicionales en cotización (No solicitados)
                         </td>
                       </tr>
@@ -429,7 +437,7 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
                                   const val = localInputs[provIdx].replace(/\./g, '').replace(',', '.');
                                   const parsed = parseFloat(val);
                                   if (!isNaN(parsed)) handlePriceEdit(provIdx, parsed);
-                                  setLocalInputs(prev => { const next = {...prev}; delete next[provIdx]; return next; });
+                                  setLocalInputs(prev => { const next = { ...prev }; delete next[provIdx]; return next; });
                                 }
                               }}
                               className="w-full max-w-[90px] text-right font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 focus:border-amber-500 focus:outline-none"

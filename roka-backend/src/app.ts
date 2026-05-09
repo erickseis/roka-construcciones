@@ -1,5 +1,5 @@
 import express from 'express';
-// import cors from 'cors';
+import cors from 'cors';
 
 import solicitudesRouter from './routes/solicitudes.routes';
 import ordenesRouter from './routes/ordenes.routes';
@@ -15,15 +15,14 @@ import proveedoresRouter from './routes/proveedores.routes';
 import solicitudCotizacionRouter from './routes/solicitud_cotizacion.routes';
 import chatRouter from './routes/chat.routes';
 import emailConfigRouter from './routes/email-config.routes';
-import { startAlertScheduler } from './lib/email-alertas';
+import { errorHandler } from './middleware/errorHandler';
 
-// const CORS_ORIGIN =
-// process.env.CORS_ORIGIN || 'http://localhost:3000' || 'http://localhost:4173';
+const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
 
 export function createRokaApp(): express.Application {
   const app = express();
 
-  // app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
+  app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
   app.use(express.json());
   app.use('/uploads', express.static('uploads'));
 
@@ -46,8 +45,8 @@ export function createRokaApp(): express.Application {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // Iniciar scheduler de alertas de email (guardia interna evita múltiples instancias)
-  startAlertScheduler();
+  // Global error handler — must be registered AFTER all routes
+  app.use(errorHandler);
 
   return app;
 }

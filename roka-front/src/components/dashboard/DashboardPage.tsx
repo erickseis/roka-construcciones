@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import { TrendingUp, AlertTriangle, Clock, DollarSign, FileText, PackageCheck } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useApi } from '@/hooks/useApi';
@@ -12,6 +13,7 @@ const COLORS = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444'];
 export default function DashboardPage() {
   const { data: stats, loading } = useApi(() => getDashboardResumen(), []);
   const { theme } = useTheme();
+  const navigate = useNavigate();
 
   const solicitudesPie = stats ? [
     { name: 'Pendientes', value: stats.solicitudes_mensual.pendientes },
@@ -327,7 +329,12 @@ export default function DashboardPage() {
                     : 'bg-blue-100 text-blue-700';
 
                   return (
-                    <tr key={sol.id} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/20">
+                    <tr
+                      key={sol.id}
+                      className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-amber-50 dark:hover:bg-amber-900/10 cursor-pointer transition-colors"
+                      title="Clic para crear cotización para esta solicitud"
+                      onClick={() => navigate(`/cotizaciones?solicitud_id=${sol.id}`)}
+                    >
                       <td className="py-2.5 text-slate-600 dark:text-slate-300 font-medium">
                         SOL-{String(sol.id).padStart(3, '0')}
                       </td>

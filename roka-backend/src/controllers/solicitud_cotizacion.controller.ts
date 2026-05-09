@@ -1,5 +1,4 @@
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/authMiddleware';
@@ -7,98 +6,9 @@ import pool from '../db';
 import * as scModel from '../models/solicitud_cotizacion.model';
 import { crearSolicitudCotizacion, crearBatchSolicitudesCotizacion, cambiarEstadoSolicitudCotizacion } from '../services/solicitud_cotizacion.service';
 import { getDb } from '../types';
-import puppeteer from 'puppeteer-core';
 import { isEventEnabled, sendEmail, buildSCProveedorHtml, buildCotizacionCreadaHtml, getUserEmailsByPermission } from '../lib/email';
-
-function detectChromePath(): string | undefined {
-  if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
-  const candidates =
-    process.platform === 'win32'
-      ? [
-          'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-          'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-        ]
-      : [
-          '/usr/bin/google-chrome-stable',
-          '/usr/bin/google-chrome',
-          '/usr/bin/chromium-browser',
-        ];
-  return candidates.find((p) => fs.existsSync(p));
-}
-
-const CHROME_EXECUTABLE = detectChromePath();
-
-let browserPromise: Promise<puppeteer.Browser> | null = null;
-let browserInstance: puppeteer.Browser | null = null;
-
-function getBrowser(): Promise<puppeteer.Browser> {
-  if (browserInstance?.isConnected()) {
-    return Promise.resolve(browserInstance);
-  }
-  if (!browserPromise) {
-    if (!CHROME_EXECUTABLE) {
-      return Promise.reject(new Error('Chrome executable not found. Set CHROME_PATH env var.'));
-    }
-    const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_'));
-    browserPromise = puppeteer
-      .launch({
-        executablePath: CHROME_EXECUTABLE,
-        userDataDir,
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-      })
-      .then((browser) => {
-        browserInstance = browser;
-        browser.on('disconnected', () => {
-          browserInstance = null;
-          browserPromise = null;
-        });
-        return browser;
-      })
-      .catch((err) => {
-        browserPromise = null;
-        throw err;
-      });
-  }
-  return browserPromise;
-}
-
-async function htmlToPdf(html: string): Promise<Buffer> {
-  const browser = await getBrowser();
-  const page = await browser.newPage();
-  try {
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    const pdf = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '0', right: '0', bottom: '0', left: '0' },
-    });
-    return Buffer.from(pdf);
-  } finally {
-    await page.close();
-  }
-}
-
-function fmtDate(input?: string): string {
-  if (!input) return '-';
-  const d = new Date(input);
-  if (isNaN(d.getTime())) return '-';
-  return d.toLocaleDateString('es-CL');
-}
-
-function scape(s: unknown): string {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-const ROKA_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1079 1079" width="52" height="52" style="flex-shrink:0;border-radius:8px">
-  <rect width="1079" height="1079" fill="#ea9a00"/>
-  <path d="M 656,606 L 646,591 L 635,591 L 356,678 L 318,777 L 343,776 L 374,702 L 656,615 Z M 989,597 L 968,585 L 815,818 L 282,818 L 293,843 L 834,843 Z M 885,539 L 868,522 L 858,522 L 691,574 L 691,583 L 701,598 L 711,598 L 873,547 L 885,547 Z" fill="#c58200" opacity="0.9"/>
-  <path d="M 972,572 L 664,252 L 327,348 L 116,565 L 273,816 L 815,816 Z M 764,770 L 763,779 L 315,778 L 355,676 L 637,588 L 649,591 Z M 370,522 L 370,535 L 283,748 L 275,748 L 173,589 L 173,579 Z M 868,519 L 922,575 L 922,583 L 811,753 L 800,756 L 690,586 L 688,573 Z M 831,480 L 828,490 L 377,626 L 426,503 L 760,407 Z M 722,367 L 720,377 L 219,522 L 219,514 L 350,380 L 653,296 Z" fill="white" fill-rule="evenodd"/>
-</svg>`;
+import { htmlToPdf } from '../lib/pdf-utils';
+import { fmtDate, scape, ROKA_LOGO_SVG } from '../lib/html-templates';
 
 function buildSolicitudCotizacionHtml(sc: any, items: any[], proveedor?: any, solicitud?: any, pdfUrl?: string): string {
   const folio = 'SC-' + String(sc.id).padStart(3, '0');
@@ -175,7 +85,7 @@ ${pdfUrl ? `<div class="download-bar" style="position:sticky;top:0;z-index:999;b
         </div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:10px;opacity:0.85">Folio</div>
+        <div style="font-size:10px;opacity:0.85">Solicitud de Cotización N°:</div>
         <div style="font-size:19px;font-weight:800">${folio}</div>
         <div style="font-size:10px">Fecha: ${fmtDate(sc.created_at)}</div>
       </div>
@@ -201,10 +111,9 @@ ${pdfUrl ? `<div class="download-bar" style="position:sticky;top:0;z-index:999;b
             <div style="font-size:10px;font-weight:800;margin-bottom:5px;color:#0f172a">DATOS DE OBRA / TRAZABILIDAD</div>
             <table style="width:100%;border-collapse:collapse">
               <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px;width:36%">Obra</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(sc.proyecto_nombre) || '-'}</td></tr>
-              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px;width:36%">Nro. de Obra</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(sc.numero_obra) || '-'}</td></tr>
+              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px;width:36%">Nro. de Obra</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(sc.proyecto_numero_obra) || '-'}</td></tr>
               <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Solicitante</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(sc.solicitante) || '-'}</td></tr>
               <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Nro. Solic. Material</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${numeroSolicitudMaterial}</td></tr>
-              <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Nro. Solic. Cotización</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${folio}</td></tr>
               <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Fecha Requerida</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${fechaRequerida}</td></tr>
               <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Estado</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${scape(sc.estado) || '-'}</td></tr>
               <tr><td style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;padding:2px 4px">Fecha Solicitud</td><td style="font-size:11px;font-weight:700;color:#0f172a;padding:2px 4px">${fmtDate(sc.fecha_solicitud)}</td></tr>
@@ -570,6 +479,12 @@ export async function importarArchivo(req: AuthRequest, res: Response) {
       unidad: item.unidad || '',
     }));
 
+    // Fetch proveedor from DB for RUT and other fields
+    let proveedorDb: any = null;
+    if (sc.proveedor_id) {
+      proveedorDb = await getProveedorById(sc.proveedor_id);
+    }
+
     // Parse the file with AI
     const { parseCotizacionArchivo } = await import('../services/sc-import.service');
     const parsed = await parseCotizacionArchivo(file.path, sanitizedItems, sc.proveedor);
@@ -580,8 +495,10 @@ export async function importarArchivo(req: AuthRequest, res: Response) {
       archivo_path: file.path,
       archivo_nombre: file.originalname,
       numero_cov: parsed.numero_cov,
-      proveedor_nombre: parsed.proveedor_nombre,
+      proveedor_nombre: parsed.proveedor_nombre || proveedorDb?.nombre || sc.proveedor,
+      proveedor_rut: proveedorDb?.rut || undefined,
       proveedor_esperado: sc.proveedor,
+      condiciones_pago: parsed.condiciones_pago,
       monto_total: parsed.monto_total,
       items: parsed.items,
       warnings: parsed.warnings || [],
@@ -603,6 +520,8 @@ export async function confirmarImportacion(req: AuthRequest, res: Response) {
       archivo_path,
       archivo_nombre,
       numero_cov,
+      condiciones_pago,
+      plazo_entrega,
       proveedor_nombre,
       items,
     } = req.body;
@@ -644,8 +563,12 @@ export async function confirmarImportacion(req: AuthRequest, res: Response) {
       if (archivo_path && archivo_nombre) {
         await scModel.updateSCArchivo(solicitud_cotizacion_id, archivo_path, archivo_nombre, client);
       }
-      if (numero_cov) {
-        await scModel.updateSCNumeroCov(solicitud_cotizacion_id, numero_cov, client);
+      if (numero_cov || condiciones_pago || plazo_entrega) {
+        await scModel.updateSCRespuestaProveedor(solicitud_cotizacion_id, {
+          numero_cov: numero_cov || null,
+          condiciones_pago_cov: condiciones_pago || null,
+          plazo_entrega_cov: plazo_entrega || null,
+        }, client);
       }
 
       // Mark SC as RESPONDIDA — con trazabilidad de quién lo hizo
@@ -713,6 +636,19 @@ export async function enviarProveedor(req: AuthRequest, res: Response) {
       })),
     });
 
+    // Generar PDF para adjuntar
+    let pdfBuffer: Buffer | null = null;
+    try {
+      let proveedorRow: any = null;
+      let solicitudRow: any = null;
+      if (sc.proveedor_id) proveedorRow = await getProveedorById(sc.proveedor_id);
+      if (sc.solicitud_id) solicitudRow = await getSolicitudById(sc.solicitud_id);
+      const pdfHtml = buildSolicitudCotizacionHtml(sc, items, proveedorRow, solicitudRow);
+      pdfBuffer = await htmlToPdf(pdfHtml);
+    } catch (pdfErr: any) {
+      console.warn('[enviarProveedor SC] PDF generation failed, sending email without attachment:', pdfErr?.message || pdfErr);
+    }
+
     await sendEmail({
       to: emailDestino,
       subject: `Solicitud de Cotización ${folio} — ROKA Construcciones`,
@@ -720,6 +656,11 @@ export async function enviarProveedor(req: AuthRequest, res: Response) {
       eventoCodigo: 'sc.envio_proveedor',
       entidadTipo: 'solicitud_cotizacion',
       entidadId: id,
+      attachments: pdfBuffer ? [{
+        filename: `${folio}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf',
+      }] : undefined,
     });
 
     // Marcar como Enviada después de enviar email exitosamente

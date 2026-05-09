@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authMiddleware } from '../middleware/authMiddleware';
 import {
   unidades,
   categorias,
@@ -7,6 +8,8 @@ import {
 } from '../controllers/materiales.controller';
 
 const router = Router();
+
+router.use(authMiddleware);
 
 // Unidades de Medida
 router.get('/unidades', unidades.list);
