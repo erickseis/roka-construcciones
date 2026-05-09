@@ -128,9 +128,9 @@ export async function crearOCManual(input: CrearOCManualInput, usuarioId: number
 
     for (const item of itemsData) {
       await client.query(
-        `INSERT INTO orden_compra_items (orden_compra_id, nombre_material, cantidad, unidad, precio_unitario, subtotal, codigo)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [orden.id, item.nombre_material, item.cantidad, item.unidad, item.precio_unitario, item.subtotal, item.codigo]
+        `INSERT INTO orden_compra_items (orden_compra_id, nombre_material, cantidad, unidad, precio_unitario, subtotal, codigo, descuento_porcentaje)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [orden.id, item.nombre_material, item.cantidad, item.unidad, item.precio_unitario, item.subtotal, item.codigo, 0]
       );
     }
 

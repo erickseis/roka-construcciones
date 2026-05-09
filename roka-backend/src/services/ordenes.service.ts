@@ -211,12 +211,13 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
     for (const item of scItems) {
       const cant = Number(item.cantidad_requerida);
       const punit = Number(item.precio_unitario);
-      const desc = item.descuento_porcentaje > 0 ? 1 - item.descuento_porcentaje / 100 : 1;
+      const descPct = Number(item.descuento_porcentaje || 0);
+      const desc = descPct > 0 ? 1 - descPct / 100 : 1;
       const sub = Math.round(punit * cant * desc * 100) / 100;
       await client.query(
-        `INSERT INTO orden_compra_items (orden_compra_id, nombre_material, cantidad, unidad, precio_unitario, subtotal, codigo)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [orden.id, item.nombre_material, cant, item.unidad, punit, sub, item.codigo_proveedor || item.codigo]
+        `INSERT INTO orden_compra_items (orden_compra_id, nombre_material, cantidad, unidad, precio_unitario, subtotal, codigo, descuento_porcentaje)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [orden.id, item.nombre_material, cant, item.unidad, punit, sub, item.codigo_proveedor || item.codigo, descPct]
       );
     }
 

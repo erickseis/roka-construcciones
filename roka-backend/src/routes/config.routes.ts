@@ -6,6 +6,7 @@ import {
   cargos,
   roles,
   permisos,
+  triage,
 } from '../controllers/config.controller';
 
 const router = Router();
@@ -33,5 +34,9 @@ router.patch('/roles/:id/reactivar', authMiddleware, requirePermission('config.m
 router.get('/permisos', authMiddleware, requirePermission('config.manage'), permisos.list);
 router.get('/roles/:id/permisos', authMiddleware, requirePermission('config.manage'), roles.getPermisos);
 router.put('/roles/:id/permisos', authMiddleware, requirePermission('config.manage'), roles.updatePermisos);
+
+// --- Triage Config ---
+router.get('/triage', authMiddleware, triage.list);
+router.put('/triage', authMiddleware, requirePermission('config.manage'), triage.update);
 
 export default router;

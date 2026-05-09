@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { TrendingUp, AlertTriangle, Clock, DollarSign, FileText, PackageCheck } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useApi } from '@/hooks/useApi';
-import { getDashboardResumen } from '@/lib/api';
+import { getDashboardResumen, getTriageConfig } from '@/lib/api';
 import { formatCLP } from '@/lib/utils';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -14,6 +14,16 @@ export default function DashboardPage() {
   const { data: stats, loading } = useApi(() => getDashboardResumen(), []);
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const [triageConfig, setTriageConfig] = useState<Record<string, number>>({ critico_dias: 2, atrasado_dias: 5 });
+
+  // Cargar configuración de triage desde API
+  useEffect(() => {
+    getTriageConfig().then((config: any[]) => {
+      const cfg: Record<string, number> = {};
+      config?.forEach((c: any) => { cfg[c.codigo] = c.valor; });
+      setTriageConfig({ critico_dias: cfg.critico_dias ?? 2, atrasado_dias: cfg.atrasado_dias ?? 5 });
+    }).catch(() => { /* usar defaults */ });
+  }, []);
 
   const solicitudesPie = stats ? [
     { name: 'Pendientes', value: stats.solicitudes_mensual.pendientes },
@@ -310,15 +320,12 @@ export default function DashboardPage() {
                   } else if (diasRestantes < 0) {
                     diasBadgeClass = 'bg-red-100 text-red-700 font-bold';
                     diasBadgeText = `Vencida hace ${Math.abs(diasRestantes)} día${Math.abs(diasRestantes) > 1 ? 's' : ''}`;
-                  } else if (diasRestantes === 0) {
+                  } else if (diasRestantes <= triageConfig.critico_dias) {
+                    diasBadgeClass = 'bg-red-100 text-red-700 font-bold';
+                    diasBadgeText = `Crítica: ${diasRestantes} día${diasRestantes > 1 ? 's' : ''}`;
+                  } else if (diasRestantes <= triageConfig.atrasado_dias) {
                     diasBadgeClass = 'bg-amber-100 text-amber-700 font-bold';
-                    diasBadgeText = 'HOY';
-                  } else if (diasRestantes >= 1 && diasRestantes <= 3) {
-                    diasBadgeClass = 'bg-orange-100 text-orange-700';
-                    diasBadgeText = `${diasRestantes} día${diasRestantes > 1 ? 's' : ''}`;
-                  } else if (diasRestantes >= 4 && diasRestantes <= 7) {
-                    diasBadgeClass = 'bg-yellow-100 text-yellow-700';
-                    diasBadgeText = `${diasRestantes} días`;
+                    diasBadgeText = `Atrasada: ${diasRestantes} días`;
                   } else {
                     diasBadgeClass = 'bg-emerald-50 text-emerald-600';
                     diasBadgeText = `${diasRestantes} días`;

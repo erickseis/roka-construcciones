@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import * as configModel from '../models/config.model';
+import * as triageModel from '../models/triage.model';
 
 // ================================================
 // Departamentos
@@ -283,6 +284,39 @@ export const permisos = {
     } catch (error) {
       console.error('Error al obtener permisos:', error);
       res.status(500).json({ error: 'Error al obtener permisos' });
+    }
+  },
+};
+
+// ================================================
+// Triage Config
+// ================================================
+
+export const triage = {
+  async list(_req: Request, res: Response) {
+    try {
+      const config = await triageModel.getTriageConfig();
+      res.json(config);
+    } catch (error) {
+      console.error('Error al obtener configuración de triage:', error);
+      res.status(500).json({ error: 'Error al obtener configuración de triage' });
+    }
+  },
+
+  async update(req: Request, res: Response) {
+    const { codigo, valor } = req.body;
+    if (!codigo || valor == null || !Number.isInteger(valor) || valor < 0) {
+      return res.status(400).json({ error: 'codigo (string) y valor (entero >= 0) son requeridos' });
+    }
+    try {
+      const updated = await triageModel.updateTriageConfig(codigo, valor);
+      if (!updated) {
+        return res.status(404).json({ error: `Código "${codigo}" no encontrado` });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error('Error al actualizar configuración de triage:', error);
+      res.status(500).json({ error: 'Error al actualizar configuración de triage' });
     }
   },
 };

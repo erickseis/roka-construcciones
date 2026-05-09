@@ -12,6 +12,7 @@ export async function getAllOrdenes(filters: OrdenFilters): Promise<OrdenCompra[
     SELECT oc.*,
            COALESCE(sc.proveedor, oc.proveedor) AS proveedor,
            sc.solicitud_id,
+           sm.fecha_requerida,
            p.nombre AS proyecto_nombre,
            p.numero_obra AS proyecto_numero_obra,
            COALESCE(sm.proyecto_id, oc.proyecto_id) AS proyecto_id
@@ -44,7 +45,7 @@ export async function getOrdenById(id: number): Promise<OrdenCompraDetalle | nul
     SELECT oc.*,
            COALESCE(sc.proveedor, oc.proveedor) AS proveedor,
            sc.proveedor_id, sc.solicitud_id AS cotizacion_solicitud_id,
-           sm.solicitante, sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
+            sm.solicitante, sm.fecha_requerida, sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
            p.nombre AS proyecto_nombre, p.ubicacion AS proyecto_ubicacion,
            p.numero_licitacion AS proyecto_numero_licitacion,
            p.numero_obra AS proyecto_numero_obra,
@@ -95,7 +96,7 @@ export async function getOrdenItemsByOC(ordenCompraId: number): Promise<OrdenIte
   const db = getDb();
   const { rows } = await db.query(`
     SELECT id, nombre_material, cantidad AS cantidad_requerida, unidad,
-           precio_unitario, subtotal, codigo AS material_sku
+           precio_unitario, subtotal, codigo AS material_sku, descuento_porcentaje
     FROM orden_compra_items
     WHERE orden_compra_id = $1
     ORDER BY id

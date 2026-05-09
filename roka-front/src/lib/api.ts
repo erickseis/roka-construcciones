@@ -524,3 +524,9 @@ export const updateEmailAlertasConfig = (data: Partial<AlertaEmailConfig>) =>
 
 export const getUsuariosAlertas = () =>
   fetchApi<UsuarioAlerta[]>('/config/email/alertas/usuarios');
+
+// ---- Configuración de Triage ----
+export const getTriageConfig = () => fetchApi<any[]>('/config/triage');
+
+export const updateTriageConfig = (codigo: string, valor: number) =>
+  fetchApi<any>('/config/triage', { method: 'PUT', body: JSON.stringify({ codigo, valor }) });

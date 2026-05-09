@@ -809,12 +809,39 @@ export default function SolicitudesPage() {
             {showDetail.fecha_requerida && (
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 dark:bg-amber-900/20 dark:border-amber-800">
                 <p className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-500">Fecha requerida en terreno</p>
-                <p className="text-sm font-bold text-amber-800 dark:text-amber-200">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-bold text-amber-800 dark:text-amber-200">
+                    {(() => {
+                      const d = new Date(showDetail.fecha_requerida);
+                      return isNaN(d.getTime()) ? showDetail.fecha_requerida : d.toLocaleDateString('es-CL');
+                    })()}
+                  </span>
                   {(() => {
-                    const d = new Date(showDetail.fecha_requerida + 'T12:00:00');
-                    return isNaN(d.getTime()) ? showDetail.fecha_requerida : d.toLocaleDateString('es-ES');
+                    const d = new Date(showDetail.fecha_requerida);
+                    if (isNaN(d.getTime())) return null;
+                    const now = new Date();
+                    now.setHours(0, 0, 0, 0);
+                    d.setHours(0, 0, 0, 0);
+                    const diffDays = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                    let label = `${diffDays} día(s)`;
+                    let colorClass = 'text-emerald-600 bg-emerald-100 dark:text-emerald-400 dark:bg-emerald-900/30';
+                    if (diffDays < 0) {
+                      label = `Vencida hace ${Math.abs(diffDays)} día(s)`;
+                      colorClass = 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30';
+                    } else if (diffDays <= 2) {
+                      label = `Crítico — ${diffDays} día(s)`;
+                      colorClass = 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30';
+                    } else if (diffDays <= 5) {
+                      label = `Atrasado — ${diffDays} día(s)`;
+                      colorClass = 'text-amber-600 bg-amber-100 dark:text-amber-400 dark:bg-amber-900/30';
+                    }
+                    return (
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${colorClass}`}>
+                        {label}
+                      </span>
+                    );
                   })()}
-                </p>
+                </div>
               </div>
             )}
 

@@ -77,6 +77,7 @@ const headerValueStyle: React.CSSProperties = {
 
 const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
   const items: any[] = orden?.items || [];
+  const hasItemDiscount = items.some((i: any) => Number(i?.descuento_porcentaje || 0) > 0);
   const atencion = atencionManual.trim() || orden?.atencion_a || orden?.proveedor_contacto_nombre || '-';
   const folio = orden?.folio || `OC-${String(orden?.id || 0).padStart(6, '0')}`;
   const numeroSolicitud = orden?.solicitud_id ? `SM-${String(orden.solicitud_id).padStart(3, '0')}` : '-';
@@ -247,6 +248,7 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
             <th style={{ border: '1px solid #cbd5e1', padding: '5px', fontSize: '9px', width: '70px' }}>Codigo</th>
             <th style={{ border: '1px solid #cbd5e1', padding: '5px', fontSize: '9px' }}>Descripcion</th>
             <th style={{ border: '1px solid #cbd5e1', padding: '5px', fontSize: '9px', width: '88px' }}>P. Unitario</th>
+            {hasItemDiscount && <th style={{ border: '1px solid #cbd5e1', padding: '5px', fontSize: '9px', width: '44px', textAlign: 'center' }}>Desc.</th>}
             <th style={{ border: '1px solid #cbd5e1', padding: '5px', fontSize: '9px', width: '92px' }}>Subtotal</th>
           </tr>
         </thead>
@@ -274,6 +276,13 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
                 <td style={{ border: '1px solid #e2e8f0', padding: '5px', fontSize: '9px', textAlign: 'right' }}>
                   {fmtMoney(unitario)}
                 </td>
+                {hasItemDiscount && (
+                  <td style={{ border: '1px solid #e2e8f0', padding: '5px', fontSize: '9px', textAlign: 'center' }}>
+                    {desc > 0
+                      ? <span style={{ background: '#dbeafe', color: '#1e40af', padding: '1px 6px', borderRadius: '4px', fontWeight: 700, fontSize: '9px' }}>{desc}%</span>
+                      : '-'}
+                  </td>
+                )}
                 <td style={{ border: '1px solid #e2e8f0', padding: '5px', fontSize: '9px', textAlign: 'right' }}>
                   {fmtMoney(subtotal)}
                 </td>
@@ -282,7 +291,7 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
           })}
           {items.length === 0 && (
             <tr>
-              <td colSpan={6} style={{ border: '1px solid #e2e8f0', padding: '10px', textAlign: 'center', fontSize: '10px', color: '#64748b' }}>
+              <td colSpan={hasItemDiscount ? 7 : 6} style={{ border: '1px solid #e2e8f0', padding: '10px', textAlign: 'center', fontSize: '10px', color: '#64748b' }}>
                 Esta orden no tiene items cargados.
               </td>
             </tr>
@@ -398,7 +407,7 @@ const OCPreviewModal: React.FC<OCPreviewModalProps> = ({ isOpen, onClose, orden 
 
   const handlePrint = () => {
     const apiBase = import.meta.env.VITE_API_URL + '/roka/api';
-    const token = localStorage.getItem('token') || '';
+    const token = localStorage.getItem('roka_token') || '';
     const url = `${apiBase}/ordenes/${orden.id}/html`;
 
     // Abrir ventana en blanco y hacer fetch con el token de autenticación

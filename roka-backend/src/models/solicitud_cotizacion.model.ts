@@ -41,7 +41,7 @@ export async function getAllSolicitudesCotizacion(filters: SolicitudCotizacionFi
 export async function getSolicitudCotizacionById(id: number): Promise<(SolicitudCotizacion & { total_items?: number }) | null> {
   const db = getDb();
   const { rows: [sc] } = await db.query(`
-    SELECT sc.*, sm.solicitante, p.nombre AS proyecto_nombre, p.numero_obra AS proyecto_numero_obra,
+    SELECT sc.*, sm.solicitante, sm.fecha_requerida, p.nombre AS proyecto_nombre, p.numero_obra AS proyecto_numero_obra,
            sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
            prov.rut AS prov_rut,
            prov.correo AS prov_correo,

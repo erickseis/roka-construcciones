@@ -28,7 +28,7 @@ function buildOCHtml(orden: any, items: any[], pdfUrl?: string): string {
   else if (descuentoTipo === 'monto') descuentoDetalle = fmtMoney(descuentoValor);
 
   const itemsRows = items.length === 0
-    ? '<tr><td colspan="6" style="border:1px solid #e2e8f0;padding:10px;text-align:center;font-size:10px;color:#64748b">Esta orden no tiene items cargados.</td></tr>'
+    ? '<tr><td colspan="7" style="border:1px solid #e2e8f0;padding:10px;text-align:center;font-size:10px;color:#64748b">Esta orden no tiene items cargados.</td></tr>'
     : items.map((it: any, i: number) => {
       const cant = Number(it.cantidad_requerida ?? it.cantidad_extraida ?? it.cantidad ?? 0);
       const punit = Number(it.precio_unitario || 0);
@@ -47,6 +47,7 @@ function buildOCHtml(orden: any, items: any[], pdfUrl?: string): string {
             <div style="color:#475569;font-size:9px">Unidad: ${scape(it.unidad)}</div>
           </td>
           <td style="border:1px solid #e2e8f0;padding:5px 4px;font-size:10px;text-align:right">${fmtMoney(punit)}</td>
+          <td style="border:1px solid #e2e8f0;padding:5px 4px;font-size:10px;text-align:center">${desc > 0 ? `<span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;font-weight:700">${desc}%</span>` : '-'}</td>
           <td style="border:1px solid #e2e8f0;padding:5px 4px;font-size:10px;text-align:right">${fmtMoney(sub)}</td>
         </tr>`;
     }).join('');
@@ -150,6 +151,7 @@ ${pdfUrl ? `<div class="download-bar" style="position:sticky;top:0;z-index:999;b
         <th style="border:1px solid #cbd5e1;padding:5px 4px;font-size:10px;width:68px">Codigo</th>
         <th style="border:1px solid #cbd5e1;padding:5px 4px;font-size:10px">Descripcion</th>
         <th style="border:1px solid #cbd5e1;padding:5px 4px;font-size:10px;width:86px">P. Unitario</th>
+        <th style="border:1px solid #cbd5e1;padding:5px 4px;font-size:10px;width:44px">Desc.</th>
         <th style="border:1px solid #cbd5e1;padding:5px 4px;font-size:10px;width:90px">Subtotal</th>
       </tr>
     </thead>
