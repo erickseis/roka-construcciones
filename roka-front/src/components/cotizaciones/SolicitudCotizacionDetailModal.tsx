@@ -252,48 +252,69 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
             )}
 
             {/* Datos de la Cotización de Venta (solo cuando Respondida) */}
-            {data.estado?.toUpperCase() === 'RESPONDIDA' && (data.numero_cov || data.condiciones_pago_cov || data.plazo_entrega_cov) && (
-              <div className="rounded-lg border border-emerald-200 dark:border-emerald-800/50 overflow-hidden">
-                <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 border-b border-emerald-200 dark:border-emerald-800/50">
-                  <FileCheck2 size={13} className="text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Cotización de Venta del Proveedor</span>
-                </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 p-3">
-                  {data.numero_cov && (
-                    <div>
-                      <p className="text-[10px] font-bold uppercase text-slate-400">N° Cotización de Venta</p>
-                      <p className="text-sm font-mono font-bold text-emerald-700 dark:text-emerald-400">{data.numero_cov}</p>
-                    </div>
-                  )}
-                  {data.condiciones_pago_cov && (
-                    <div>
-                      <p className="text-[10px] font-bold uppercase text-slate-400">Condiciones de Pago</p>
-                      <p className="text-xs text-slate-700 dark:text-slate-300">{data.condiciones_pago_cov}</p>
-                    </div>
-                  )}
-                  {data.plazo_entrega_cov && (
-                    <div>
-                      <p className="text-[10px] font-bold uppercase text-slate-400">Plazo de Entrega</p>
-                      <p className="text-xs text-slate-700 dark:text-slate-300">{data.plazo_entrega_cov}</p>
-                    </div>
-                  )}
-                  {data.items && data.items.some((i: any) => i.precio_unitario != null) && (() => {
-                    const total = data.items.reduce((sum: number, item: any) => {
-                      const punit = Number(item.precio_unitario || 0);
-                      const cant = Number(item.cantidad_requerida || 0);
-                      const desc = Number(item.descuento_porcentaje || 0);
-                      return sum + Math.round(punit * cant * (desc > 0 ? (1 - desc / 100) : 1) * 100) / 100;
-                    }, 0);
-                    return (
+            {data.estado?.toUpperCase() === 'RESPONDIDA' && (data.numero_cov || data.condiciones_pago_cov || data.plazo_entrega_cov || Number(data.descuento_global_cov) > 0) && (() => {
+              const subtotal = (data.items || []).reduce((sum: number, item: any) => {
+                const punit = Number(item.precio_unitario || 0);
+                const cant = Number(item.cantidad_requerida || 0);
+                const desc = Number(item.descuento_porcentaje || 0);
+                return sum + Math.round(punit * cant * (desc > 0 ? (1 - desc / 100) : 1) * 100) / 100;
+              }, 0);
+              const descGlobalPct = Number(data.descuento_global_cov || 0);
+              const descGlobalMonto = subtotal * (descGlobalPct / 100);
+              const totalFinal = subtotal - descGlobalMonto;
+              const hasItemsConPrecios = data.items && data.items.some((i: any) => i.precio_unitario != null);
+
+              return (
+                <div className="rounded-lg border border-emerald-200 dark:border-emerald-800/50 overflow-hidden">
+                  <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 border-b border-emerald-200 dark:border-emerald-800/50">
+                    <FileCheck2 size={13} className="text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Cotización de Venta del Proveedor</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 p-3">
+                    {data.numero_cov && (
                       <div>
-                        <p className="text-[10px] font-bold uppercase text-slate-400">Total Neto</p>
-                        <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{total.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}</p>
+                        <p className="text-[10px] font-bold uppercase text-slate-400">N° Cotización de Venta</p>
+                        <p className="text-sm font-mono font-bold text-emerald-700 dark:text-emerald-400">{data.numero_cov}</p>
                       </div>
-                    );
-                  })()}
+                    )}
+                    {data.condiciones_pago_cov && (
+                      <div>
+                        <p className="text-[10px] font-bold uppercase text-slate-400">Condiciones de Pago</p>
+                        <p className="text-xs text-slate-700 dark:text-slate-300">{data.condiciones_pago_cov}</p>
+                      </div>
+                    )}
+                    {data.plazo_entrega_cov && (
+                      <div>
+                        <p className="text-[10px] font-bold uppercase text-slate-400">Plazo de Entrega</p>
+                        <p className="text-xs text-slate-700 dark:text-slate-300">{data.plazo_entrega_cov}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {hasItemsConPrecios && (
+                    <div className="border-t border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/40 dark:bg-emerald-950/10 px-3 py-2 space-y-1">
+                      {descGlobalPct > 0 && (
+                        <>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-slate-600 dark:text-slate-400">Subtotal</span>
+                            <span className="font-mono text-slate-700 dark:text-slate-300">{subtotal.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-amber-700 dark:text-amber-400 font-semibold">Descuento Global ({descGlobalPct}%)</span>
+                            <span className="font-mono text-amber-700 dark:text-amber-400">− {descGlobalMonto.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}</span>
+                          </div>
+                          <div className="h-px bg-emerald-200 dark:bg-emerald-800/50 my-1" />
+                        </>
+                      )}
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Total Neto</span>
+                        <span className="text-base font-bold text-emerald-700 dark:text-emerald-400">{totalFinal.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Items con precios si existen */}
             {data.items && data.items.length > 0 && (

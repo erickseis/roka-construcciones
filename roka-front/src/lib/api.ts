@@ -314,6 +314,7 @@ export const confirmarImportacionSC = (data: {
   numero_cov?: string;
   condiciones_pago?: string;
   plazo_entrega?: string;
+  descuento_global?: number;
   proveedor_nombre?: string;
   items: Array<{
     solicitud_item_id: number;

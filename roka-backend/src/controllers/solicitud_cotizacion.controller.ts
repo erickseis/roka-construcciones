@@ -522,6 +522,7 @@ export async function confirmarImportacion(req: AuthRequest, res: Response) {
       numero_cov,
       condiciones_pago,
       plazo_entrega,
+      descuento_global,
       proveedor_nombre,
       items,
     } = req.body;
@@ -563,11 +564,12 @@ export async function confirmarImportacion(req: AuthRequest, res: Response) {
       if (archivo_path && archivo_nombre) {
         await scModel.updateSCArchivo(solicitud_cotizacion_id, archivo_path, archivo_nombre, client);
       }
-      if (numero_cov || condiciones_pago || plazo_entrega) {
+      if (numero_cov || condiciones_pago || plazo_entrega || descuento_global != null) {
         await scModel.updateSCRespuestaProveedor(solicitud_cotizacion_id, {
           numero_cov: numero_cov || null,
           condiciones_pago_cov: condiciones_pago || null,
           plazo_entrega_cov: plazo_entrega || null,
+          descuento_global_cov: descuento_global != null ? Number(descuento_global) : null,
         }, client);
       }
 

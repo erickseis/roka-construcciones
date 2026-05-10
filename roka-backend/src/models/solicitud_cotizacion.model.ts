@@ -287,7 +287,12 @@ export async function updateSCNumeroCov(scId: number, numeroCov: string, db?: Qu
 
 export async function updateSCRespuestaProveedor(
   scId: number,
-  data: { numero_cov?: string | null; condiciones_pago_cov?: string | null; plazo_entrega_cov?: string | null },
+  data: {
+    numero_cov?: string | null;
+    condiciones_pago_cov?: string | null;
+    plazo_entrega_cov?: string | null;
+    descuento_global_cov?: number | null;
+  },
   db?: Queryable
 ): Promise<void> {
   const conn = getDb(db);
@@ -296,8 +301,15 @@ export async function updateSCRespuestaProveedor(
      SET numero_cov = COALESCE($1, numero_cov),
          condiciones_pago_cov = COALESCE($2, condiciones_pago_cov),
          plazo_entrega_cov = COALESCE($3, plazo_entrega_cov),
+         descuento_global_cov = COALESCE($4, descuento_global_cov),
          updated_at = NOW()
-     WHERE id = $4`,
-    [data.numero_cov || null, data.condiciones_pago_cov || null, data.plazo_entrega_cov || null, scId]
+     WHERE id = $5`,
+    [
+      data.numero_cov || null,
+      data.condiciones_pago_cov || null,
+      data.plazo_entrega_cov || null,
+      data.descuento_global_cov ?? null,
+      scId
+    ]
   );
 }
