@@ -23,11 +23,29 @@
   }
 
   body {
-    @apply bg-[#f7fafc] text-[#181c1e] font-sans;
+    @apply bg-slate-50 text-slate-900 font-sans antialiased transition-colors duration-300;
   }
 
   .dark body {
-    @apply bg-[#0b0e14] text-slate-100;
+    @apply bg-[#05070a] text-slate-100;
+  }
+
+  /* Premium scrollbar for dark mode */
+  .dark ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .dark ::-webkit-scrollbar-track {
+    @apply bg-[#0b0e14];
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    @apply bg-slate-800 rounded-full border-2 border-[#0b0e14] hover:bg-slate-700;
+  }
+}
+
+@layer components {
+  .dark-card {
+    @apply bg-slate-900/50 border border-slate-800/50 backdrop-blur-md shadow-xl ring-1 ring-white/5;
   }
 }
 

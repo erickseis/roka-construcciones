@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../context/PermissionsContext';
+import DOMPurify from 'dompurify';
 import './RokaChatbot.css';
 
 interface Message {
@@ -9,17 +11,27 @@ interface Message {
   time: string;
 }
 
-const QUICK_ACTIONS = [
-  { label: '📋 Solicitudes pendientes', query: '¿Cuántas solicitudes hay pendientes?' },
-  { label: '💲 Gasto total OC', query: '¿Cuál es el gasto total en órdenes de compra?' },
-  { label: '📊 Proyectos activos', query: 'Muéstrame el resumen de proyectos activos' },
-  { label: '⏱ Tiempo conversión', query: '¿Cuál es el tiempo de conversión promedio?' },
+const QUICK_ACTIONS: Array<{ label: string; query: string; requiredPermission: string }> = [
+  { label: '📋 Solicitudes pendientes', query: '¿Cuántas solicitudes hay pendientes?', requiredPermission: 'solicitudes.view' },
+  { label: '💲 Gasto total OC', query: '¿Cuál es el gasto total en órdenes de compra?', requiredPermission: 'ordenes.view' },
+  { label: '📊 Proyectos activos', query: 'Muéstrame el resumen de proyectos activos', requiredPermission: 'proyectos.view' },
+  { label: '💲 Gasto por proyecto', query: '¿Cuál es el gasto por proyecto?', requiredPermission: 'proyectos.view' },
+  { label: '🏗 Estado de presupuestos', query: '¿Cómo va el estado de los presupuestos?', requiredPermission: 'presupuestos.view' },
+  { label: '🚨 Alertas de presupuesto', query: '¿Hay alertas de presupuesto activas?', requiredPermission: 'presupuestos.view' },
+  { label: '📦 Últimas OC', query: '¿Cuáles son las últimas órdenes de compra?', requiredPermission: 'ordenes.view' },
+  { label: '⏱ Tiempo conversión', query: '¿Cuál es el tiempo de conversión promedio?', requiredPermission: 'dashboard.view' },
+  { label: '🤝 Proveedores', query: '¿Qué proveedores están registrados?', requiredPermission: 'proveedores.view' },
+  { label: '📄 Cotizaciones por responder', query: '¿Hay solicitudes de cotización enviadas?', requiredPermission: 'cotizaciones.view' },
+  { label: '📦 Materiales en catálogo', query: '¿Cuántos materiales hay en el catálogo?', requiredPermission: 'materiales.view' },
+  { label: '📋 Solicitudes con fecha', query: '¿Cuáles son las solicitudes con fecha próxima?', requiredPermission: 'solicitudes.view' },
+  { label: '🚚 Estado de entregas', query: '¿Cómo están las entregas de las OC?', requiredPermission: 'ordenes.view' },
 ];
 
-const API_URL = import.meta.env.VITE_API_URL+ '/roka/api';
+const API_URL = import.meta.env.VITE_API_URL + '/roka/api';
 
 export function RokaChatbot() {
   const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
@@ -27,22 +39,48 @@ export function RokaChatbot() {
   const [hasUnread, setHasUnread] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isInitialized = useRef(false);
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const token = localStorage.getItem('roka_token');
+  const quickActions = QUICK_ACTIONS.filter(a => hasPermission(a.requiredPermission));
 
   // Solo inicializar una vez al cargar el componente
   useEffect(() => {
     if (isInitialized.current) return;
     isInitialized.current = true;
-    
+
     const firstName = user?.nombre?.split(' ')[0] || 'Usuario';
     setMessages([
       {
         id: 'initial',
         role: 'bot',
-        text: `¡Buen día, ${firstName}! Soy **Roka AI**, su asistente virtual. Puedo ayudarle con información sobre solicitudes, cotizaciones, órdenes de compra y estadísticas del sistema. ¿En qué le puedo asistir hoy?`,
+        text: `¡Buen día, ${firstName}! Soy **RokAI**, su asistente virtual. Puedo ayudarle con información sobre solicitudes, solicitudes de cotización, órdenes de compra y estadísticas del sistema. ¿En qué le puedo asistir hoy?`,
         time: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }),
       }
     ]);
+    
+    // Auto-hide suggestions after 4s
+    startHideTimer();
+
+    return () => {
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+    };
   }, []);
+
+  const startHideTimer = () => {
+    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+    hideTimeoutRef.current = setTimeout(() => {
+      setShowSuggestions(false);
+    }, 4000);
+  };
+
+  const clearHideTimer = () => {
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
+  };
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -72,12 +110,15 @@ export function RokaChatbot() {
     try {
       const response = await fetch(`${API_URL}/chat/complete`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ message: text }),
       });
 
       if (!response.ok) throw new Error('Error en la respuesta de IA');
-      
+
       const data = await response.json();
 
       const botMsg: Message = {
@@ -99,6 +140,8 @@ export function RokaChatbot() {
       setMessages(prev => [...prev, errorMsg]);
     } finally {
       setIsTyping(false);
+      setShowSuggestions(true);
+      startHideTimer();
     }
   };
 
@@ -119,7 +162,7 @@ export function RokaChatbot() {
       if (lines.length < 3) return match;
 
       const headers = lines[0].split('|').map(h => h.trim()).filter(h => h);
-      const rows = lines.slice(2).map(row => 
+      const rows = lines.slice(2).map(row =>
         row.split('|').map(c => c.trim()).filter(c => c !== '')
       );
 
@@ -169,10 +212,10 @@ export function RokaChatbot() {
 
   return (
     <div className="roka-chat-container roka-chat-wrapper">
-      <button 
-        id="chat-fab" 
-        onClick={toggleChat} 
-        title="Roka AI Assistant"
+      <button
+        id="chat-fab"
+        onClick={toggleChat}
+        title="RokAI Assistant"
         className={isOpen ? 'open' : ''}
       >
         {!isOpen && hasUnread && <div className="fab-badge">1</div>}
@@ -194,11 +237,11 @@ export function RokaChatbot() {
             <div className="chat-brand">
               <div className="chat-avatar">R</div>
               <div className="chat-brand-text">
-                <strong>Roka AI</strong>
+                <strong>RokAI</strong>
                 <span>Asistente de Roka Construcciones</span>
               </div>
             </div>
-            <button className="chat-close" onClick={() => setIsOpen(false)}>
+            <button className="chat-close cursor-pointer" onClick={() => setIsOpen(false)}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
               </svg>
@@ -217,9 +260,9 @@ export function RokaChatbot() {
                 {msg.role === 'bot' ? 'R' : (user?.nombre?.[0] || 'U')}
               </div>
               <div className="msg-content">
-                <div 
-                  className="msg-bubble" 
-                  dangerouslySetInnerHTML={{ __html: formatMessage(msg.text) }} 
+                <div
+                  className="msg-bubble"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatMessage(msg.text)) }}
                 />
                 <div className="msg-time">{msg.time}</div>
               </div>
@@ -238,9 +281,18 @@ export function RokaChatbot() {
           <div ref={messagesEndRef} />
         </div>
 
-        {!isTyping && messages.length < 5 && (
-          <div className="quick-actions">
-            {QUICK_ACTIONS.map(action => (
+        {!isTyping && (
+          <div 
+            className={`quick-actions ${showSuggestions ? 'visible' : 'hidden-chips'}`}
+            onMouseEnter={() => {
+              clearHideTimer();
+              setShowSuggestions(true);
+            }}
+            onMouseLeave={() => {
+              startHideTimer();
+            }}
+          >
+            {quickActions.map(action => (
               <div key={action.label} className="quick-chip" onClick={() => handleSend(action.query)}>
                 {action.label}
               </div>
@@ -249,16 +301,16 @@ export function RokaChatbot() {
         )}
 
         <div className="chat-input-wrap">
-          <textarea 
-            className="chat-input" 
-            placeholder="Escriba su consulta..." 
+          <textarea
+            className="chat-input"
+            placeholder="Escriba su consulta..."
             rows={1}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
           ></textarea>
-          <button 
-            className="send-btn" 
+          <button
+            className="send-btn cursor-pointer"
             onClick={() => handleSend(inputText)}
             disabled={!inputText.trim() || isTyping}
           >

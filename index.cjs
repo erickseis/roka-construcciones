@@ -2,11 +2,13 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+// Restart trigger
+
+
+dotenv.config({ path: path.join(__dirname, 'roka-backend', '.env') });
 
 const { createRokaApp } = require('./roka-backend/dist/app.js');
 const { runMigrations } = require('./roka-backend/dist/lib/migrations.js');
-
-dotenv.config({ path: path.join(__dirname, 'roka-backend', '.env') });
 
 const app = express();
 const PORT = process.env.PORT || 3001;

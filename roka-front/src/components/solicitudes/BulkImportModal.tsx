@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Upload, 
   FileSpreadsheet, 
@@ -9,9 +9,11 @@ import {
   Loader2,
   Trash2
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import { Modal } from '../ui/Modal';
 import { createSolicitud } from '@/lib/api';
+import { showAlert, showToast } from '@/lib/alerts';
+import { useAuth } from '@/context/AuthContext';
 
 interface BulkImportModalProps {
   isOpen: boolean;
@@ -28,6 +30,9 @@ export default function BulkImportModal({
   masterMateriales,
   onSuccess 
 }: BulkImportModalProps) {
+  const { user } = useAuth();
+  const userName = user ? `${user.nombre} ${user.apellido}`.trim() : '';
+
   const [file, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,9 +41,16 @@ export default function BulkImportModal({
   // Header state
   const [proyectoId, setProyectoId] = useState('');
   const [solicitante, setSolicitante] = useState('');
+  const [fechaRequerida, setFechaRequerida] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSolicitante(userName);
+    }
+  }, [isOpen, userName]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -90,6 +102,7 @@ export default function BulkImportModal({
             nombre_material: matchedMaterial?.nombre || materialName,
             cantidad_requerida: cantidad,
             unidad: matchedMaterial?.unidad_abreviatura || unidad,
+            codigo: matchedMaterial?.sku || sku || '',
             is_valid: materialName && cantidad > 0,
             original_row: row
           };
@@ -123,17 +136,27 @@ export default function BulkImportModal({
       await createSolicitud({
         proyecto_id: Number(proyectoId),
         solicitante,
+        fecha_requerida: fechaRequerida || null,
         items: validItems.map(i => ({
           material_id: i.material_id,
           nombre_material: i.nombre_material,
           cantidad_requerida: i.cantidad_requerida,
           unidad: i.unidad,
+          codigo: i.codigo,
         })),
+      });
+      showToast({
+        title: 'Importación completada',
+        icon: 'success'
       });
       onSuccess();
       handleClose();
     } catch (err: any) {
-      setError(err.message || 'Error al crear la solicitud masiva.');
+      showAlert({
+        title: 'Error de Importación',
+        text: err.message || 'Error al crear la solicitud masiva.',
+        icon: 'error'
+      });
     } finally {
       setSubmitting(false);
     }
@@ -145,18 +168,71 @@ export default function BulkImportModal({
     setError(null);
     setProyectoId('');
     setSolicitante('');
+    setFechaRequerida('');
     onClose();
   };
 
   const downloadTemplate = () => {
+    // Hoja de Datos
     const templateData = [
       { 'Material': 'Cemento Gris', 'Cantidad': 10, 'Unidad': 'Sacos', 'SKU': 'CEM-001' },
       { 'Material': 'Varilla 1/2', 'Cantidad': 50, 'Unidad': 'Piezas', 'SKU': 'VAR-002' },
-      { 'Material': 'Arena IT', 'Cantidad': 5.5, 'Unidad': 'm3', 'SKU': '' },
+      { 'Material': 'Arena de Río', 'Cantidad': 5.5, 'Unidad': 'm3', 'SKU': '' },
+      { 'Material': 'Grava 3/4', 'Cantidad': 3, 'Unidad': 'm3', 'SKU': '' },
     ];
+    
+    // Hoja de Instrucciones
+    const instructionData = [
+      { 'Campo': 'Material', 'Descripción': 'Nombre del material o insumo (Obligatorio)', 'Ejemplo': 'Cemento Gris' },
+      { 'Campo': 'Cantidad', 'Descripción': 'Cantidad requerida en formato numérico (Obligatorio)', 'Ejemplo': '10' },
+      { 'Campo': 'Unidad', 'Descripción': 'Unidad de medida (Opcional, por defecto: Unidades)', 'Ejemplo': 'Sacos' },
+      { 'Campo': 'SKU', 'Descripción': 'Código interno del material (Opcional, ayuda a vincular con el catálogo)', 'Ejemplo': 'CEM-001' },
+    ];
+
     const ws = XLSX.utils.json_to_sheet(templateData);
+    const wsIns = XLSX.utils.json_to_sheet(instructionData);
+
+    // Apply Styles to Headers (Datos)
+    const headerStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "F59E0B" } }, // Amber-500
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+
+    ['A1', 'B1', 'C1', 'D1'].forEach(cell => {
+      if (ws[cell]) ws[cell].s = headerStyle;
+    });
+
+    // Apply Styles to Headers (Instrucciones)
+    const insHeaderStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "0F172A" } }, // Slate-900
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+
+    ['A1', 'B1', 'C1'].forEach(cell => {
+      if (wsIns[cell]) wsIns[cell].s = insHeaderStyle;
+    });
+
+    // Configurar anchos de columna para la hoja principal
+    ws['!cols'] = [
+      { wch: 30 }, // Material
+      { wch: 10 }, // Cantidad
+      { wch: 15 }, // Unidad
+      { wch: 15 }, // SKU
+    ];
+
+    // Configurar anchos para instrucciones
+    wsIns['!cols'] = [
+      { wch: 15 },
+      { wch: 50 },
+      { wch: 20 },
+    ];
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
+    XLSX.utils.book_append_sheet(wb, ws, 'Datos para Importar');
+    XLSX.utils.book_append_sheet(wb, wsIns, 'Instrucciones');
+    
     XLSX.writeFile(wb, 'Plantilla_Solicitud_Materiales.xlsx');
   };
 
@@ -174,7 +250,7 @@ export default function BulkImportModal({
     >
       <div className="space-y-6">
         {/* Step 1: Info & Header */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Proyecto</label>
             <select
@@ -196,6 +272,19 @@ export default function BulkImportModal({
               onChange={e => setSolicitante(e.target.value)}
               placeholder="Nombre de quien solicita"
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-amber-500/50 dark:focus:ring-amber-500/10"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Fecha requerida en terreno</label>
+            <input
+              type="date"
+              value={fechaRequerida}
+              onChange={e => setFechaRequerida(e.target.value)}
+              title="Fecha en que se necesita el material físicamente en terreno"
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-amber-500/50 dark:focus:ring-amber-500/10"
             />
           </div>
         </div>
@@ -222,7 +311,7 @@ export default function BulkImportModal({
             <button 
               type="button"
               onClick={(e) => { e.stopPropagation(); downloadTemplate(); }}
-              className="mt-4 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-600 hover:underline"
+              className="mt-4 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-600 hover:underline cursor-pointer"
             >
               <Download size={12} /> Descargar Plantilla
             </button>
@@ -241,7 +330,7 @@ export default function BulkImportModal({
               </div>
               <button 
                 onClick={() => { setFile(null); setParsedData([]); }}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-red-500"
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-red-500 cursor-pointer"
               >
                 <X size={16} />
               </button>
@@ -272,8 +361,9 @@ export default function BulkImportModal({
                   <tr>
                     <th className="px-3 py-2 text-center w-8">#</th>
                     <th className="px-3 py-2">Material</th>
-                    <th className="px-3 py-2 w-20 text-right">Cant.</th>
-                    <th className="px-3 py-2 w-20">Unidad</th>
+                    <th className="px-3 py-2 w-24">Código</th>
+                    <th className="px-3 py-2 w-16 text-right">Cant.</th>
+                    <th className="px-3 py-2 w-16">Unidad</th>
                     <th className="px-3 py-2 text-center w-10">Estado</th>
                     <th className="px-3 py-2 w-8"></th>
                   </tr>
@@ -283,10 +373,13 @@ export default function BulkImportModal({
                     <tr key={item.id} className={!item.is_valid ? 'bg-red-50/30' : ''}>
                       <td className="px-3 py-2 text-center text-slate-400 dark:text-slate-500">{idx + 1}</td>
                       <td className="px-3 py-2">
-                        <div className="font-bold text-slate-700 dark:text-slate-200">{item.nombre_material || 'N/A'}</div>
+                        <div className="font-bold text-slate-700 dark:text-slate-200 leading-tight">{item.nombre_material || 'N/A'}</div>
                         {item.material_id && (
                           <div className="text-[9px] text-amber-600 font-medium dark:text-amber-400">Vinculado al catálogo</div>
                         )}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-slate-500 dark:text-slate-400">
+                        {item.codigo || '—'}
                       </td>
                       <td className="px-3 py-2 text-right font-mono font-bold text-slate-600 dark:text-slate-300">
                         {item.cantidad_requerida}
@@ -302,7 +395,7 @@ export default function BulkImportModal({
                       <td className="px-3 py-2">
                         <button 
                           onClick={() => removeItem(item.id)}
-                          className="text-slate-300 hover:text-red-500 transition-colors"
+                          className="text-slate-300 hover:text-red-500 transition-colors cursor-pointer"
                         >
                           <Trash2 size={12} />
                         </button>
@@ -320,7 +413,7 @@ export default function BulkImportModal({
           <button
             type="button"
             onClick={handleClose}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 cursor-pointer"
           >
             Cancelar
           </button>

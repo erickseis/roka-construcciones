@@ -53,13 +53,13 @@ export default function CategoriaModal({ isOpen, onClose, onSave, categoria }: C
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
       <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl dark:bg-slate-900">
         <div className="flex items-center justify-between border-b border-slate-100 p-6 dark:border-slate-800">
           <h2 className="text-xl font-black text-slate-900 dark:text-slate-50">
             {categoria ? 'Editar Categoría' : 'Nueva Categoría'}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
             <X size={24} />
           </button>
         </div>
@@ -91,14 +91,14 @@ export default function CategoriaModal({ isOpen, onClose, onSave, categoria }: C
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="rounded-xl px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-2 text-sm font-black text-white shadow-lg shadow-amber-500/30 transition-all hover:bg-amber-600 active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-2 text-sm font-black text-white shadow-lg shadow-amber-500/30 transition-all hover:bg-amber-600 active:scale-95 disabled:opacity-50 cursor-pointer"
             >
               <Save size={18} />
               {isSubmitting ? 'Guardando...' : 'Guardar Categoría'}

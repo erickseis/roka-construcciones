@@ -1,0 +1,1 @@
+ALTER TABLE solicitudes_material ADD COLUMN IF NOT EXISTS fecha_requerida DATE;

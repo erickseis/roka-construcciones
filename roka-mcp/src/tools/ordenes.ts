@@ -39,9 +39,9 @@ export function registerOrdenesTools(server: McpServer, auth: AuthManager, clien
 
   server.tool(
     "crear_orden_compra",
-    "Genera una orden de compra a partir de una cotización aprobada. Compromete presupuesto automáticamente.",
+    "Genera una orden de compra a partir de una solicitud de cotización respondida. Compromete presupuesto automáticamente.",
     {
-      cotizacion_id: z.number().describe("ID de la cotización aprobada"),
+      solicitud_cotizacion_id: z.number().describe("ID de la solicitud de cotización respondida"),
       condiciones_pago: z.string().optional().describe("Condiciones de pago (Neto 30 días por defecto)"),
       folio: z.string().optional().describe("Folio personalizado (se genera automáticamente si no se especifica)"),
       descuento_tipo: z.enum(["none", "porcentaje", "monto"]).optional().describe("Tipo de descuento"),
@@ -50,6 +50,8 @@ export function registerOrdenesTools(server: McpServer, auth: AuthManager, clien
       condiciones_entrega: z.string().optional().describe("Condiciones de entrega"),
       atencion_a: z.string().optional().describe("Atención a (persona de contacto)"),
       observaciones: z.string().optional().describe("Observaciones adicionales"),
+      autorizado_por_usuario_id: z.number().optional().describe("ID del usuario que autoriza la OC"),
+      codigo_obra: z.string().optional().describe("Código de obra (si no se especifica, se usa el N° de licitación del proyecto)"),
     },
     async (args) => {
       const res = await client.post("ordenes", args);
@@ -86,8 +88,8 @@ export function registerOrdenesTools(server: McpServer, auth: AuthManager, clien
         process.env.ROKA_BACKEND_URL ||
         "http://localhost:3001"
       ).replace(/\/+$/, "");
-      const apiPrefix = (process.env.ROKA_API_PREFIX || "/api/roka/api/").replace(/\/+$/, "");
-      const backendRoot = apiPrefix.replace(/\/api$/, "");
+      const apiPrefix = process.env.ROKA_API_PREFIX || "/api/roka/api/";
+      const apiRoot = apiPrefix.replace(/\/+$/, "");
 
       try {
         const res = await client.get<{
@@ -96,14 +98,16 @@ export function registerOrdenesTools(server: McpServer, auth: AuthManager, clien
           size: number;
         }>(`ordenes/${id}/pdf-link`);
 
-        const absoluteUrl = `${publicBase}${backendRoot}${res.data.url}`;
-        const htmlUrl = `${publicBase}${backendRoot}/ordenes/${id}/exportar`;
+        // PDF se sirve desde /uploads (static file en raíz del servidor)
+        const pdfUrl = `${publicBase}${res.data.url}`;
+        // HTML usar prefijo API
+        const htmlUrl = `${publicBase}${apiRoot}/ordenes/${id}/exportar`;
 
         const msg = [
           `**PDF generado exitosamente desde el sistema**`,
           ``,
           `Archivo: ${res.data.filename} (${(res.data.size / 1024).toFixed(1)} KB)`,
-          `URL descarga PDF: ${absoluteUrl}`,
+          `URL descarga PDF: ${pdfUrl}`,
           `URL vista HTML (idéntica al frontend): ${htmlUrl}`,
           ``,
           `👉 Para ver el PDF: abre la URL de descarga.`,
@@ -115,7 +119,7 @@ export function registerOrdenesTools(server: McpServer, auth: AuthManager, clien
         };
       } catch (pdfError) {
         console.error('PDF falló, usando fallback:', pdfError);
-        const exportUrl = `${publicBase}${backendRoot}/ordenes/${id}/exportar`;
+        const exportUrl = `${publicBase}${apiRoot}/ordenes/${id}/exportar`;
 
         return {
           content: [
@@ -132,6 +136,42 @@ Para ver la orden de compra:
           ],
         };
       }
+    }
+  );
+
+  server.tool(
+    "crear_orden_compra_manual",
+    "Crea una orden de compra manual/esporádica sin solicitud ni cotización previa. Para urgencias de terreno. Compromete presupuesto automáticamente si existe.",
+    {
+      proyecto_id: z.number().describe("ID del proyecto"),
+      proveedor: z.string().describe("Nombre del proveedor"),
+      proveedor_rut: z.string().optional().describe("RUT del proveedor"),
+      proveedor_direccion: z.string().optional().describe("Dirección del proveedor"),
+      proveedor_telefono: z.string().optional().describe("Teléfono del proveedor"),
+      proveedor_correo: z.string().optional().describe("Correo del proveedor"),
+      items: z.array(z.object({
+        nombre_material: z.string().describe("Nombre del material"),
+        cantidad: z.number().describe("Cantidad"),
+        unidad: z.string().describe("Unidad de medida"),
+        precio_unitario: z.number().describe("Precio unitario"),
+        codigo: z.string().optional().describe("Código o SKU"),
+      })).describe("Lista de ítems a comprar"),
+      condiciones_pago: z.string().optional().describe("Condiciones de pago"),
+      plazo_entrega: z.string().optional().describe("Plazo de entrega"),
+      condiciones_entrega: z.string().optional().describe("Condiciones de entrega"),
+      atencion_a: z.string().optional().describe("Atención a (persona de contacto)"),
+      observaciones: z.string().optional().describe("Observaciones adicionales"),
+      descuento_tipo: z.enum(["none", "porcentaje", "monto"]).optional().describe("Tipo de descuento"),
+      descuento_valor: z.number().optional().describe("Valor del descuento"),
+      folio: z.string().optional().describe("Folio personalizado"),
+      solicitud_id: z.number().optional().describe("ID de solicitud de materiales para trazabilidad (opcional)"),
+      codigo_obra: z.string().optional().describe("Código de obra directo (si no se especifica, se usa el N° de licitación del proyecto)"),
+    },
+    async (args) => {
+      const res = await client.post("ordenes/manual", args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }],
+      };
     }
   );
 }

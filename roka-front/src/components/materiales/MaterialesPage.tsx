@@ -15,13 +15,14 @@ import { Material, MaterialInput, UnidadMedida, MaterialCategoria } from '../../
 import MaterialModal from './MaterialModal';
 import CategoriaModal from './CategoriaModal';
 import UnidadModal from './UnidadModal';
-import { 
-  getMaterialCategorias, 
-  deleteMaterialCategoria, 
+import {
+  getMaterialCategorias,
+  deleteMaterialCategoria,
   deleteUnidadMedida,
   getMaterialesSolicitados,
   getProyectos
 } from '../../lib/api';
+import { formatCLP } from '@/lib/utils';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/roka';
 
@@ -30,14 +31,14 @@ export default function MaterialesPage() {
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
   const [masterCategorias, setMasterCategorias] = useState<MaterialCategoria[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'materiales' | 'categorias' | 'unidades' | 'solicitados'>('materiales');
+  const [activeTab, setActiveTab] = useState<'solicitados' | 'categorias' | 'unidades'>('solicitados');
   const [materialesSolicitados, setMaterialesSolicitados] = useState<any[]>([]);
   const [proyectos, setProyectos] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
-  
+
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<MaterialCategoria | null>(null);
 
@@ -77,13 +78,13 @@ export default function MaterialesPage() {
       console.error(error);
     }
   };
-  
+
   const fetchSolicitados = async () => {
     setIsLoading(true);
     try {
-      const data = await getMaterialesSolicitados({ 
-        q: searchTerm, 
-        proyecto_id: selectedCategoryId && activeTab === 'solicitados' ? Number(selectedCategoryId) : undefined 
+      const data = await getMaterialesSolicitados({
+        q: searchTerm,
+        proyecto_id: selectedCategoryId && activeTab === 'solicitados' ? Number(selectedCategoryId) : undefined
       });
       setMaterialesSolicitados(data);
     } catch (error) {
@@ -163,12 +164,12 @@ export default function MaterialesPage() {
     return matchesSearch && matchesCategory;
   });
 
-  const filteredCategorias = masterCategorias.filter(c => 
+  const filteredCategorias = masterCategorias.filter(c =>
     c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (c.descripcion && c.descripcion.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const filteredUnidades = unidades.filter(u => 
+  const filteredUnidades = unidades.filter(u =>
     u.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.abreviatura.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -198,7 +199,7 @@ export default function MaterialesPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2 text-sm font-medium text-slate-500 mb-1">
+          <div className="flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">
             <span>Configuración</span>
             <ChevronRight size={14} />
             <span className="text-amber-600">Catálogo</span>
@@ -206,72 +207,76 @@ export default function MaterialesPage() {
           <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50">
             Gestiona tus <span className="text-amber-500">Materiales</span>
           </h1>
-          <p className="text-sm font-medium text-slate-500">
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
             Gestiona el catálogo centralizado para mejorar la trazabilidad de tus compras.
           </p>
         </div>
 
-        <div className="flex gap-2">
-          {[
-            { id: 'materiales', label: 'Materiales' },
-            { id: 'categorias', label: 'Categorías' },
-            { id: 'unidades', label: 'Unidades' },
-            { id: 'solicitados', label: 'Solicitados' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`relative rounded-xl px-6 py-2.5 text-sm font-bold transition-all duration-300 ${
-                activeTab === tab.id
+        <div className="flex flex-col gap-4 w-full lg:w-auto">
+          <div className="flex overflow-x-auto pb-2 scrollbar-hide gap-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+            {[
+              { id: 'solicitados', label: 'Solicitados' },
+              // { id: 'materiales', label: 'Materiales' },
+              { id: 'categorias', label: 'Categorías' },
+              { id: 'unidades', label: 'Unidades' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`relative whitespace-nowrap rounded-xl px-6 py-2.5 text-sm font-bold transition-all duration-300 ${activeTab === tab.id
                   ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-[0_4px_20px_rgba(245,158,11,0.4)] scale-105 z-10'
                   : 'bg-white/50 text-slate-500 hover:bg-white border border-slate-200 dark:bg-slate-900/50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800'
-              }`}
+                  } cursor-pointer`}
+              >
+                {tab.label}
+                {activeTab === tab.id && (
+                  <motion.div
+                    layoutId="activeTabGlow"
+                    className="absolute -bottom-1 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full bg-amber-400 blur-[2px]"
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+          {activeTab === 'solicitados' ? (
+            null
+          ) : (
+            <button
+              onClick={() => {
+                if (activeTab === 'materiales') {
+                  setEditingMaterial(null);
+                  setIsModalOpen(true);
+                } else if (activeTab === 'categorias') {
+                  setEditingCategory(null);
+                  setIsCategoryModalOpen(true);
+                } else if (activeTab === 'unidades') {
+                  setEditingUnidad(null);
+                  setIsUnidadModalOpen(true);
+                }
+              }}
+              className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-black text-white shadow-xl transition-all hover:bg-slate-800 active:scale-95 dark:bg-white dark:text-slate-900 w-full sm:w-auto cursor-pointer"
             >
-              {tab.label}
-              {activeTab === tab.id && (
-                <motion.div
-                  layoutId="activeTabGlow"
-                  className="absolute -bottom-1 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full bg-amber-400 blur-[2px]"
-                />
-              )}
+              <Plus size={18} />
+              {activeTab === 'materiales' ? 'Registrar Material' : activeTab === 'categorias' ? 'Nueva Categoría' : activeTab === 'unidades' ? 'Nueva Unidad' : 'Registrar'}
             </button>
-          ))}
-          
-          <button
-            onClick={() => {
-              if (activeTab === 'materiales') {
-                setEditingMaterial(null);
-                setIsModalOpen(true);
-              } else if (activeTab === 'categorias') {
-                setEditingCategory(null);
-                setIsCategoryModalOpen(true);
-              } else if (activeTab === 'unidades') {
-                setEditingUnidad(null);
-                setIsUnidadModalOpen(true);
-              }
-            }}
-            className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-black text-white shadow-xl transition-all hover:bg-slate-800 active:scale-95 dark:bg-white dark:text-slate-900"
-          >
-            <Plus size={18} />
-            {activeTab === 'materiales' ? 'Registrar Material' : activeTab === 'categorias' ? 'Nueva Categoría' : activeTab === 'unidades' ? 'Nueva Unidad' : 'Registrar'}
-          </button>
+          )}
         </div>
       </div>
 
       {/* Stats Quick View */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-[#111827]/40">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/20">
               <Package size={24} />
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Materiales</p>
-              <h3 className="text-2xl font-black text-slate-900 dark:text-slate-50">{materiales.length}</h3>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Materiales Solicitados</p>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-slate-50">{materialesSolicitados.length}</h3>
             </div>
           </div>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-[#111827]/40">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-900/20">
               <Filter size={24} />
@@ -282,7 +287,7 @@ export default function MaterialesPage() {
             </div>
           </div>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-[#111827]/40">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50 text-green-600 dark:bg-green-900/20">
               <RefreshCw size={24} />
@@ -296,7 +301,7 @@ export default function MaterialesPage() {
       </div>
 
       {/* Filters & Search */}
-      <div className="flex flex-col gap-4 p-4 rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:flex-row lg:items-center">
+      <div className="flex flex-col gap-4 p-4 rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-[#111827]/40 lg:flex-row lg:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input
@@ -311,7 +316,7 @@ export default function MaterialesPage() {
           <select
             value={selectedCategoryId}
             onChange={(e) => setSelectedCategoryId(e.target.value)}
-            className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
+            className="flex-1 lg:flex-none rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
           >
             {activeTab === 'solicitados' ? (
               <>
@@ -331,7 +336,7 @@ export default function MaterialesPage() {
           </select>
           <button
             onClick={fetchMateriales}
-            className="rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-slate-500 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-800"
+            className="rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-slate-500 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-800 cursor-pointer"
           >
             <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
           </button>
@@ -340,7 +345,7 @@ export default function MaterialesPage() {
 
       {/* Conditional Rendering based on Tab */}
       {activeTab === 'materiales' ? (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-[#111827]/40">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -375,7 +380,7 @@ export default function MaterialesPage() {
                       <td className="px-6 py-4 font-bold">{material.nombre}</td>
                       <td className="px-6 py-4 text-slate-500 font-medium text-xs">{material.categoria_nombre || material.categoria || 'Sin categoría'}</td>
                       <td className="px-6 py-4 text-slate-500 text-xs font-bold">{material.unidad_abreviatura}</td>
-                      <td className="px-6 py-4 text-right font-black">${Number(material.precio_referencial).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-right font-black">{formatCLP(Number(material.precio_referencial))}</td>
                       <td className="px-6 py-4 text-center">
                         <span className={`px-2 py-1 rounded-full text-[10px] font-black ${material.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                           {material.is_active ? 'ACTIVO' : 'INACTIVO'}
@@ -383,8 +388,8 @@ export default function MaterialesPage() {
                       </td>
                       <td className="px-6 py-4 text-right grayscale opacity-30 group-hover:grayscale-0 group-hover:opacity-100 transition-all">
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => { setEditingMaterial(material); setIsModalOpen(true); }} className="hover:text-amber-600"><Edit2 size={16} /></button>
-                          <button onClick={() => handleDelete(material.id)} className="hover:text-red-500"><Trash2 size={16} /></button>
+                          <button onClick={() => { setEditingMaterial(material); setIsModalOpen(true); }} className="hover:text-amber-600 cursor-pointer"><Edit2 size={16} /></button>
+                          <button onClick={() => handleDelete(material.id)} className="hover:text-red-500 cursor-pointer"><Trash2 size={16} /></button>
                         </div>
                       </td>
                     </tr>
@@ -395,7 +400,7 @@ export default function MaterialesPage() {
           </div>
         </div>
       ) : activeTab === 'categorias' ? (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-[#111827]/40">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -417,8 +422,8 @@ export default function MaterialesPage() {
                       <td className="px-6 py-4 text-xs text-slate-400">{new Date(cat.created_at).toLocaleDateString()}</td>
                       <td className="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => { setEditingCategory(cat); setIsCategoryModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-amber-600"><Edit2 size={16} /></button>
-                          <button onClick={() => handleDeleteCategory(cat.id)} className="p-1.5 text-slate-400 hover:text-red-500"><Trash2 size={16} /></button>
+                          <button onClick={() => { setEditingCategory(cat); setIsCategoryModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-amber-600 cursor-pointer"><Edit2 size={16} /></button>
+                          <button onClick={() => handleDeleteCategory(cat.id)} className="p-1.5 text-slate-400 hover:text-red-500 cursor-pointer"><Trash2 size={16} /></button>
                         </div>
                       </td>
                     </tr>
@@ -429,7 +434,7 @@ export default function MaterialesPage() {
           </div>
         </div>
       ) : activeTab === 'unidades' ? (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-[#111827]/40">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -449,8 +454,8 @@ export default function MaterialesPage() {
                       <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400 font-mono">{u.abreviatura}</td>
                       <td className="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => { setEditingUnidad(u); setIsUnidadModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-amber-600"><Edit2 size={16} /></button>
-                          <button onClick={() => handleDeleteUnidad(u.id)} className="p-1.5 text-slate-400 hover:text-red-500"><Trash2 size={16} /></button>
+                          <button onClick={() => { setEditingUnidad(u); setIsUnidadModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-amber-600 cursor-pointer"><Edit2 size={16} /></button>
+                          <button onClick={() => handleDeleteUnidad(u.id)} className="p-1.5 text-slate-400 hover:text-red-500 cursor-pointer"><Trash2 size={16} /></button>
                         </div>
                       </td>
                     </tr>
@@ -461,7 +466,7 @@ export default function MaterialesPage() {
           </div>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-[#111827]/40">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -515,7 +520,7 @@ export default function MaterialesPage() {
         unidades={unidades}
       />
 
-      <CategoriaModal 
+      <CategoriaModal
         isOpen={isCategoryModalOpen}
         onClose={() => {
           setIsCategoryModalOpen(false);

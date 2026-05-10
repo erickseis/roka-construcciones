@@ -50,4 +50,16 @@ export function registerDashboardTools(server: McpServer, client: ApiClient) {
       };
     }
   );
+
+  server.tool(
+    "solicitudes_urgentes",
+    "Lista solicitudes de materiales ordenadas por fecha de entrega más próxima a vencer. Muestra solicitudes Pendiente/Cotizando con fecha_requerida, indicando días restantes y urgencia.",
+    {},
+    async () => {
+      const res = await client.get("dashboard/solicitudes-urgentes");
+      return {
+        content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }],
+      };
+    }
+  );
 }

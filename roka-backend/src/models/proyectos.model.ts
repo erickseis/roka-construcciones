@@ -15,6 +15,12 @@ export interface ProyectoRow {
   monto_referencial_licitacion: number | null;
   archivo_licitacion_path: string | null;
   archivo_licitacion_nombre: string | null;
+  archivo_materiales_path: string | null;
+  archivo_materiales_nombre: string | null;
+  mandante: string | null;
+  moneda: string | null;
+  plazo_ejecucion_dias: number | null;
+  numero_obra: string | null;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -36,6 +42,7 @@ export interface MetricasProyecto {
 
 export interface CreateProyectoData {
   nombre: string;
+  numero_obra?: string | null;
   ubicacion?: string | null;
   estado?: string;
   fecha_inicio?: string | null;
@@ -47,21 +54,32 @@ export interface CreateProyectoData {
   monto_referencial_licitacion?: number | null;
   archivo_licitacion_path?: string | null;
   archivo_licitacion_nombre?: string | null;
+  archivo_materiales_path?: string | null;
+  archivo_materiales_nombre?: string | null;
+  mandante?: string | null;
+  moneda?: string | null;
+  plazo_ejecucion_dias?: number | null;
 }
 
 export interface UpdateProyectoData {
   nombre?: string | null;
+  numero_obra?: string | null;
   ubicacion?: string | null;
   estado?: string | null;
   fecha_inicio?: string | null;
   fecha_fin?: string | null;
-  responsable_usuario_id?: number | null;
+  responsable_usuario_id?: string | null;
   numero_licitacion?: string | null;
   descripcion_licitacion?: string | null;
   fecha_apertura_licitacion?: string | null;
   monto_referencial_licitacion?: number | null;
   archivo_licitacion_path?: string | null;
   archivo_licitacion_nombre?: string | null;
+  archivo_materiales_path?: string | null;
+  archivo_materiales_nombre?: string | null;
+  mandante?: string | null;
+  moneda?: string | null;
+  plazo_ejecucion_dias?: number | null;
 }
 
 export async function getAllProyectos(
@@ -70,9 +88,14 @@ export async function getAllProyectos(
 ): Promise<ProyectoRow[]> {
   const conn = getDb(db);
   let query = `
-    SELECT p.*, CONCAT(u.nombre, ' ', u.apellido) AS responsable_nombre
+    SELECT p.*, CONCAT(u.nombre, ' ', u.apellido) AS responsable_nombre,
+           COALESCE(pp.monto_total, 0) AS presupuesto_total,
+           COALESCE(pp.monto_comprometido, 0) AS presupuesto_comprometido,
+           COALESCE(pp.monto_total - pp.monto_comprometido, 0) AS presupuesto_disponible,
+           COALESCE(ROUND((pp.monto_comprometido / NULLIF(pp.monto_total, 0)) * 100, 2), 0) AS presupuesto_porcentaje_uso
     FROM proyectos p
     LEFT JOIN usuarios u ON u.id = p.responsable_usuario_id
+    LEFT JOIN presupuestos_proyecto pp ON pp.proyecto_id = p.id
     WHERE 1=1
   `;
   const params: any[] = [];
@@ -126,13 +149,13 @@ export async function getMetricasProyecto(proyectoId: number, db?: Queryable): P
   const { rows } = await conn.query(
     `SELECT
        COUNT(DISTINCT sm.id)::int AS total_solicitudes,
-       COUNT(DISTINCT c.id)::int AS total_cotizaciones,
+       COUNT(DISTINCT sc.id)::int AS total_cotizaciones,
        COUNT(DISTINCT oc.id)::int AS total_ordenes,
        COALESCE(SUM(oc.total), 0)::numeric AS gasto_total_oc
      FROM proyectos p
      LEFT JOIN solicitudes_material sm ON sm.proyecto_id = p.id
-     LEFT JOIN cotizaciones c ON c.solicitud_id = sm.id
-     LEFT JOIN ordenes_compra oc ON oc.cotizacion_id = c.id
+     LEFT JOIN solicitud_cotizacion sc ON sc.solicitud_id = sm.id
+     LEFT JOIN ordenes_compra oc ON oc.solicitud_cotizacion_id = sc.id
      WHERE p.id = $1`,
     [proyectoId]
   );
@@ -143,14 +166,17 @@ export async function createProyecto(data: CreateProyectoData, db?: Queryable): 
   const conn = getDb(db);
   const { rows } = await conn.query(
     `INSERT INTO proyectos (
-       nombre, ubicacion, estado, fecha_inicio, fecha_fin,
+       nombre, numero_obra, ubicacion, estado, fecha_inicio, fecha_fin,
        responsable_usuario_id, numero_licitacion, descripcion_licitacion,
        fecha_apertura_licitacion, monto_referencial_licitacion,
-       archivo_licitacion_path, archivo_licitacion_nombre
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       archivo_licitacion_path, archivo_licitacion_nombre, 
+       archivo_materiales_path, archivo_materiales_nombre,
+       mandante, moneda, plazo_ejecucion_dias
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
      RETURNING *`,
     [
       data.nombre,
+      data.numero_obra || null,
       data.ubicacion || null,
       data.estado || 'Planificacion',
       data.fecha_inicio || null,
@@ -162,6 +188,11 @@ export async function createProyecto(data: CreateProyectoData, db?: Queryable): 
       data.monto_referencial_licitacion || null,
       data.archivo_licitacion_path || null,
       data.archivo_licitacion_nombre || null,
+      data.archivo_materiales_path || null,
+      data.archivo_materiales_nombre || null,
+      data.mandante || null,
+      data.moneda || 'CLP',
+      data.plazo_ejecucion_dias || null,
     ]
   );
   return rows[0];
@@ -173,22 +204,29 @@ export async function updateProyecto(id: number, data: UpdateProyectoData, db?: 
     `UPDATE proyectos
      SET
        nombre = COALESCE($1, nombre),
-       ubicacion = COALESCE($2, ubicacion),
-       estado = COALESCE($3, estado),
-       fecha_inicio = COALESCE($4, fecha_inicio),
-       fecha_fin = COALESCE($5, fecha_fin),
-       responsable_usuario_id = COALESCE($6, responsable_usuario_id),
-       numero_licitacion = COALESCE($7, numero_licitacion),
-       descripcion_licitacion = COALESCE($8, descripcion_licitacion),
-       fecha_apertura_licitacion = COALESCE($9, fecha_apertura_licitacion),
-       monto_referencial_licitacion = COALESCE($10, monto_referencial_licitacion),
-       archivo_licitacion_path = COALESCE($11, archivo_licitacion_path),
-       archivo_licitacion_nombre = COALESCE($12, archivo_licitacion_nombre),
+       numero_obra = COALESCE($2, numero_obra),
+       ubicacion = COALESCE($3, ubicacion),
+       estado = COALESCE($4, estado),
+       fecha_inicio = COALESCE($5, fecha_inicio),
+       fecha_fin = COALESCE($6, fecha_fin),
+       responsable_usuario_id = COALESCE($7, responsable_usuario_id),
+       numero_licitacion = COALESCE($8, numero_licitacion),
+       descripcion_licitacion = COALESCE($9, descripcion_licitacion),
+       fecha_apertura_licitacion = COALESCE($10, fecha_apertura_licitacion),
+       monto_referencial_licitacion = COALESCE($11, monto_referencial_licitacion),
+       archivo_licitacion_path = COALESCE($12, archivo_licitacion_path),
+       archivo_licitacion_nombre = COALESCE($13, archivo_licitacion_nombre),
+       archivo_materiales_path = COALESCE($14, archivo_materiales_path),
+       archivo_materiales_nombre = COALESCE($15, archivo_materiales_nombre),
+       mandante = COALESCE($16, mandante),
+       moneda = COALESCE($17, moneda),
+       plazo_ejecucion_dias = COALESCE($18, plazo_ejecucion_dias),
        updated_at = NOW()
-     WHERE id = $13
+     WHERE id = $19
      RETURNING *`,
     [
       data.nombre || null,
+      data.numero_obra || null,
       data.ubicacion || null,
       data.estado || null,
       data.fecha_inicio || null,
@@ -200,6 +238,11 @@ export async function updateProyecto(id: number, data: UpdateProyectoData, db?: 
       data.monto_referencial_licitacion || null,
       data.archivo_licitacion_path || null,
       data.archivo_licitacion_nombre || null,
+      data.archivo_materiales_path || null,
+      data.archivo_materiales_nombre || null,
+      data.mandante || null,
+      data.moneda || null,
+      data.plazo_ejecucion_dias || null,
       id,
     ]
   );
@@ -222,6 +265,15 @@ export async function getLicitacionArchivo(id: number, db?: Queryable): Promise<
   const conn = getDb(db);
   const { rows } = await conn.query(
     'SELECT archivo_licitacion_path, archivo_licitacion_nombre FROM proyectos WHERE id = $1',
+    [id]
+  );
+  return rows[0] || null;
+}
+
+export async function getMaterialesArchivo(id: number, db?: Queryable): Promise<{ archivo_materiales_path: string | null; archivo_materiales_nombre: string | null } | null> {
+  const conn = getDb(db);
+  const { rows } = await conn.query(
+    'SELECT archivo_materiales_path, archivo_materiales_nombre FROM proyectos WHERE id = $1',
     [id]
   );
   return rows[0] || null;

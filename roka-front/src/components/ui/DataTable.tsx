@@ -101,14 +101,14 @@ export function DataTable<T extends Record<string, any>>({
       {filteredData.length === 0 ? (
         <EmptyState title={emptyTitle} message={emptyMessage} />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200/70 dark:border-slate-800">
+        <div className="overflow-x-auto rounded-xl border border-slate-200/70 dark:border-slate-800">
           <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800">
             <thead className="bg-slate-50/80 dark:bg-slate-900/50">
               <tr>
                 {columns.map(col => (
                   <th
                     key={col.key}
-                    className={`px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500 ${col.sortable ? 'cursor-pointer select-none hover:text-slate-700' : ''} ${col.className || ''} dark:text-slate-400`}
+                    className={`px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500 ${col.sortable ? 'cursor-pointer select-none hover:text-slate-700' : ''} ${col.className || ''} dark:text-slate-300`}
                     onClick={() => col.sortable && handleSort(col.key)}
                   >
                     <span className="flex items-center gap-1">

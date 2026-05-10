@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import pool from '../db';
 import { getSystemStats } from '../models/chat.model';
 
 const openai = new OpenAI({
@@ -6,7 +7,7 @@ const openai = new OpenAI({
   baseURL: process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1',
 });
 
-const SYSTEM_PROMPT = `Eres Roka AI, asistente virtual del sistema de gestion de compras para construccion ROKA.
+const BASE_SYSTEM_PROMPT = `Eres RokAI, asistente virtual del sistema de gestion de compras para construccion ROKA.
 
 El sistema ROKA gestiona el ciclo de compras y control presupuestario.
 
@@ -19,8 +20,13 @@ El sistema ROKA gestiona el ciclo de compras y control presupuestario.
 4. **Tono**: Profesional, ejecutivo y orientado a datos.
 5. **Concision**: Maximo 2-3 parrafos de texto explicativo rodeando las tablas.
 
+### RESTRICCIONES DE ROL:
+- SOLO puedes mostrar informacion de modulos que el usuario tenga permiso de ver.
+- SOLO puedes sugerir acciones que el usuario tenga permiso de realizar.
+- Si el usuario pregunta por algo fuera de sus permisos, indicaselo amablemente.
+
 Puedes responder sobre:
-- Estado de solicitudes, cotizaciones y ordenes de compra
+- Estado de solicitudes, solicitudes de cotización y ordenes de compra
 - Informacion de proveedores
 - Estadisticas y KPIs operativos (Presupuestos, Gasto OC, Tiempos)
 - Estado de proyectos y comparativas mensuales`;
@@ -28,8 +34,12 @@ Puedes responder sobre:
 function getFallbackResponse(message: string, stats: any): string {
   const msg = (message || '').toLowerCase();
 
-  if (msg.includes('solicitudes') || msg.includes('pendientes')) {
-    return `Actualmente el sistema registra **${stats.pendientes} solicitudes pendientes** de atencion este mes. Se han atendido un total de ${stats.atendidas} solicitudes satisfactoriamente.`;
+  if (msg.includes('solicitudes') || msg.includes('pendientes') || msg.includes('anuladas')) {
+    const scope = stats.solo_mis_solicitudes ? 'tuyas' : 'del sistema';
+    if (msg.includes('anuladas')) {
+      return `Actualmente hay **${stats.anuladas} solicitudes anuladas** ${scope} este mes.`;
+    }
+    return `Actualmente el sistema registra **${stats.pendientes} solicitudes pendientes** ${scope} este mes. Se han atendido un total de ${stats.atendidas} solicitudes satisfactoriamente.`;
   } else if (msg.includes('gasto') || msg.includes('dinero') || msg.includes('cuanto') || msg.includes('total')) {
     return `El gasto total aprobado en ordenes de compra es de **$${stats.total_gastado.toLocaleString('es-ES')}**. El proyecto con mayor ejecucion presupuestaria hasta ahora es "${stats.proyecto_top}".`;
   } else if (msg.includes('proyecto') || msg.includes('obra')) {
@@ -55,7 +65,7 @@ Si necesitas informacion mas detallada de algun proyecto (lineas de compra, prov
   } else if (msg.includes('tiempo') || msg.includes('conversion') || msg.includes('tarda')) {
     return `Nuestra eficiencia operativa indica que el **tiempo promedio de conversion** (desde solicitud hasta orden de compra) es de **${stats.promedio_conversion} dias**.`;
   } else if (msg.includes('hola') || msg.includes('buenos') || msg.includes('asistente')) {
-    return `Hola! Soy Roka AI. Puedo asistirte hoy con informacion sobre las ${stats.pendientes} solicitudes pendientes, el presupuesto ejecutado ($${stats.total_gastado.toLocaleString('es-ES')}) o el estado de tus proyectos. En que puedo ayudarte?`;
+    return `Hola! Soy RokAI. Puedo asistirte hoy con informacion sobre las ${stats.pendientes} solicitudes pendientes, el presupuesto ejecutado ($${stats.total_gastado.toLocaleString('es-ES')}) o el estado de tus proyectos. En que puedo ayudarte?`;
   } else {
     return `Entiendo su consulta. Segun los datos del sistema, tenemos ${stats.pendientes} solicitudes pendientes y una inversion total de $${stats.total_gastado.toLocaleString('es-ES')}. Puedo darle mas detalles si lo desea.`;
   }
@@ -66,8 +76,27 @@ export interface ChatResult {
   source: 'ai' | 'fallback';
 }
 
-export async function getChatResponse(message: string): Promise<ChatResult> {
-  const stats = await getSystemStats();
+export async function getChatResponse(message: string, userId: number | null, rolId: number | null): Promise<ChatResult> {
+  // Get user's permissions from DB
+  let userPermisos: string[] = [];
+  let rolNombre = 'Usuario';
+  if (rolId) {
+    try {
+      const { rows: permRows } = await pool.query(
+        `SELECT p.codigo FROM rol_permisos rp
+         JOIN permisos p ON p.id = rp.permiso_id
+         WHERE rp.rol_id = $1`,
+        [rolId]
+      );
+      userPermisos = permRows.map((r: any) => r.codigo);
+      const { rows: [rolRow] } = await pool.query(
+        'SELECT nombre FROM roles WHERE id = $1', [rolId]
+      );
+      rolNombre = rolRow?.nombre || 'Usuario';
+    } catch { /* ignore */ }
+  }
+
+  const stats = await getSystemStats(userId, rolId, userPermisos);
 
   // Try NVIDIA AI
   if (process.env.NVIDIA_API_KEY) {
@@ -78,39 +107,55 @@ export async function getChatResponse(message: string): Promise<ChatResult> {
         .map((p: any) => `- ${p.nombre} (Estado: ${p.estado}, Ubicacion: ${p.ubicacion || 'N/A'})`)
         .join('\n');
 
-      const presupuestosList = stats.presupuestos
-        .map((p: any) =>
-          `- ${p.proyecto_nombre}: Total $${Number(p.monto_total).toLocaleString('es-ES')}, Comprometido $${Number(p.monto_comprometido).toLocaleString('es-ES')} (${p.porcentaje_uso}%)`
-        )
-        .join('\n');
+      const presupuestosList = stats.presupuestos.length > 0
+        ? stats.presupuestos
+          .map((p: any) =>
+            `- ${p.proyecto_nombre}: Total $${Number(p.monto_total).toLocaleString('es-ES')}, Comprometido $${Number(p.monto_comprometido).toLocaleString('es-ES')} (${p.porcentaje_uso}%)`
+          )
+          .join('\n')
+        : 'No disponible para su rol';
 
       const alertasList =
         stats.alertas.length > 0
           ? stats.alertas.map((a: any) => `- ${a.proyecto}: ${a.estado_alerta} (${a.porcentaje_uso}%)`).join('\n')
           : 'No hay alertas de presupuesto';
 
-      const proveedoresList = stats.proveedores
-        .slice(0, 10)
-        .map((p: any) => `- ${p.nombre} (RUT: ${p.rut || 'N/A'}, Contacto: ${p.contacto_nombre || 'N/A'})`)
-        .join('\n');
+      const proveedoresList = stats.proveedores.length > 0
+        ? stats.proveedores.slice(0, 10).map((p: any) => `- ${p.nombre} (RUT: ${p.rut || 'N/A'}, Contacto: ${p.contacto_nombre || 'N/A'})`).join('\n')
+        : 'No disponible para su rol';
 
       const notificacionesList =
         stats.notificaciones.length > 0
           ? stats.notificaciones.map((n: any) => `- ${n.titulo}`).join('\n')
           : 'No hay notificaciones pendientes';
 
+      const filtrosPorRol = [];
+      if (!userPermisos.includes('presupuestos.view')) filtrosPorRol.push('- PRESUPUESTOS: NO visible para este rol');
+      if (!userPermisos.includes('proyectos.view')) filtrosPorRol.push('- PROYECTOS: NO visible para este rol');
+      if (!userPermisos.includes('proveedores.view')) filtrosPorRol.push('- PROVEEDORES: NO visible para este rol');
+      if (!userPermisos.includes('notificaciones.view')) filtrosPorRol.push('- NOTIFICACIONES: NO visible para este rol');
+      if (!userPermisos.includes('solicitudes.view_all')) filtrosPorRol.push('- SOLICITUDES: Solo visible las propias');
+
       const contextMessage = `
-Eres Roka AI, asistente virtual del sistema de gestion de compras para construccion ROKA.
+Eres RokAI, asistente virtual del sistema de gestion de compras para construccion ROKA.
 
 DATOS ACTUALES DEL SISTEMA (${new Date().toLocaleDateString('es-CL')}):
+
+========================================
+USUARIO ACTUAL: ${rolNombre} (rol_id: ${rolId})
+PERMISOS: ${userPermisos.join(', ') || 'Ninguno'}
+========================================
 
 ========================================
 SOLICITUDES DE MATERIALES
 ========================================
 - Pendientes: ${stats.pendientes}
 - Atendidas este mes: ${stats.atendidas}
+- Anuladas este mes: ${stats.anuladas}
 - Total del mes: ${stats.total_mensual}
+${stats.solo_mis_solicitudes ? '- Nota: Solo se muestran las solicitudes creadas por este usuario' : '- Nota: Se muestran todas las solicitudes del sistema'}
 
+${userPermisos.includes('presupuestos.view') ? `
 ========================================
 PRESUPUESTOS
 ========================================
@@ -125,11 +170,14 @@ ${presupuestosList}
 ALERTAS DE PRESUPUESTO
 ========================================
 ${alertasList}
+` : ''}
 
+${userPermisos.includes('proyectos.view') ? `
 ========================================
 PROYECTOS ACTIVOS (${stats.proyectos_activos.length})
 ========================================
 ${proyectosList}
+` : ''}
 
 ========================================
 GASTO EN ORDENES DE COMPRA
@@ -138,15 +186,26 @@ GASTO EN ORDENES DE COMPRA
 - Proyecto con mayor gasto: ${stats.proyecto_top}
 - Tiempo promedio de conversion: ${stats.promedio_conversion} dias
 
+${userPermisos.includes('proveedores.view') ? `
 ========================================
 PROVEEDORES REGISTRADOS (${stats.proveedores.length})
 ========================================
 ${proveedoresList}
+` : ''}
 
+${userPermisos.includes('notificaciones.view') ? `
 ========================================
 NOTIFICACIONES PENDIENTES (${stats.notificaciones.length})
 ========================================
 ${notificacionesList}
+` : ''}
+
+${filtrosPorRol.length > 0 ? `
+========================================
+RESTRICCIONES PARA ESTE USUARIO:
+========================================
+${filtrosPorRol.join('\n')}
+` : ''}
 
 ========================================
 PREGUNTA DEL USUARIO: ${message}
@@ -163,7 +222,7 @@ INSTRUCCIONES:
         openai.chat.completions.create({
           model: process.env.NVIDIA_MODEL || 'openai/gpt-oss-120b',
           messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'system', content: BASE_SYSTEM_PROMPT },
             { role: 'user', content: contextMessage },
           ],
           temperature: 0.7,

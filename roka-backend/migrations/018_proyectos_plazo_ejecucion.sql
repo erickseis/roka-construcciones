@@ -1,0 +1,1 @@
+ALTER TABLE proyectos ADD COLUMN IF NOT EXISTS plazo_ejecucion_dias INTEGER;

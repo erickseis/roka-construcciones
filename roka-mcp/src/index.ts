@@ -16,6 +16,7 @@ import { registerMaterialesTools } from "./tools/materiales.js";
 import { registerProveedoresTools } from "./tools/proveedores.js";
 import { registerNotificacionesTools } from "./tools/notificaciones.js";
 import { registerDashboardTools } from "./tools/dashboard.js";
+import { registerEmailConfigTools } from "./tools/email-config.js";
 
 export type ResilientClient = ReturnType<typeof createResilientClient>;
 
@@ -83,6 +84,7 @@ function registerAllTools(server: McpServer, auth: AuthManager, api: ResilientCl
   registerProveedoresTools(server, api);
   registerNotificacionesTools(server, api);
   registerDashboardTools(server, api);
+  registerEmailConfigTools(server, api);
 }
 
 function createMcpServer() {

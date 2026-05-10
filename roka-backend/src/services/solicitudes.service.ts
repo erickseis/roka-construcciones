@@ -1,10 +1,18 @@
 import pool from '../db';
 import * as solicitudModel from '../models/solicitudes.model';
+import {
+  createNotifications,
+  resolveRecipientUserIds,
+  getActorDisplayName,
+  NotificationInput,
+} from '../lib/notifications';
 
 export interface CreateSolicitudInput {
   proyecto_id: number;
   solicitante: string;
   fecha?: string;
+  fecha_requerida?: string | null;
+  created_by_usuario_id?: number | null;
   items: Array<{
     material_id?: number;
     nombre_material?: string;
@@ -19,6 +27,7 @@ export interface SolicitudConItems {
   proyecto_id: number;
   solicitante: string;
   fecha: string;
+  fecha_requerida?: string | null;
   estado: string;
   created_at: Date;
   updated_at: Date;
@@ -37,6 +46,8 @@ export async function crearSolicitudConItems(input: CreateSolicitudInput): Promi
         proyecto_id: input.proyecto_id,
         solicitante: input.solicitante,
         fecha: input.fecha || new Date().toISOString().split('T')[0],
+        fecha_requerida: input.fecha_requerida || null,
+        created_by_usuario_id: input.created_by_usuario_id || null,
       },
       db
     );
@@ -117,6 +128,50 @@ export async function crearSolicitudConItems(input: CreateSolicitudInput): Promi
     );
 
     await client.query('COMMIT');
+
+    // Notificar a usuarios con acceso a solicitudes de cotización
+    try {
+      const actorId = input.created_by_usuario_id || null;
+      const actorName = actorId ? await getActorDisplayName(actorId) : 'El sistema';
+
+      // Destinatarios: usuarios con permiso para ver cotizaciones (módulo SC),
+      // excluyendo al creador
+      const recipients = await resolveRecipientUserIds({
+        permissionCodes: ['cotizaciones.view'],
+        excludeUserId: actorId,
+      });
+
+      if (recipients.length > 0) {
+        const { rows: [proyectoRow] } = await pool.query(
+          'SELECT nombre FROM proyectos WHERE id = $1',
+          [input.proyecto_id]
+        );
+        const proyectoNombre = proyectoRow?.nombre || 'Proyecto';
+        const totalItems = input.items.length;
+        const solicitudFolio = `SOL-${String(solicitud.id).padStart(3, '0')}`;
+
+        const notifications: NotificationInput[] = recipients.map(uid => ({
+          usuario_destino_id: uid,
+          tipo: 'solicitud.creada',
+          titulo: 'Nueva solicitud de materiales',
+          mensaje: `${actorName} creó la solicitud ${solicitudFolio} para el proyecto ${proyectoNombre} con ${totalItems} ítem${totalItems > 1 ? 's' : ''}. Solicitante: ${input.solicitante}.`,
+          entidad_tipo: 'solicitud',
+          entidad_id: solicitud.id,
+          payload: {
+            proyecto_id: input.proyecto_id,
+            solicitante: input.solicitante,
+            total_items: totalItems,
+            created_by_usuario_id: actorId,
+          },
+          enviado_por_usuario_id: actorId,
+        }));
+
+        await createNotifications(notifications);
+      }
+    } catch (notifError) {
+      console.error('Error al enviar notificación de solicitud creada:', notifError);
+      // No fallar la creación si la notificación falla
+    }
 
     return { ...solicitud, items };
   } catch (error) {

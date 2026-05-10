@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import ReactDOM from 'react-dom';
-import { X, Printer } from 'lucide-react';
+import { X, Printer, MailCheck } from 'lucide-react';
+import { formatCLP } from '@/lib/utils';
+import { enviarOCProveedor } from '@/lib/api';
+import Swal from 'sweetalert2';
+import AuditTrailBadge from '../ui/AuditTrailBadge';
 
 const EMPRESA = {
   nombre: 'Constructora Roka SpA',
@@ -18,8 +21,7 @@ const ROKA_LOGO_SVG = (
   </svg>
 );
 
-const fmtMoney = (value: number) =>
-  `$ ${Number(value || 0).toLocaleString('es-CL', { minimumFractionDigits: 2 })}`;
+const fmtMoney = (value: number | null | undefined) => formatCLP(Number(value || 0));
 
 const fmtDate = (input?: string) => {
   if (!input) return '-';
@@ -75,10 +77,11 @@ const headerValueStyle: React.CSSProperties = {
 
 const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
   const items: any[] = orden?.items || [];
+  const hasItemDiscount = items.some((i: any) => Number(i?.descuento_porcentaje || 0) > 0);
   const atencion = atencionManual.trim() || orden?.atencion_a || orden?.proveedor_contacto_nombre || '-';
   const folio = orden?.folio || `OC-${String(orden?.id || 0).padStart(6, '0')}`;
   const numeroSolicitud = orden?.solicitud_id ? `SM-${String(orden.solicitud_id).padStart(3, '0')}` : '-';
-  const numeroCotizacion = orden?.cotizacion_id ? `COT-${String(orden.cotizacion_id).padStart(3, '0')}` : '-';
+  const numeroSolicitudCotizacion = orden?.solicitud_cotizacion_id ? `SC-${String(orden.solicitud_cotizacion_id).padStart(3, '0')}` : '-';
   const moneda = 'PESO CHILENO';
   const subtotalNeto = Number(orden?.subtotal_neto ?? orden?.total ?? 0);
   const descuentoMonto = Number(orden?.descuento_monto ?? 0);
@@ -136,7 +139,7 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '10px', opacity: 0.85 }}>Folio</div>
+            <div style={{ fontSize: '10px', opacity: 0.85 }}>Orden de Compra N°: </div>
             <div style={{ fontSize: '16px', fontWeight: 800 }}>{folio}</div>
             <div style={{ fontSize: '10px' }}>Fecha: {fmtDate(orden?.fecha_emision)}</div>
           </div>
@@ -150,6 +153,10 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
                 <tr>
                   <td style={headerLabelStyle}>Señor(es)</td>
                   <td style={headerValueStyle}>{orden?.proveedor || '-'}</td>
+                </tr>
+                <tr>
+                  <td style={headerLabelStyle}>N° Cotiz. Venta</td>
+                  <td style={headerValueStyle}>{orden?.numero_cov || '-'}</td>
                 </tr>
                 <tr>
                   <td style={headerLabelStyle}>Atención</td>
@@ -188,6 +195,10 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
                   <td style={headerValueStyle}>{orden?.plazo_entrega || '-'}</td>
                 </tr>
                 <tr>
+                  <td style={headerLabelStyle}>Cód. Obra</td>
+                  <td style={headerValueStyle}>{orden?.codigo_obra || orden?.proyecto_numero_obra || orden?.proyecto_numero_licitacion || '-'}</td>
+                </tr>
+                <tr>
                   <td style={headerLabelStyle}>Obra</td>
                   <td style={headerValueStyle}>{orden?.proyecto_nombre || '-'}</td>
                 </tr>
@@ -196,12 +207,12 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
                   <td style={headerValueStyle}>{orden?.autorizado_por_nombre || '-'}</td>
                 </tr>
                 <tr>
-                  <td style={headerLabelStyle}>Nro. Cotización</td>
-                  <td style={headerValueStyle}>{numeroCotizacion}</td>
+                  <td style={headerLabelStyle}>Nro. Solicitud de Cotización</td>
+                  <td style={headerValueStyle}>{numeroSolicitudCotizacion}</td>
                 </tr>
                 <tr>
                   <td style={headerLabelStyle}>Encargado</td>
-                  <td style={headerValueStyle}>{atencion}</td>
+                  <td style={headerValueStyle}>{orden?.responsable_nombre || orden?.solicitante || '-'}</td>
                 </tr>
                 <tr>
                   <td style={headerLabelStyle}>Forma de Pago</td>
@@ -210,10 +221,6 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
                 <tr>
                   <td style={headerLabelStyle}>Emitida por</td>
                   <td style={headerValueStyle}>{orden?.autorizado_por_nombre || '-'}</td>
-                </tr>
-                <tr>
-                  <td style={headerLabelStyle}>Cód. Obra</td>
-                  <td style={headerValueStyle}>{orden?.proyecto_numero_licitacion || '-'}</td>
                 </tr>
                 <tr>
                   <td style={headerLabelStyle}>Fecha Autorización</td>
@@ -241,14 +248,18 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
             <th style={{ border: '1px solid #cbd5e1', padding: '5px', fontSize: '9px', width: '70px' }}>Codigo</th>
             <th style={{ border: '1px solid #cbd5e1', padding: '5px', fontSize: '9px' }}>Descripcion</th>
             <th style={{ border: '1px solid #cbd5e1', padding: '5px', fontSize: '9px', width: '88px' }}>P. Unitario</th>
+            {hasItemDiscount && <th style={{ border: '1px solid #cbd5e1', padding: '5px', fontSize: '9px', width: '44px', textAlign: 'center' }}>Desc.</th>}
             <th style={{ border: '1px solid #cbd5e1', padding: '5px', fontSize: '9px', width: '92px' }}>Subtotal</th>
           </tr>
         </thead>
         <tbody>
           {items.map((item: any, index: number) => {
-            const cantidad = Number(item?.cantidad_requerida || 0);
+            const cantidad = Number(item?.cantidad_requerida ?? item?.cantidad_extraida ?? 0);
             const unitario = Number(item?.precio_unitario || 0);
-            const subtotal = Number(item?.subtotal ?? cantidad * unitario);
+            const desc = Number(item?.descuento_porcentaje || 0);
+            const subtotal = (item?.subtotal != null && Number(item.subtotal) > 0)
+              ? Number(item.subtotal)
+              : Math.round(cantidad * unitario * (desc > 0 ? (1 - desc / 100) : 1) * 100) / 100;
             return (
               <tr key={item?.id ?? index}>
                 <td style={{ border: '1px solid #e2e8f0', padding: '5px', fontSize: '9px', textAlign: 'center' }}>{index + 1}</td>
@@ -265,6 +276,13 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
                 <td style={{ border: '1px solid #e2e8f0', padding: '5px', fontSize: '9px', textAlign: 'right' }}>
                   {fmtMoney(unitario)}
                 </td>
+                {hasItemDiscount && (
+                  <td style={{ border: '1px solid #e2e8f0', padding: '5px', fontSize: '9px', textAlign: 'center' }}>
+                    {desc > 0
+                      ? <span style={{ background: '#dbeafe', color: '#1e40af', padding: '1px 6px', borderRadius: '4px', fontWeight: 700, fontSize: '9px' }}>{desc}%</span>
+                      : '-'}
+                  </td>
+                )}
                 <td style={{ border: '1px solid #e2e8f0', padding: '5px', fontSize: '9px', textAlign: 'right' }}>
                   {fmtMoney(subtotal)}
                 </td>
@@ -273,7 +291,7 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
           })}
           {items.length === 0 && (
             <tr>
-              <td colSpan={6} style={{ border: '1px solid #e2e8f0', padding: '10px', textAlign: 'center', fontSize: '10px', color: '#64748b' }}>
+              <td colSpan={hasItemDiscount ? 7 : 6} style={{ border: '1px solid #e2e8f0', padding: '10px', textAlign: 'center', fontSize: '10px', color: '#64748b' }}>
                 Esta orden no tiene items cargados.
               </td>
             </tr>
@@ -346,43 +364,89 @@ const OCDoc: React.FC<OCDocProps> = ({ orden, atencionManual }) => {
 
 const OCPreviewModal: React.FC<OCPreviewModalProps> = ({ isOpen, onClose, orden }) => {
   const [atencion, setAtencion] = useState('');
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const style = document.createElement('style');
-    style.id = 'oc-print-styles';
-    style.textContent = `
-      @media print {
-        body > *:not(#oc-print-portal) { display: none !important; }
-        #oc-print-portal { display: block !important; }
-        @page { margin: 0; size: A4 portrait; }
-      }
-      #oc-print-portal { display: none; }
-    `;
-    document.head.appendChild(style);
-
-    return () => {
-      document.getElementById('oc-print-styles')?.remove();
-    };
-  }, [isOpen]);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
     setAtencion(orden?.atencion_a || orden?.proveedor_contacto_nombre || '');
   }, [isOpen, orden]);
 
+  const handleEnviarProveedor = async () => {
+    if (!orden?.id) return;
+    const result = await Swal.fire({
+      title: '¿Enviar OC al proveedor?',
+      html: `Se enviará la Orden de Compra <strong>${orden.folio || `OC-${String(orden.id).padStart(3, '0')}`}</strong> por correo electrónico al proveedor <strong>${orden.proveedor}</strong>.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#f59e0b',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, enviar',
+      cancelButtonText: 'Cancelar',
+    });
+    if (!result.isConfirmed) return;
+    setSendingEmail(true);
+    try {
+      const res = await enviarOCProveedor(orden.id);
+      await Swal.fire({
+        title: '¡Email enviado!',
+        text: `Orden de Compra enviada a ${res.enviado_a}`,
+        icon: 'success',
+        confirmButtonColor: '#f59e0b',
+      });
+    } catch (err: any) {
+      await Swal.fire({
+        title: 'Error al enviar',
+        text: err.message || 'No se pudo enviar el email',
+        icon: 'error',
+        confirmButtonColor: '#64748b',
+      });
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const handlePrint = () => {
+    const apiBase = import.meta.env.VITE_API_URL + '/roka/api';
+    const token = localStorage.getItem('roka_token') || '';
+    const url = `${apiBase}/ordenes/${orden.id}/html`;
+
+    // Abrir ventana en blanco y hacer fetch con el token de autenticación
+    const win = window.open('', '_blank');
+    if (!win) { alert('El navegador bloqueó la ventana emergente. Permite ventanas emergentes para este sitio.'); return; }
+
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.text())
+      .then(html => {
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+        win.addEventListener('load', () => { win.focus(); win.print(); });
+      })
+      .catch(() => { win.close(); alert('Error al generar el documento para imprimir.'); });
+  };
+
   if (!isOpen || !orden) return null;
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-slate-950/70 flex flex-col items-center py-6 overflow-y-auto">
+      <div className="fixed inset-0 z-[150] bg-slate-950/70 flex flex-col items-center py-6 overflow-y-auto">
         <div className="w-[980px] max-w-[96vw] bg-white rounded-t-xl border-b border-slate-200 flex items-center justify-between px-5 py-3 sticky top-0 z-10 shadow-sm">
           <div>
             <h2 className="font-bold text-slate-800 text-base">Vista Previa - Orden de Compra</h2>
             <p className="text-xs text-slate-500">
               {orden.folio || `OC-${String(orden.id).padStart(6, '0')}`} | {orden.proveedor} | {orden.proyecto_nombre}
             </p>
+            {/* Audit Trail - Estado de entrega */}
+            {orden.estado_entrega && orden.estado_entrega !== 'Pendiente' && (
+              <div className="mt-1">
+                <AuditTrailBadge
+                  label="Entrega actualizada por"
+                  nombre={orden.entrega_updated_by_nombre}
+                  fecha={orden.entrega_updated_at}
+                  icon="entrega"
+                />
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
@@ -395,15 +459,24 @@ const OCPreviewModal: React.FC<OCPreviewModalProps> = ({ isOpen, onClose, orden 
               />
             </div>
             <button
-              onClick={() => window.print()}
-              className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white shadow-md hover:bg-amber-600 transition-colors"
+              onClick={handleEnviarProveedor}
+              disabled={sendingEmail}
+              title="Enviar OC al proveedor por email"
+              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-md hover:bg-indigo-700 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              <MailCheck size={15} />
+              {sendingEmail ? 'Enviando...' : 'Enviar a Proveedor'}
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white shadow-md hover:bg-amber-600 transition-colors cursor-pointer"
             >
               <Printer size={15} />
               Imprimir / PDF
             </button>
             <button
               onClick={onClose}
-              className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+              className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
             >
               <X size={18} />
             </button>
@@ -417,12 +490,6 @@ const OCPreviewModal: React.FC<OCPreviewModalProps> = ({ isOpen, onClose, orden 
         </div>
       </div>
 
-      {ReactDOM.createPortal(
-        <div id="oc-print-portal">
-          <OCDoc orden={orden} atencionManual={atencion} />
-        </div>,
-        document.body
-      )}
     </>
   );
 };
