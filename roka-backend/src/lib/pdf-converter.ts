@@ -1,11 +1,19 @@
 import fs from 'fs';
 import path from 'path';
-import * as pdfjsLib from 'pdfjs-dist';
 import { createCanvas, Path2D, ImageData } from '@napi-rs/canvas';
 
 // pdfjs-dist v4 needs Path2D and ImageData as globals in Node.js
 (globalThis as any).Path2D = Path2D;
 (globalThis as any).ImageData = ImageData;
+
+// Dynamic import of pdfjs-dist (ESM-only, must use import() not require())
+let _pdfjsLib: any = null;
+async function getPdfjsLib() {
+  if (!_pdfjsLib) {
+    _pdfjsLib = await import('pdfjs-dist');
+  }
+  return _pdfjsLib;
+}
 
 export async function convertPdfToImages(pdfPath: string): Promise<string[]> {
   const outputDir = path.join(path.dirname(pdfPath), 'ocr_temp');
@@ -23,11 +31,12 @@ export async function convertPdfToImages(pdfPath: string): Promise<string[]> {
     );
   }
 
+  const pdfjsLib = await getPdfjsLib();
   let doc: pdfjsLib.PDFDocumentProxy;
   try {
     doc = await pdfjsLib.getDocument({
       data,
-      disableWorker: true as any,
+      disableWorker: true,
       useSystemFonts: true,
     }).promise;
   } catch (err: any) {
