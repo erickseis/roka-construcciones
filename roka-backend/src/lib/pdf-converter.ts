@@ -1,22 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import * as pdfjsLib from 'pdfjs-dist';
-import { createCanvas } from '@napi-rs/canvas';
+import { createCanvas, Path2D, ImageData } from '@napi-rs/canvas';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = '';
-
-function createNodeCanvasFactory() {
-  return {
-    create: (w: number, h: number) => {
-      const canvas = createCanvas(w, h);
-      const context = canvas.getContext('2d') as unknown as pdfjsLib.CanvasContext;
-      return { canvas, context };
-    },
-    destroy: ({ canvas }: { canvas: any; context: any }) => {
-      canvas = null;
-    },
-  };
-}
+// pdfjs-dist v4 needs Path2D and ImageData as globals in Node.js
+(globalThis as any).Path2D = Path2D;
+(globalThis as any).ImageData = ImageData;
 
 export async function convertPdfToImages(pdfPath: string): Promise<string[]> {
   const outputDir = path.join(path.dirname(pdfPath), 'ocr_temp');
@@ -38,7 +27,7 @@ export async function convertPdfToImages(pdfPath: string): Promise<string[]> {
   try {
     doc = await pdfjsLib.getDocument({
       data,
-      canvasFactory: createNodeCanvasFactory() as any,
+      disableWorker: true as any,
       useSystemFonts: true,
     }).promise;
   } catch (err: any) {
@@ -58,13 +47,13 @@ export async function convertPdfToImages(pdfPath: string): Promise<string[]> {
       const viewport = page.getViewport({ scale: 2 });
 
       const canvas = createCanvas(viewport.width, viewport.height);
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d')!;
 
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, viewport.width, viewport.height);
 
       await page.render({
-        canvasContext: ctx as unknown as pdfjsLib.CanvasContext,
+        canvasContext: ctx as any,
         viewport,
       }).promise;
 
