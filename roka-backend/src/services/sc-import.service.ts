@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
 import OpenAI from 'openai';
 import { PDFParse } from 'pdf-parse';
+import { convertPdfToImages } from '../lib/pdf-converter';
 
 // Extract raw text from a PDF (no OCR — only works if PDF has selectable text layer)
 async function extractPdfText(pdfPath: string): Promise<string> {
@@ -105,79 +105,8 @@ function getNvidiaClient(): OpenAI {
   });
 }
 
-// Resolve the Ghostscript binary depending on platform / env override.
-// On Linux/Mac the binary is `gs`; on Windows it is `gswin64c` / `gswin32c`.
-// Allow explicit override via env var GHOSTSCRIPT_BIN (full path or binary name).
-function resolveGsBinary(): string {
-  if (process.env.GHOSTSCRIPT_BIN) {
-    return process.env.GHOSTSCRIPT_BIN;
-  }
-  if (process.platform === 'win32') {
-    for (const candidate of ['gswin64c', 'gswin32c']) {
-      try {
-        execSync(`where ${candidate}`, { stdio: 'ignore' });
-        return candidate;
-      } catch {
-        // try next candidate
-      }
-    }
-    return 'gswin64c'; // default for clearer error messages on Windows
-  }
-  return 'gs';
-}
-
-// Quote a binary path/name safely for shell execution (handles spaces in paths).
-function quoteBin(bin: string): string {
-  return /\s/.test(bin) ? `"${bin}"` : bin;
-}
-
-// Convert PDF to PNG images using Ghostscript directly
-// This avoids dependency on GraphicsMagick/ImageMagick system packages
-function convertPdfToImages(pdfPath: string): string[] {
-  const outputDir = path.join(path.dirname(pdfPath), 'ocr_temp');
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-  }
-
-  const baseName = path.basename(pdfPath, '.pdf');
-  const gsBin = resolveGsBinary();
-
-  try {
-    execSync(
-      `${quoteBin(gsBin)} -dNOPAUSE -dBATCH -sDEVICE=png16m -r200 ` +
-      `-sOutputFile="${outputDir}/${baseName}-%d.png" ` +
-      `-dFirstPage=1 -dLastPage=3 ` +
-      `-dTextAlphaBits=4 -dGraphicsAlphaBits=4 ` +
-      `"${pdfPath}"`,
-      { timeout: 30000 }
-    );
-  } catch (err: any) {
-    const platformHint = process.platform === 'win32'
-      ? 'En Windows instale Ghostscript desde https://ghostscript.com/releases/gsdnld.html y agregue su carpeta bin al PATH, o configure GHOSTSCRIPT_BIN con la ruta absoluta a gswin64c.exe.'
-      : 'En Linux instale con: sudo apt-get install ghostscript (Debian/Ubuntu) o equivalente.';
-    throw Object.assign(
-      new Error(
-        `No se pudo convertir el PDF a imagen. Binario intentado: "${gsBin}". ` +
-        `Verifique que Ghostscript esté instalado y disponible en PATH, y que el archivo sea un PDF válido. ${platformHint}`
-      ),
-      { statusCode: 400 }
-    );
-  }
-
-  const files = fs.readdirSync(outputDir)
-    .filter(f => f.startsWith(baseName))
-    .sort()
-    .map(f => path.join(outputDir, f));
-
-  if (files.length === 0) {
-    throw Object.assign(
-      new Error('No se pudo convertir el PDF a imagen. El archivo puede estar vacío o dañado.'),
-      { statusCode: 400 }
-    );
-  }
-
-  return files;
-}
+// Convert PDF to PNG images using pdfjs-dist + @napi-rs/canvas
+// Pure Node.js — no external binary dependencies (Ghostscript not needed)
 
 // Encode image file to base64
 function encodeImageBase64(imagePath: string): string {
@@ -353,8 +282,8 @@ REGLAS:
         { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Data}` } }
       ];
     } else if (ext === '.pdf') {
-      // Convert PDF to PNG images first using Ghostscript
-      const imagePaths = convertPdfToImages(archivoPath);
+      // Convert PDF to PNG images using pdfjs-dist + canvas (no external binaries)
+      const imagePaths = await convertPdfToImages(archivoPath);
       tempDir = path.join(path.dirname(archivoPath), 'ocr_temp');
 
       // Send first page (most quotation data is on page 1)
