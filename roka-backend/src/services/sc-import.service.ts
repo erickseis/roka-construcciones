@@ -17,65 +17,6 @@ async function extractPdfText(pdfPath: string): Promise<string> {
   }
 }
 
-// Build the set of "Chilean-formatted thousand amounts" present in raw PDF text.
-// Returns numeric values that appeared with at least one "." thousand-separator.
-function extractChileanAmounts(text: string): Set<number> {
-  const chileanAmountRegex = /\b\d{1,3}(?:\.\d{3})+(?:,\d+)?\b/g;
-  const set = new Set<number>();
-  const matches = text.match(chileanAmountRegex) || [];
-  for (const m of matches) {
-    const n = Number(m.replace(/\./g, '').replace(',', '.'));
-    if (!isNaN(n) && n > 0) set.add(Math.round(n));
-  }
-  return set;
-}
-
-// Detect and correct per-item ÷1000 misscale.
-// For each item, check if (precio × 1000) or (subtotal × 1000) appears as a Chilean-formatted
-// thousand amount in the raw PDF text. If so, multiply that item's price + subtotal by 1000.
-// Returns the count of items corrected.
-async function correctPerItemMisscale(
-  pdfPath: string,
-  items: Array<{ precio_unitario: number; cantidad_extraida?: number; subtotal_linea?: number; nombre_extraido: string }>
-): Promise<{ corrected: number; chileanAmounts: Set<number> }> {
-  if (!pdfPath.toLowerCase().endsWith('.pdf')) return { corrected: 0, chileanAmounts: new Set() };
-  const text = await extractPdfText(pdfPath);
-  if (!text) return { corrected: 0, chileanAmounts: new Set() };
-
-  const chileanAmounts = extractChileanAmounts(text);
-  if (chileanAmounts.size === 0) return { corrected: 0, chileanAmounts };
-
-  // Tolerance: LLM rounds to 2 decimals, so e.g. 61.716 → 61.72 → ×1000 = 61720 vs real 61716.
-  // Use ±max(10, 0.5%) of the value to absorb that rounding.
-  const inSet = (n: number) => {
-    const r = Math.round(n);
-    const tol = Math.max(10, Math.round(r * 0.005));
-    for (const v of chileanAmounts) {
-      if (Math.abs(v - r) <= tol) return true;
-    }
-    return false;
-  };
-
-  let corrected = 0;
-  for (const it of items) {
-    const precioX1000 = it.precio_unitario * 1000;
-    const subtotalX1000 = (it.subtotal_linea || 0) * 1000;
-
-    // Trigger correction if either scaled-up precio or scaled-up subtotal exists in PDF
-    // AND the current (un-scaled) value does NOT exist as a Chilean thousand amount.
-    const precioMatches = precioX1000 >= 1000 && inSet(precioX1000);
-    const subtotalMatches = subtotalX1000 >= 1000 && inSet(subtotalX1000);
-    const currentPrecioInSet = it.precio_unitario >= 1000 && inSet(it.precio_unitario);
-
-    if ((precioMatches || subtotalMatches) && !currentPrecioInSet) {
-      it.precio_unitario = Math.round(precioX1000);
-      if (it.subtotal_linea != null) it.subtotal_linea = Math.round(subtotalX1000);
-      corrected++;
-    }
-  }
-  return { corrected, chileanAmounts };
-}
-
 // ================================================
 // NVIDIA Nemotron Nano VL OCR Service for Vendor Quotations
 // ================================================
@@ -173,11 +114,56 @@ function jaccardSimilarity(a: string, b: string): number {
   return intersection.size / union.size;
 }
 
+// ================================================
+// Deterministic Chilean-amount parser
+// Parses a raw text string (e.g. "$4.500", "61.716", "1.250,50")
+// into a number based on currency-specific formatting rules.
+// For CLP / UF:  . = thousands separator, , = decimal separator
+// For USD:        , = thousands separator, . = decimal separator
+// Returns null when input is blank/unparseable.
+// ================================================
+function parseChileanAmount(raw: any, moneda: string): { value: number; raw: string } | null {
+  if (raw == null) return null;
+  let s = String(raw).trim().replace(/^\s*[$]\s*/g, '').replace(/\s+/g, '');
+  if (s === '') return null;
+
+  if (moneda === 'CLP' || moneda === 'UF') {
+    // Has a comma → treat the LAST comma as decimal separator
+    if (s.includes(',')) {
+      const lastComma = s.lastIndexOf(',');
+      const intPart = s.substring(0, lastComma).replace(/\./g, '');
+      const decPart = s.substring(lastComma + 1);
+      const n = parseFloat(intPart + '.' + decPart);
+      return { value: isNaN(n) ? 0 : n, raw };
+    }
+    // Pattern: digits.ddd.ddd etc. → dots are thousands separators
+    if (/^\d{1,3}(\.\d{3})+$/.test(s)) {
+      return { value: parseInt(s.replace(/\./g, ''), 10), raw };
+    }
+    // Single dot with 1-2 digits → decimal
+    if (/^\d+\.\d{1,2}$/.test(s)) {
+      return { value: parseFloat(s), raw };
+    }
+    // Plain integer
+    if (/^\d+$/.test(s)) {
+      return { value: parseInt(s, 10), raw };
+    }
+    // Fallback
+    const n = parseFloat(s);
+    return { value: isNaN(n) ? 0 : n, raw };
+  }
+
+  // USD / standard: remove commas before parsing
+  const n = parseFloat(s.replace(/,/g, ''));
+  return { value: isNaN(n) ? 0 : n, raw };
+}
+
 // Main function: Parse a vendor quotation file and extract items with prices
 export async function parseCotizacionArchivo(
   archivoPath: string,
   scItems: Array<{ id: number; solicitud_item_id: number; nombre_material: string; cantidad_requerida: number; unidad: string }>,
-  proveedorEsperado?: string
+  proveedorEsperado?: string,
+  moneda: string = 'CLP',
 ): Promise<{
   items: Array<{
     solicitud_item_id: number | null;
@@ -206,34 +192,50 @@ export async function parseCotizacionArchivo(
     `- ID:${item.solicitud_item_id} | ${item.nombre_material} | Cant:${item.cantidad_requerida} ${item.unidad}`
   ).join('\n');
 
-  // System prompt — structured JSON extraction from vendor quotation documents
+  // Build currency-aware format hint
+  const monedaReglas = moneda === 'CLP' || moneda === 'UF'
+    ? `Moneda: ${moneda}
+FORMATO NUMÉRICO CHILENO — REGLA ABSOLUTA:
+En Chile el punto (.) separa MILES y la coma (,) separa decimales.
+Ejemplos:
+  Documento: "$3.500"  → precio_unitario: 3500  (NUNCA 3.5)
+  Documento: "$2.000"  → precio_unitario: 2000
+  Documento: "$324.000" → precio_unitario: 324000
+  Documento: "$1.250,50" → precio_unitario: 1250.50
+  Documento: "$61.716" → precio_unitario: 61716
+ERROR COMÚN: "$4.500" NO es 4.5. Es CUATRO MIL QUINIENTOS = 4500.`
+    : `Moneda: ${moneda}
+Formato numérico estándar (punto = decimal, coma = miles).`;
+
   const systemPrompt = `/no_think
-Eres un extractor de datos de cotizaciones de proveedores de materiales de construcción en Chile.
+Eres un extractor de datos de cotizaciones de proveedores de materiales de construcción.
 Responde EXCLUSIVAMENTE con JSON válido. Sin texto adicional, sin markdown, sin explicaciones.
 
-FORMATO NUMÉRICO CHILENO — LEE ESTO CUIDADOSAMENTE:
-En Chile, el punto (.) separa MILES y la coma (,) separa decimales.
-Ejemplos de conversión del documento al JSON:
-  "$3.500" en el documento → 3500 en el JSON
-  "$2.000" en el documento → 2000 en el JSON
-  "$324.000" en el documento → 324000 en el JSON
-  "$1.250,50" en el documento → 1250.50 en el JSON
-NUNCA escribas 3.5 si el documento dice $3.500. Eso es TRES MIL QUINIENTOS = 3500.
+${monedaReglas}
+
+IMPORTANTE — CAMPOS _raw:
+Cada número DEBE incluir un campo con sufijo "_raw" que contenga el TEXTO EXACTO del documento (tal cual aparece, incluyendo $, puntos y comas). Esto es obligatorio para validación posterior.
+Ejemplo:
+  Documento: "$4.500" → precio_unitario_raw: "$4.500"
+  Documento: "61.716" → precio_unitario_raw: "61.716"
 
 Esquema de respuesta:
 {
   "numero_cov": "string|null",
   "proveedor_nombre": "string|null",
   "proveedor_rut": "string|null",
+  "monto_total_raw": "string|null",
   "monto_total": number|null,
   "condiciones_pago": "string|null",
   "plazo_entrega": "string|null",
   "items": [{
     "solicitud_item_id": number|null,
     "nombre_extraido": "string",
+    "precio_unitario_raw": "string",
     "precio_unitario": number,
     "cantidad_extraida": number|null,
     "unidad_extraida": "string|null",
+    "subtotal_linea_raw": "string|null",
     "subtotal_linea": number|null,
     "descuento_porcentaje": number|null,
     "codigo_proveedor": "string|null",
@@ -247,7 +249,8 @@ VALIDACIÓN OBLIGATORIA:
 - Si no cuadra, RELEE el documento y corrige los valores.
 - El JSON debe ser 100% válido para JSON.parse().`;
 
-  const userText = `Extrae los ítems y precios del documento de cotización adjunto.
+  const currencyLabel = moneda === 'CLP' ? 'pesos chilenos ($)' : moneda === 'UF' ? 'UF' : 'dólares (USD)';
+  const userText = `Extrae los ítems y precios del documento de cotización adjunto (moneda: ${currencyLabel}).
 
 Haz matching con estos ítems de solicitud:
 ${itemsList}
@@ -257,14 +260,14 @@ REGLAS:
 2. Compara semánticamente: tipo de material, dimensiones, uso.
 3. match_confidence: "high" = coincidencia exacta, "medium" = mismo tipo diferente variante, "low" = mismo material base, "none" = sin relación.
 4. Un solicitud_item_id solo puede asignarse a un ítem.
-5. NÚMEROS: Lee cuidadosamente. $3.500 = 3500, $2.000 = 2000, $324.000 = 324000. El punto en montos chilenos es separador de miles, NO decimal.
+5. NÚMEROS: Lee cuidadosamente y respeta el formato de la moneda (${currencyLabel}). El campo "precio_unitario_raw" debe contener el texto EXACTO del documento incluyendo $, puntos y comas.
 6. DESCUENTOS: Si un ítem tiene descuento, extrae el porcentaje en "descuento_porcentaje" (ej: 15 para 15%, 3.5 para 3.5%). Si no tiene, déjalo como null.
 7. Verifica con descuento: precio_unitario × cantidad × (1 - descuento/100) = subtotal_linea. Si no hay descuento: precio_unitario × cantidad = subtotal_linea.
 8. Extrae a nivel global los siguientes campos del encabezado del documento:
    - numero_cov: el número o folio del documento del proveedor. Busca etiquetas como "N° Cotización", "Folio", "N° Documento", "Cot. N°", "Cotización N°", "N° Orden", "Referencia", "Número", "Doc. N°", o cualquier código identificador del documento. Si hay un número visible en el encabezado aunque no tenga etiqueta, úsalo.
    - proveedor_nombre: razón social o nombre del proveedor.
    - proveedor_rut: RUT del proveedor (formato XX.XXX.XXX-X o similar).
-   - monto_total: total neto sin IVA. Busca "Neto", "Total Neto", "Subtotal", "Afecto". Si solo hay total con IVA, divide por 1.19.
+   - monto_total: total neto sin IVA. Busca "Neto", "Total Neto", "Subtotal", "Afecto". Si solo hay total con IVA, divide por 1.19. Incluye monto_total_raw con el texto exacto.
    - condiciones_pago: forma o condición de pago (ej: "Transferencia 30 días", "Contado", "Crédito 60 días").
    - plazo_entrega: plazo de entrega indicado en el documento.`;
 
@@ -286,11 +289,26 @@ REGLAS:
       const imagePaths = await convertPdfToImages(archivoPath);
       tempDir = path.join(path.dirname(archivoPath), 'ocr_temp');
 
+      // Extract raw text from PDF (if it has a text layer) and inject it into the prompt.
+      // This preserves Chilean number formatting (e.g. "61.716" as literal chars), letting
+      // the vision model cross-check against the rendered image and avoid the ÷1000 bug.
+      const pdfText = await extractPdfText(archivoPath);
+      let userTextWithContext = userText;
+      if (pdfText && pdfText.trim().length > 0) {
+        const truncated = pdfText.substring(0, 4000);
+        userTextWithContext = `${userText}
+
+TEXTO CRUDO EXTRAÍDO DEL PDF (úsalo como referencia exacta de números; respeta los puntos como separador de miles tal cual aparecen aquí — NO inventes valores ni los acortes):
+"""
+${truncated}
+"""`;
+      }
+
       // Send first page (most quotation data is on page 1)
       // If multiple pages, we could process them all, but start with page 1
       const base64Data = encodeImageBase64(imagePaths[0]);
       content = [
-        { type: 'text', text: userText },
+        { type: 'text', text: userTextWithContext },
         { type: 'image_url', image_url: { url: `data:image/png;base64,${base64Data}` } }
       ];
 
@@ -398,105 +416,88 @@ REGLAS:
     }
 
     // ---------------------------------------------------------------
-    // SANITIZACIÓN: Corrige el error de separador de miles chileno.
-    // El modelo de IA puede leer "$4.500" como 4.5 (en vez de 4500)
-    // porque interpreta el punto como decimal (formato anglosajón).
-    // Si precio * cantidad ≈ subtotal/1000, multiplicamos todo x1000.
+    // PROCESAMIENTO NUMÉRICO DETERMINÍSTICO POR MONEDA
+    // 1. Si el LLM incluyó campo _raw → lo parseamos con
+    //    parseChileanAmount() según la moneda del proyecto.
+    //    Ese valor es la FUENTE DE VERDAD (sobreescribe al LLM).
+    // 2. Sin _raw → heurística de ×1000 (como antes).
+    // En ambos casos se registran warnings cuando hay discrepancia.
     // ---------------------------------------------------------------
-    function sanitizeCLPValue(raw: any): number {
-      const n = Number(raw);
-      return isNaN(n) ? 0 : n;
-    }
-
-    function fixThousandsSeparator(precio: number, cantidad: number | undefined, subtotal: number | undefined, descuentoPorcentaje?: number): number {
-      if (!precio || precio === 0) return precio;
-      // Si hay descuento, verificar primero con el descuento aplicado
-      if (subtotal && cantidad && descuentoPorcentaje && descuentoPorcentaje > 0) {
-        const discountFactor = 1 - descuentoPorcentaje / 100;
-        const calcWithDiscount = precio * cantidad * discountFactor;
-        const diffWithDiscount = Math.abs(calcWithDiscount - subtotal) / subtotal;
-        if (diffWithDiscount < 0.01) {
-          // El precio es correcto, la diferencia se explica por el descuento
-          return precio;
-        }
-        // Probar con precio ×1000
-        const calcX1000 = precio * 1000 * cantidad * discountFactor;
-        const diffX1000wk = Math.abs(calcX1000 - subtotal) / subtotal;
-        if (diffX1000wk < 0.01) {
-          return precio * 1000;
-        }
-      }
-      // Sin descuento: lógica original de separador de miles
-      // y tenemos subtotal, verificamos si precio*1000*cantidad ≈ subtotal
-      if (subtotal && cantidad && subtotal > 0) {
-        const calcNormal = precio * cantidad;
-        const calcX1000 = precio * 1000 * cantidad;
-        const diffNormal = Math.abs(calcNormal - subtotal) / subtotal;
-        const diffX1000 = Math.abs(calcX1000 - subtotal) / subtotal;
-        if (diffX1000 < 0.01 && diffNormal > 0.5) {
-          // La versión ×1000 encaja mucho mejor con el subtotal
-          return precio * 1000;
-        }
-      }
-      // Heurística adicional: si el precio tiene parte decimal que parece miles
-      // (ej. 4.5 → el .5 representa 500, así que es 4500)
-      // Detectamos cuando precio < 1000 y el precio en el documento claramente
-      // debería ser un número de 4+ dígitos (precio tiene decimales .5, .25, etc.)
-      if (precio < 1000 && !Number.isInteger(precio)) {
-        const decimals = precio - Math.floor(precio);
-        // Si los decimales son múltiplos exactos de 0.1, 0.25, 0.5 → probablemente miles mal leídos
-        const roundedDecimals = Math.round(decimals * 1000);
-        if (roundedDecimals % 100 === 0 || roundedDecimals % 250 === 0 || roundedDecimals % 500 === 0) {
-          // Verificar con subtotal si está disponible
-          if (subtotal && cantidad) {
-            const candidatePrice = Math.floor(precio) * 1000 + roundedDecimals;
-            const candidateTotal = candidatePrice * cantidad;
-            if (Math.abs(candidateTotal - subtotal) / subtotal < 0.01) {
-              return candidatePrice;
-            }
-          }
-        }
-      }
-      return precio;
-    }
-
-    // Validate and normalize the response
     const items = (parsed.items || []).map((item: any) => {
-      const rawPrecio = sanitizeCLPValue(item.precio_unitario);
       const rawCantidad = item.cantidad_extraida != null ? Number(item.cantidad_extraida) : undefined;
-      const rawSubtotal = item.subtotal_linea != null ? sanitizeCLPValue(item.subtotal_linea) : undefined;
-
-      // Auto-correct subtotal if it also suffered thousands-as-decimal issue
-      let correctedSubtotal = rawSubtotal;
-      if (rawSubtotal && rawCantidad) {
-        const calcSubtotalX1000 = rawPrecio * 1000 * rawCantidad;
-        const calcSubtotalNormal = rawPrecio * rawCantidad;
-        if (rawSubtotal > 0) {
-          const diffNormal = Math.abs(calcSubtotalNormal - rawSubtotal) / rawSubtotal;
-          const diffX1000 = Math.abs(calcSubtotalX1000 - rawSubtotal * 1000) / (rawSubtotal * 1000);
-          if (diffX1000 < 0.01 && diffNormal > 0.5) {
-            correctedSubtotal = rawSubtotal * 1000;
-          }
-        }
-      }
-
+      const rawSubtotalLlm = item.subtotal_linea != null ? Number(item.subtotal_linea) : undefined;
       const rawDescuento = item.descuento_porcentaje != null ? Number(item.descuento_porcentaje) : undefined;
 
-      const correctedPrecio = fixThousandsSeparator(rawPrecio, rawCantidad, correctedSubtotal, rawDescuento);
+      // --- Precio: raw text → deterministic parse → override LLM ---
+      const parsedPrecio = parseChileanAmount(item.precio_unitario_raw, moneda);
+      const precioDesdeRaw = parsedPrecio?.value;
+      let precioFinal: number;
+      let precioSource: 'raw_deterministic' | 'llm' | 'llm_x1000' = 'llm';
+
+      if (precioDesdeRaw != null && item.precio_unitario_raw) {
+        // Deterministic parse succeeded — use it
+        precioFinal = precioDesdeRaw;
+        precioSource = 'raw_deterministic';
+      } else {
+        // Fallback: LLM numeric value
+        precioFinal = Number(item.precio_unitario) || 0;
+      }
+
+      // --- Subtotal: deterministic parse → override LLM ---
+      const parsedSubtotal = parseChileanAmount(item.subtotal_linea_raw, moneda);
+      let subtotalFinal = rawSubtotalLlm;
+
+      if (parsedSubtotal != null && item.subtotal_linea_raw) {
+        subtotalFinal = parsedSubtotal.value;
+      }
+
+      // --- Cross-validate precio vs subtotal (×1000 heuristic as fallback) ---
+      // If we used raw text but precio × cantidad doesn't match subtotal,
+      // AND the ×1000 version does match → ×1000 correction needed
+      if (precioSource === 'raw_deterministic' && precioFinal > 0 && subtotalFinal != null && rawCantidad && subtotalFinal > 0) {
+        const calcNormal = precioFinal * rawCantidad;
+        const calcX1000 = precioFinal * 1000 * rawCantidad;
+        const diffNormal = Math.abs(calcNormal - subtotalFinal) / subtotalFinal;
+        const diffX1000 = Math.abs(calcX1000 - subtotalFinal) / subtotalFinal;
+        if (diffX1000 < 0.01 && diffNormal > 0.5) {
+          precioFinal = Math.round(precioFinal * 1000);
+          if (subtotalFinal != null) subtotalFinal = Math.round(subtotalFinal * 1000);
+          precioSource = 'llm_x1000';
+        }
+      }
+
+      // --- Last-resort fallback (no raw text, no ×1000 match) ---
+      if (precioSource === 'llm') {
+        // Try the old ×1000 heuristic
+        let calcSubtotal = subtotalFinal;
+        if (rawSubtotalLlm && rawCantidad && rawSubtotalLlm > 0 && precioFinal > 0) {
+          const calcNormal = precioFinal * rawCantidad;
+          const calcX1000 = precioFinal * 1000 * rawCantidad;
+          const diffNormal = Math.abs(calcNormal - rawSubtotalLlm) / rawSubtotalLlm;
+          const diffX1000 = Math.abs(calcX1000 - rawSubtotalLlm) / rawSubtotalLlm;
+          if (diffX1000 < 0.01 && diffNormal > 0.5) {
+            precioFinal = Math.round(precioFinal * 1000);
+            calcSubtotal = Math.round(rawSubtotalLlm * 1000);
+            precioSource = 'llm_x1000';
+          }
+          subtotalFinal = calcSubtotal;
+        }
+      }
 
       return {
         solicitud_item_id: item.solicitud_item_id ?? null,
         nombre_extraido: String(item.nombre_extraido || ''),
-        precio_unitario: correctedPrecio,
+        precio_unitario: precioFinal,
         cantidad_extraida: rawCantidad,
         unidad_extraida: item.unidad_extraida ? String(item.unidad_extraida) : undefined,
-        subtotal_linea: correctedSubtotal,
-        descuento_porcentaje: item.descuento_porcentaje != null ? Number(item.descuento_porcentaje) : undefined,
+        subtotal_linea: subtotalFinal,
+        descuento_porcentaje: rawDescuento,
         codigo_proveedor: item.codigo_proveedor ? String(item.codigo_proveedor) : undefined,
         match_confidence: ['high', 'medium', 'low', 'none'].includes(item.match_confidence)
           ? item.match_confidence
           : 'none',
-      };
+        _precio_source: precioSource,
+      } as any;
     });
 
     // ---------------------------------------------------------------
@@ -504,25 +505,47 @@ REGLAS:
     // ---------------------------------------------------------------
     const warnings: string[] = [];
 
-    // ---------------------------------------------------------------
-    // VALIDACIÓN POST-LLM: corrección per-item ÷1000 (formato chileno)
-    // El LLM a veces interpreta el separador de miles "." como decimal en items
-    // donde el PDF muestra "61.716" (= 61716 CLP). Cruzamos cada ítem contra el
-    // texto crudo del PDF y multiplicamos por 1000 los que aparecen formateados con miles.
-    // ---------------------------------------------------------------
-    const { corrected: itemsCorrected, chileanAmounts } = await correctPerItemMisscale(archivoPath, items);
-    if (itemsCorrected > 0) {
-      // También intentar corregir monto_total si su versión ×1000 está en el PDF
-      if (parsed.monto_total != null) {
-        const mt = Number(parsed.monto_total);
-        const mtX1000 = Math.round(mt * 1000);
-        let foundX1000 = false;
-        for (let d = -2; d <= 2; d++) if (chileanAmounts.has(mtX1000 + d)) { foundX1000 = true; break; }
-        if (foundX1000) parsed.monto_total = mtX1000;
-      }
+    // --- Monto total: deterministic parse + ×1000 validation ---
+    const parsedMontoTotal = parseChileanAmount(parsed.monto_total_raw, moneda);
+    let montoTotalFinal: number | null = parsedMontoTotal?.value ?? null;
+
+    // If no raw text for monto_total, use LLM's value
+    if (montoTotalFinal == null && parsed.monto_total != null) {
+      montoTotalFinal = Number(parsed.monto_total);
+    }
+
+    // --- Count items corrected by raw text / ×1000 for warnings ---
+    const itemsRawSource = items.filter((it: any) => it._precio_source === 'raw_deterministic');
+    const itemsX1000 = items.filter((it: any) => it._precio_source === 'llm_x1000');
+
+    if (itemsX1000.length > 0) {
       warnings.push(
-        `Se detectó y corrigió un error de escala (×1000) en ${itemsCorrected} ítem(s) por mala interpretación del separador de miles. Verifique los valores antes de confirmar.`
+        `Se aplicó corrección ×1000 a ${itemsX1000.length} ítem(s) porque el subtotal no cuadraba. Verifique los valores antes de confirmar.`
       );
+    }
+
+    // ---------------------------------------------------------------
+    // RESCUE GLOBAL ÷1000: si el monto_total fue extraído correctamente
+    // pero la suma de subtotales está ~1000× por debajo, todos los items
+    // están ÷1000. Solo dispara si no hubo correcciones previas.
+    // ---------------------------------------------------------------
+    if (itemsX1000.length === 0 && montoTotalFinal != null) {
+      const sumSubtotalesPreCheck = items.reduce(
+        (s: number, it: any) => s + (Number(it.subtotal_linea) || (Number(it.precio_unitario) || 0) * (Number(it.cantidad_extraida) || 1)),
+        0
+      );
+      if (montoTotalFinal > 0 && sumSubtotalesPreCheck > 0) {
+        const ratio = montoTotalFinal / sumSubtotalesPreCheck;
+        if (ratio > 900 && ratio < 1100) {
+          for (const it of items) {
+            it.precio_unitario = Math.round(it.precio_unitario * 1000);
+            if (it.subtotal_linea != null) it.subtotal_linea = Math.round(it.subtotal_linea * 1000);
+          }
+          warnings.push(
+            `Se detectó escalado ÷1000 global (monto_total $${montoTotalFinal.toLocaleString('es-CL')} vs suma de subtotales $${Math.round(sumSubtotalesPreCheck).toLocaleString('es-CL')}); todos los items fueron multiplicados ×1000. Verifique los valores antes de confirmar.`
+          );
+        }
+      }
     }
 
     // ---------------------------------------------------------------
@@ -573,12 +596,11 @@ REGLAS:
 
     // 3. Validación de monto total: comparar con suma de subtotales
     const sumSubtotales = items.reduce((s, it) => s + (Number(it.subtotal_linea) || 0), 0);
-    const montoTotal = parsed.monto_total != null ? Number(parsed.monto_total) : null;
-    if (montoTotal && sumSubtotales > 0) {
-      const diff = Math.abs(montoTotal - sumSubtotales) / Math.max(montoTotal, sumSubtotales);
+    if (montoTotalFinal != null && sumSubtotales > 0) {
+      const diff = Math.abs(montoTotalFinal - sumSubtotales) / Math.max(montoTotalFinal, sumSubtotales);
       if (diff > 0.05) {
         warnings.push(
-          `Discrepancia: monto total del documento ($${montoTotal.toLocaleString('es-CL')}) no coincide con suma de subtotales ($${sumSubtotales.toLocaleString('es-CL')}).`
+          `Discrepancia: monto total del documento ($${montoTotalFinal.toLocaleString('es-CL')}) no coincide con suma de subtotales ($${sumSubtotales.toLocaleString('es-CL')}).`
         );
       }
     }
@@ -591,12 +613,22 @@ REGLAS:
       );
     }
 
+    // 5. Warnings informativos por fuente de precio
+    if (itemsRawSource.length > 0) {
+      warnings.push(
+        `${itemsRawSource.length} ítem(s) usaron parseo determinístico desde _raw (fuente: texto exacto del documento).`
+      );
+    }
+
+    // Strip internal metadata from items
+    const cleanItems = (items as any[]).map(({ _precio_source, ...rest }) => rest);
+
     return {
-      items,
+      items: cleanItems,
       numero_cov: parsed.numero_cov || undefined,
       proveedor_nombre: parsed.proveedor_nombre || undefined,
       proveedor_rut: parsed.proveedor_rut || undefined,
-      monto_total: montoTotal ?? undefined,
+      monto_total: montoTotalFinal ?? undefined,
       condiciones_pago: parsed.condiciones_pago || undefined,
       plazo_entrega: parsed.plazo_entrega || undefined,
       datos_raw: parsed,

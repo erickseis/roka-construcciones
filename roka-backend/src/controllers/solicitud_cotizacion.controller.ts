@@ -485,9 +485,23 @@ export async function importarArchivo(req: AuthRequest, res: Response) {
       proveedorDb = await getProveedorById(sc.proveedor_id);
     }
 
+    // Get project currency for deterministic number parsing
+    let moneda = 'CLP';
+    if (sc.solicitud_id) {
+      try {
+        const { rows: [{ moneda: m }] } = await pool.query(
+          `SELECT p.moneda FROM proyectos p
+           JOIN solicitudes_material sm ON sm.proyecto_id = p.id
+           WHERE sm.id = $1`,
+          [sc.solicitud_id]
+        );
+        if (m) moneda = m;
+      } catch { /* keep default CLP */ }
+    }
+
     // Parse the file with AI
     const { parseCotizacionArchivo } = await import('../services/sc-import.service');
-    const parsed = await parseCotizacionArchivo(file.path, sanitizedItems, sc.proveedor);
+    const parsed = await parseCotizacionArchivo(file.path, sanitizedItems, sc.proveedor, moneda);
 
     // Build preview with matching
     const preview = {

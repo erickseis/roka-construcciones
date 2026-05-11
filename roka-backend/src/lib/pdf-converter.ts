@@ -44,7 +44,7 @@ export async function convertPdfToImages(pdfPath: string): Promise<string[]> {
   try {
     for (let i = 1; i <= pageCount; i++) {
       const page = await doc.getPage(i);
-      const viewport = page.getViewport({ scale: 2 });
+      const viewport = page.getViewport({ scale: 3 });
 
       const canvas = createCanvas(viewport.width, viewport.height);
       const ctx = canvas.getContext('2d')!;
