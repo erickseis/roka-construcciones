@@ -1,6 +1,6 @@
 import * as esbuild from "esbuild";
 
-const external = ["pg", "pg-native", "pdf-parse", "pdfjs-dist", "@napi-rs/canvas"];
+const external = ["pg", "pg-native", "pdf-parse", "@napi-rs/canvas"];
 
 // Bundle app.ts (createRokaApp + all routes + middleware + utilities)
 await esbuild.build({
