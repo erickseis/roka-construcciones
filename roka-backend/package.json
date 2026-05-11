@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^0.1.100",
     "@types/nodemailer": "^8.0.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
@@ -22,6 +23,7 @@
     "nodemailer": "^8.0.7",
     "openai": "^4.104.0",
     "pdf-parse": "^2.4.5",
+    "pdfjs-dist": "^4.10.38",
     "pg": "^8.20.0",
     "puppeteer-core": "^24.42.0",
     "xlsx": "^0.18.5"
