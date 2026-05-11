@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Upload, Check, AlertCircle, Loader2, AlertTriangle, FileText, Building2 } from 'lucide-react';
-import { importarRespuestaSC, confirmarImportacionSC } from '@/lib/api';
+import { importarRespuestaSC, confirmarImportacionSC, getProveedores } from '@/lib/api';
+import ProveedorModal from '../proveedores/ProveedorModal';
+import CreatableSelect from 'react-select/creatable';
 import { showAlert, showToast } from '@/lib/alerts';
 import { formatCLP } from '@/lib/utils';
 
@@ -32,12 +34,38 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<any>(null);
   const [editedPrices, setEditedPrices] = useState<EditedPrices>({});
+  const [editedDiscounts, setEditedDiscounts] = useState<Record<number, number>>({});
+  const [descuentoGlobalPct, setDescuentoGlobalPct] = useState<number>(0);
+  const [editedProviderData, setEditedProviderData] = useState<{
+    proveedor_nombre?: string;
+    numero_cov?: string;
+    proveedor_rut?: string;
+    condiciones_pago?: string;
+  }>({});
   const [localInputs, setLocalInputs] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [proveedores, setProveedores] = useState<any[]>([]);
+  const [showProveedorModal, setShowProveedorModal] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (preview) setEditedPrices({});
+    if (isOpen) {
+      getProveedores().then(data => setProveedores(data || []));
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (preview) {
+      setEditedPrices({});
+      setEditedDiscounts({});
+      setDescuentoGlobalPct(0);
+      setEditedProviderData({
+        proveedor_nombre: preview.proveedor_nombre || solicitudData?.proveedor || '',
+        numero_cov: preview.numero_cov || '',
+        proveedor_rut: preview.proveedor_rut || '',
+        condiciones_pago: preview.condiciones_pago || '',
+      });
+    }
   }, [preview]);
 
   const handleUpload = async () => {
@@ -76,10 +104,11 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
         .filter((item: any, idx: number) => item.solicitud_item_id && (editedPrices[idx] !== undefined || item.precio_unitario))
         .map((item: any, idx: number) => {
           const price = editedPrices[idx] !== undefined ? editedPrices[idx] : item.precio_unitario;
+          const desc = editedDiscounts[idx] !== undefined ? editedDiscounts[idx] : item.descuento_porcentaje;
           return {
             solicitud_item_id: item.solicitud_item_id,
             precio_unitario: price,
-            descuento_porcentaje: item.descuento_porcentaje,
+            descuento_porcentaje: desc,
             codigo_proveedor: item.codigo_proveedor,
           };
         });
@@ -88,10 +117,11 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
         solicitud_cotizacion_id: solicitudCotizacionId,
         archivo_path: preview.archivo_path,
         archivo_nombre: preview.archivo_nombre,
-        numero_cov: preview.numero_cov,
-        condiciones_pago: preview.condiciones_pago,
+        numero_cov: editedProviderData.numero_cov !== undefined ? editedProviderData.numero_cov : preview.numero_cov,
+        condiciones_pago: editedProviderData.condiciones_pago !== undefined ? editedProviderData.condiciones_pago : preview.condiciones_pago,
         plazo_entrega: preview.plazo_entrega,
-        proveedor_nombre: preview.proveedor_nombre,
+        descuento_global: descuentoGlobalPct > 0 ? descuentoGlobalPct : undefined,
+        proveedor_nombre: editedProviderData.proveedor_nombre !== undefined ? editedProviderData.proveedor_nombre : preview.proveedor_nombre,
         items: confirmedItems,
       });
 
@@ -115,12 +145,23 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
     return editedPrices[index] !== undefined ? editedPrices[index] : (item.precio_unitario || 0);
   };
 
+  const getItemDiscount = (item: any, index: number): number => {
+    return editedDiscounts[index] !== undefined ? editedDiscounts[index] : Number(item.descuento_porcentaje || 0);
+  };
+
+  const handleDiscountEdit = (index: number, value: number) => {
+    setEditedDiscounts(prev => ({ ...prev, [index]: value }));
+  };
+
   const handleClose = () => {
     setStep('upload');
     setFile(null);
     setPreview(null);
     setError(null);
     setEditedPrices({});
+    setEditedDiscounts({});
+    setDescuentoGlobalPct(0);
+    setEditedProviderData({});
     setLocalInputs({});
     onClose();
   };
@@ -199,11 +240,13 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
         const { matched, unmatched } = buildComparison();
         const matchedCount = matched.filter(m => m.provItem && m.provItem.match_confidence !== 'none').length;
         const unmatchedCount = scItems.length - matchedCount;
-        const totalCalculated = preview.items?.reduce((sum: number, item: any, idx: number) => {
+        const subtotal = preview.items?.reduce((sum: number, item: any, idx: number) => {
           const price = getItemPrice(item, idx);
-          const desc = (item.descuento_porcentaje || 0) / 100;
+          const desc = getItemDiscount(item, idx) / 100;
           return sum + price * (item.cantidad_extraida || 1) * (1 - desc);
         }, 0) || 0;
+        const descuentoGlobalMonto = subtotal * (descuentoGlobalPct / 100);
+        const totalCalculated = subtotal - descuentoGlobalMonto;
 
         return (
           <div className="space-y-4">
@@ -273,37 +316,139 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="col-span-2">
-                    <span className="block text-[10px] text-slate-400">Razón Social Proveedor</span>
-                    <span className="font-semibold text-slate-800 dark:text-white">{preview.proveedor_nombre || solicitudData?.proveedor || '-'}</span>
+                  <div className="col-span-2 group">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="block text-[10px] text-slate-400">Razón Social Proveedor</span>
+                      <button type="button" onClick={() => setShowProveedorModal(true)} className="text-[10px] font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+                        + Registrar proveedor
+                      </button>
+                    </div>
+                    <CreatableSelect
+                      isClearable
+                      menuPortalTarget={document.body}
+                      menuPosition="fixed"
+                      placeholder="Seleccionar o escribir proveedor..."
+                      options={proveedores.map(p => ({ value: p.nombre, label: p.nombre, isExisting: true }))}
+                      styles={{
+                        control: (base: any, state: any) => ({
+                          ...base,
+                          minHeight: '28px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          border: 'none',
+                          borderBottom: '1px solid transparent',
+                          borderRadius: '0',
+                          backgroundColor: 'transparent',
+                          boxShadow: 'none',
+                          padding: 0,
+                          '&:hover': { borderBottom: '1px solid #cbd5e1' },
+                        }),
+                        singleValue: (base: any) => ({ ...base, color: 'inherit', margin: 0 }),
+                        input: (base: any) => ({ ...base, margin: 0, padding: 0 }),
+                        valueContainer: (base: any) => ({ ...base, padding: 0 }),
+                        menuPortal: (base: any) => ({ ...base, zIndex: 9999 }),
+                        menu: (base: any) => ({
+                          ...base,
+                          fontSize: '12px',
+                          borderRadius: '0.5rem',
+                          backgroundColor: '#1e293b',
+                          color: '#f1f5f9',
+                        }),
+                        option: (base: any, state: any) => ({
+                          ...base,
+                          backgroundColor: state.isSelected ? '#3b82f6' : state.isFocused ? '#334155' : 'transparent',
+                          color: 'inherit',
+                          cursor: 'pointer',
+                        })
+                      }}
+                      value={editedProviderData.proveedor_nombre ? { label: editedProviderData.proveedor_nombre, value: editedProviderData.proveedor_nombre } : null}
+                      onChange={(newValue: any) => {
+                        setEditedProviderData({ ...editedProviderData, proveedor_nombre: newValue ? newValue.label : '' });
+                      }}
+                      formatCreateLabel={(v) => `Usar "${v}" (nuevo)`}
+                    />
                   </div>
-                  <div>
-                    <span className="block text-[10px] text-slate-400">N° Cotización</span>
-                    <span className="font-mono text-xs text-slate-700 dark:text-slate-300">{preview.numero_cov || '-'}</span>
+                  <div className="group">
+                    <span className="block text-[10px] text-slate-400">N° Cotización de Venta</span>
+                    <input 
+                      type="text" 
+                      value={editedProviderData.numero_cov ?? ''}
+                      onChange={e => setEditedProviderData({...editedProviderData, numero_cov: e.target.value})}
+                      className="w-full bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none font-mono text-xs text-slate-700 dark:text-slate-300 transition-colors py-0.5"
+                      placeholder="Nº Cotización"
+                    />
                   </div>
-                  <div>
+                  <div className="group">
                     <span className="block text-[10px] text-slate-400">RUT Proveedor</span>
-                    <span className="font-mono text-xs text-slate-700 dark:text-slate-300">{preview.proveedor_rut || '-'}</span>
+                    <input 
+                      type="text" 
+                      value={editedProviderData.proveedor_rut ?? ''}
+                      onChange={e => setEditedProviderData({...editedProviderData, proveedor_rut: e.target.value})}
+                      className="w-full bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none font-mono text-xs text-slate-700 dark:text-slate-300 transition-colors py-0.5"
+                      placeholder="RUT"
+                    />
                   </div>
-                  <div>
+                  <div className="group">
                     <span className="block text-[10px] text-slate-400">Condiciones Pago</span>
-                    <span className="text-xs text-slate-600 dark:text-slate-400">{preview.condiciones_pago || '-'}</span>
+                    <input 
+                      type="text" 
+                      value={editedProviderData.condiciones_pago ?? ''}
+                      onChange={e => setEditedProviderData({...editedProviderData, condiciones_pago: e.target.value})}
+                      className="w-full bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none text-xs text-slate-600 dark:text-slate-400 transition-colors py-0.5"
+                      placeholder="Ej. CREDITO 30 DIAS"
+                    />
                   </div>
                   <div>
-                    <span className="block text-[10px] text-slate-400">Total Documento</span>
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCLP(preview.monto_total)}</span>
+                    <span className="block text-[10px] text-slate-400">Total Documento (Calculado)</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400 py-0.5 block">{formatCLP(totalCalculated)}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Resumen de match */}
+            {/* Resumen de match + totales */}
             <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-800 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
               <div className="flex-1 text-[11px] font-medium text-slate-500">Resumen de Análisis OCR:</div>
-              <div className="flex gap-4">
+              <div className="flex gap-4 items-center">
                 <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ {matchedCount} Cotizados</span>
                 <span className="text-xs font-bold text-red-500 dark:text-red-400">✗ {unmatchedCount} Faltantes</span>
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-4 border-l pl-4 border-slate-300">Total Calculado: {formatCLP(totalCalculated)}</span>
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-4 border-l pl-4 border-slate-300">
+                  Subtotal: {formatCLP(subtotal)}
+                </span>
+              </div>
+            </div>
+
+            {/* Descuento global + Total final */}
+            <div className="flex items-center justify-between gap-4 bg-amber-50/50 dark:bg-amber-950/20 p-3 rounded-lg border border-amber-200 dark:border-amber-900/30">
+              <div className="flex items-center gap-3">
+                <label className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+                  Descuento Global
+                </label>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={descuentoGlobalPct || ''}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value);
+                      setDescuentoGlobalPct(isNaN(v) ? 0 : Math.max(0, Math.min(100, v)));
+                    }}
+                    placeholder="0"
+                    className="w-20 text-right font-mono text-sm bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded px-2 py-1 focus:border-amber-500 focus:outline-none"
+                  />
+                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400">%</span>
+                </div>
+                {descuentoGlobalPct > 0 && (
+                  <span className="text-xs text-amber-700 dark:text-amber-400">
+                    (− {formatCLP(descuentoGlobalMonto)})
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Total Final</span>
+                <span className="text-xl font-black text-emerald-700 dark:text-emerald-400">{formatCLP(totalCalculated)}</span>
               </div>
             </div>
 
@@ -393,11 +538,28 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
                             />
                           ) : '-'}
                         </td>
-                        <td className="px-3 py-3 text-center text-slate-500">
-                          {hasMatch && provItem.descuento_porcentaje ? `${provItem.descuento_porcentaje}%` : '-'}
+                        <td className="px-3 py-2 text-center">
+                          {hasMatch ? (
+                            <div className="flex items-center justify-center gap-0.5">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                value={getItemDiscount(provItem, provIdx) || ''}
+                                onChange={(e) => {
+                                  const v = parseFloat(e.target.value);
+                                  handleDiscountEdit(provIdx, isNaN(v) ? 0 : Math.max(0, Math.min(100, v)));
+                                }}
+                                placeholder="0"
+                                className="w-12 text-right font-mono text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-1 py-0.5 focus:border-amber-500 focus:outline-none"
+                              />
+                              <span className="text-[10px] text-slate-400">%</span>
+                            </div>
+                          ) : '-'}
                         </td>
                         <td className="px-3 py-3 text-right font-mono font-bold text-slate-800 dark:text-slate-200">
-                          {hasMatch ? formatCLP(getItemPrice(provItem, provIdx) * (provItem.cantidad_extraida || 1) * (1 - (provItem.descuento_porcentaje || 0) / 100)) : '-'}
+                          {hasMatch ? formatCLP(getItemPrice(provItem, provIdx) * (provItem.cantidad_extraida || 1) * (1 - getItemDiscount(provItem, provIdx) / 100)) : '-'}
                         </td>
                       </tr>
                     );
@@ -443,11 +605,26 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
                               className="w-full max-w-[90px] text-right font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 focus:border-amber-500 focus:outline-none"
                             />
                           </td>
-                          <td className="px-3 py-2 text-center text-slate-500">
-                            {provItem.descuento_porcentaje ? `${provItem.descuento_porcentaje}%` : '-'}
+                          <td className="px-3 py-2 text-center">
+                            <div className="flex items-center justify-center gap-0.5">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                value={getItemDiscount(provItem, provIdx) || ''}
+                                onChange={(e) => {
+                                  const v = parseFloat(e.target.value);
+                                  handleDiscountEdit(provIdx, isNaN(v) ? 0 : Math.max(0, Math.min(100, v)));
+                                }}
+                                placeholder="0"
+                                className="w-12 text-right font-mono text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-1 py-0.5 focus:border-amber-500 focus:outline-none"
+                              />
+                              <span className="text-[10px] text-slate-400">%</span>
+                            </div>
                           </td>
                           <td className="px-3 py-2 text-right font-mono font-bold text-slate-600">
-                            {formatCLP(provItem.precio_unitario * (provItem.cantidad_extraida || 1))}
+                            {formatCLP(getItemPrice(provItem, provIdx) * (provItem.cantidad_extraida || 1) * (1 - getItemDiscount(provItem, provIdx) / 100))}
                           </td>
                         </tr>
                       ))}
@@ -477,6 +654,15 @@ export default function ImportarRespuestaSCModal({ isOpen, onClose, solicitudCot
           </div>
         );
       })()}
+
+      <ProveedorModal 
+        isOpen={showProveedorModal} 
+        onClose={() => setShowProveedorModal(false)}
+        onSave={async () => {
+          const provs = await getProveedores();
+          setProveedores(provs || []);
+        }} 
+      />
 
       {step === 'confirming' && (
         <div className="flex flex-col items-center justify-center py-12">

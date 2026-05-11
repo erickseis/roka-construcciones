@@ -2,6 +2,79 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import OpenAI from 'openai';
+import { PDFParse } from 'pdf-parse';
+
+// Extract raw text from a PDF (no OCR — only works if PDF has selectable text layer)
+async function extractPdfText(pdfPath: string): Promise<string> {
+  try {
+    const buf = fs.readFileSync(pdfPath);
+    const parser = new PDFParse({ data: new Uint8Array(buf) });
+    const result = await parser.getText();
+    await parser.destroy();
+    return result.text || '';
+  } catch {
+    return ''; // scanned PDF or unparseable → skip
+  }
+}
+
+// Build the set of "Chilean-formatted thousand amounts" present in raw PDF text.
+// Returns numeric values that appeared with at least one "." thousand-separator.
+function extractChileanAmounts(text: string): Set<number> {
+  const chileanAmountRegex = /\b\d{1,3}(?:\.\d{3})+(?:,\d+)?\b/g;
+  const set = new Set<number>();
+  const matches = text.match(chileanAmountRegex) || [];
+  for (const m of matches) {
+    const n = Number(m.replace(/\./g, '').replace(',', '.'));
+    if (!isNaN(n) && n > 0) set.add(Math.round(n));
+  }
+  return set;
+}
+
+// Detect and correct per-item ÷1000 misscale.
+// For each item, check if (precio × 1000) or (subtotal × 1000) appears as a Chilean-formatted
+// thousand amount in the raw PDF text. If so, multiply that item's price + subtotal by 1000.
+// Returns the count of items corrected.
+async function correctPerItemMisscale(
+  pdfPath: string,
+  items: Array<{ precio_unitario: number; cantidad_extraida?: number; subtotal_linea?: number; nombre_extraido: string }>
+): Promise<{ corrected: number; chileanAmounts: Set<number> }> {
+  if (!pdfPath.toLowerCase().endsWith('.pdf')) return { corrected: 0, chileanAmounts: new Set() };
+  const text = await extractPdfText(pdfPath);
+  if (!text) return { corrected: 0, chileanAmounts: new Set() };
+
+  const chileanAmounts = extractChileanAmounts(text);
+  if (chileanAmounts.size === 0) return { corrected: 0, chileanAmounts };
+
+  // Tolerance: LLM rounds to 2 decimals, so e.g. 61.716 → 61.72 → ×1000 = 61720 vs real 61716.
+  // Use ±max(10, 0.5%) of the value to absorb that rounding.
+  const inSet = (n: number) => {
+    const r = Math.round(n);
+    const tol = Math.max(10, Math.round(r * 0.005));
+    for (const v of chileanAmounts) {
+      if (Math.abs(v - r) <= tol) return true;
+    }
+    return false;
+  };
+
+  let corrected = 0;
+  for (const it of items) {
+    const precioX1000 = it.precio_unitario * 1000;
+    const subtotalX1000 = (it.subtotal_linea || 0) * 1000;
+
+    // Trigger correction if either scaled-up precio or scaled-up subtotal exists in PDF
+    // AND the current (un-scaled) value does NOT exist as a Chilean thousand amount.
+    const precioMatches = precioX1000 >= 1000 && inSet(precioX1000);
+    const subtotalMatches = subtotalX1000 >= 1000 && inSet(subtotalX1000);
+    const currentPrecioInSet = it.precio_unitario >= 1000 && inSet(it.precio_unitario);
+
+    if ((precioMatches || subtotalMatches) && !currentPrecioInSet) {
+      it.precio_unitario = Math.round(precioX1000);
+      if (it.subtotal_linea != null) it.subtotal_linea = Math.round(subtotalX1000);
+      corrected++;
+    }
+  }
+  return { corrected, chileanAmounts };
+}
 
 // ================================================
 // NVIDIA Nemotron Nano VL OCR Service for Vendor Quotations
@@ -501,6 +574,27 @@ REGLAS:
     // VALIDACIONES POST-LLM: detectar hallucinations / discrepancias
     // ---------------------------------------------------------------
     const warnings: string[] = [];
+
+    // ---------------------------------------------------------------
+    // VALIDACIÓN POST-LLM: corrección per-item ÷1000 (formato chileno)
+    // El LLM a veces interpreta el separador de miles "." como decimal en items
+    // donde el PDF muestra "61.716" (= 61716 CLP). Cruzamos cada ítem contra el
+    // texto crudo del PDF y multiplicamos por 1000 los que aparecen formateados con miles.
+    // ---------------------------------------------------------------
+    const { corrected: itemsCorrected, chileanAmounts } = await correctPerItemMisscale(archivoPath, items);
+    if (itemsCorrected > 0) {
+      // También intentar corregir monto_total si su versión ×1000 está en el PDF
+      if (parsed.monto_total != null) {
+        const mt = Number(parsed.monto_total);
+        const mtX1000 = Math.round(mt * 1000);
+        let foundX1000 = false;
+        for (let d = -2; d <= 2; d++) if (chileanAmounts.has(mtX1000 + d)) { foundX1000 = true; break; }
+        if (foundX1000) parsed.monto_total = mtX1000;
+      }
+      warnings.push(
+        `Se detectó y corrigió un error de escala (×1000) en ${itemsCorrected} ítem(s) por mala interpretación del separador de miles. Verifique los valores antes de confirmar.`
+      );
+    }
 
     // ---------------------------------------------------------------
     // VALIDACIÓN POST-LLM: descuentos

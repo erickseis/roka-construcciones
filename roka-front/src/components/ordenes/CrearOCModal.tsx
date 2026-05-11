@@ -24,6 +24,7 @@ interface SolicitudCotizacionDetalle {
     descuento_porcentaje?: number;
   }>;
   numero_cov?: string;
+  descuento_global_cov?: number;
   prov_condiciones_pago?: string;
   prov_condicion_despacho?: string;
   prov_plazo_entrega?: string;
@@ -87,6 +88,11 @@ export function CrearOCModal({ isOpen, onClose, onSuccess, initialSolicitudCotiz
             if (data.prov_condicion_despacho) setCondicionesEntrega(data.prov_condicion_despacho);
             if (data.prov_contacto_nombre) setAtencionA(data.prov_contacto_nombre);
             if (data.numero_cov) setNumeroCov(data.numero_cov);
+            // Precargar descuento global guardado al confirmar la importación de la SC
+            if (Number(data.descuento_global_cov) > 0) {
+              setDescuentoTipo('porcentaje');
+              setDescuentoValor(String(data.descuento_global_cov));
+            }
           }
         })
         .catch(() => setScDetalle(null))
