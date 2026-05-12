@@ -506,7 +506,7 @@ export async function importarArchivo(req: AuthRequest, res: Response) {
     // Build preview with matching
     const preview = {
       solicitud_cotizacion_id: Number(solicitud_cotizacion_id),
-      archivo_path: file.path,
+      archivo_path: '/uploads/sc-respuestas/' + file.filename,
       archivo_nombre: file.originalname,
       numero_cov: parsed.numero_cov,
       proveedor_nombre: parsed.proveedor_nombre || proveedorDb?.nombre || sc.proveedor,
@@ -557,8 +557,11 @@ export async function confirmarImportacion(req: AuthRequest, res: Response) {
       }
 
       // Update each item with prices
+      const confirmedSolicitudItemIds: number[] = [];
+      const extras: any[] = [];
       for (const item of items) {
         if (item.solicitud_item_id && item.precio_unitario) {
+          confirmedSolicitudItemIds.push(item.solicitud_item_id);
           // Find the detalle for this solicitud_item_id
           const { rows: [detalle] } = await client.query(
             'SELECT id FROM solicitud_cotizacion_detalle WHERE solicitud_cotizacion_id = $1 AND solicitud_item_id = $2',
@@ -570,8 +573,43 @@ export async function confirmarImportacion(req: AuthRequest, res: Response) {
               descuento_porcentaje: item.descuento_porcentaje,
               codigo_proveedor: item.codigo_proveedor,
             }, client);
+          } else {
+            await scModel.insertDetalleConPrecios(solicitud_cotizacion_id, item.solicitud_item_id, {
+              precio_unitario: item.precio_unitario,
+              descuento_porcentaje: item.descuento_porcentaje,
+              codigo_proveedor: item.codigo_proveedor,
+            }, client);
           }
+        } else if (!item.solicitud_item_id && item.nombre_extraido) {
+          extras.push({
+            nombre_extraido: item.nombre_extraido,
+            cantidad_extraida: item.cantidad_extraida,
+            unidad_extraida: item.unidad_extraida,
+            precio_unitario: item.precio_unitario,
+            codigo_proveedor: item.codigo_proveedor,
+          });
         }
+      }
+
+      // Save extras as datos_importados metadata
+      if (extras.length > 0) {
+        const { rows: [scRow] } = await client.query(
+          `SELECT datos_importados FROM solicitud_cotizacion WHERE id = $1`,
+          [solicitud_cotizacion_id]
+        );
+        const existingDatos = scRow?.datos_importados || {};
+        await client.query(
+          `UPDATE solicitud_cotizacion SET datos_importados = $1, updated_at = NOW() WHERE id = $2`,
+          [{ ...existingDatos, extras, confirmed_at: new Date().toISOString() }, solicitud_cotizacion_id]
+        );
+      }
+
+      // Update proveedor nombre on SC if changed
+      if (proveedor_nombre && proveedor_nombre !== sc.proveedor) {
+        await client.query(
+          'UPDATE solicitud_cotizacion SET proveedor = $1, updated_at = NOW() WHERE id = $2',
+          [proveedor_nombre, solicitud_cotizacion_id]
+        );
       }
 
       // Update SC with file info and numero_cov

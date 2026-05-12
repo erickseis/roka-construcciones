@@ -225,6 +225,29 @@ export async function updateSolicitudEstadoIfPendiente(
   );
 }
 
+export async function insertDetalleConPrecios(
+  scId: number,
+  solicitudItemId: number,
+  data: {
+    precio_unitario: number;
+    descuento_porcentaje?: number;
+    codigo_proveedor?: string;
+  },
+  db?: Queryable
+): Promise<void> {
+  const conn = getDb(db);
+  const subtotal = data.descuento_porcentaje && data.descuento_porcentaje > 0
+    ? data.precio_unitario * (1 - data.descuento_porcentaje / 100)
+    : data.precio_unitario;
+
+  await conn.query(
+    `INSERT INTO solicitud_cotizacion_detalle 
+     (solicitud_cotizacion_id, solicitud_item_id, precio_unitario, subtotal, descuento_porcentaje, codigo_proveedor)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [scId, solicitudItemId, data.precio_unitario, subtotal, data.descuento_porcentaje ?? null, data.codigo_proveedor ?? null]
+  );
+}
+
 export async function updateDetalleConPrecios(
   detalleId: number,
   data: {

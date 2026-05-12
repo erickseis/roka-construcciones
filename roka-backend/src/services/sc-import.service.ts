@@ -572,7 +572,10 @@ ${truncated}
       }
     }
 
-    // 2. Validación semántica por item: forzar match='none' si Jaccard < 0.3
+    // 2. Validación semántica por item: solo invalidar matches cuando Jaccard
+    //    sugiere error claro. Para alta/media confianza del LLM, confiar en la
+    //    semántica del modelo (materiales de construcción tienen sinónimos que
+    //    Jaccard no puede resolver: fierro=barra corrugada, corrugado≠corrugada).
     const scItemsById = new Map(scItems.map(it => [it.solicitud_item_id, it]));
     let invalidatedMatches = 0;
     for (const item of items) {
@@ -580,7 +583,14 @@ ${truncated}
         const scItem = scItemsById.get(item.solicitud_item_id);
         if (scItem) {
           const sim = jaccardSimilarity(scItem.nombre_material, item.nombre_extraido);
-          if (sim < 0.3) {
+          const confidence = item.match_confidence;
+          // 'high' → confiar en IA, sin validación Jaccard
+          // 'medium' → solo invalidar si sim === 0 (sin ninguna palabra en común)
+          // 'low' → invalidar si sim < 0.15 (umbral relajado desde 0.3)
+          if (
+            (confidence === 'low' && sim < 0.15) ||
+            (confidence === 'medium' && sim === 0)
+          ) {
             item.solicitud_item_id = null;
             item.match_confidence = 'none';
             invalidatedMatches++;

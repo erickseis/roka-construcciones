@@ -312,6 +312,16 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
                       </div>
                     </div>
                   )}
+
+                  {data.archivo_adjunto_path && (
+                    <div className="border-t border-emerald-200 dark:border-emerald-800/50 px-3 py-2 flex items-center justify-between">
+                      <a href={`${(import.meta as any).env.VITE_API_URL.replace(/\/api\/?$/, '')}${data.archivo_adjunto_path}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                        <FileText size={14} /> {data.archivo_adjunto_nombre || 'Descargar respuesta original'}
+                      </a>
+                    </div>
+                  )}
                 </div>
               );
             })()}

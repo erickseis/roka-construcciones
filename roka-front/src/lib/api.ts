@@ -309,18 +309,21 @@ export const importarRespuestaSC = (solicitudCotizacionId: number, file: File) =
 
 export const confirmarImportacionSC = (data: {
   solicitud_cotizacion_id: number;
-  archivo_path: string;
-  archivo_nombre: string;
+  archivo_path?: string;
+  archivo_nombre?: string;
   numero_cov?: string;
   condiciones_pago?: string;
   plazo_entrega?: string;
   descuento_global?: number;
   proveedor_nombre?: string;
   items: Array<{
-    solicitud_item_id: number;
+    solicitud_item_id?: number | null;
     precio_unitario: number;
     descuento_porcentaje?: number;
     codigo_proveedor?: string;
+    nombre_extraido?: string;
+    cantidad_extraida?: number;
+    unidad_extraida?: string;
   }>;
 }) =>
   fetchApi<any>('/solicitud-cotizacion/importar/confirmar', {
