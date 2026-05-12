@@ -2,12 +2,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/authMiddleware';
+import pool from '../db';
+import { getDb } from '../types';
 import * as ordenesModel from '../models/ordenes.model';
+import * as presupuestosModel from '../models/presupuestos.model';
+import * as solicitudesModel from '../models/solicitudes.model';
 import { generarOrdenCompra } from '../services/ordenes.service';
 import { crearOCManual } from '../services/ordenesManual.service';
 import { isEventEnabled, sendEmail, buildOCProveedorHtml } from '../lib/email';
 import { htmlToPdf } from '../lib/pdf-utils';
 import { fmtMoney, fmtDate, scape, ROKA_LOGO_SVG } from '../lib/html-templates';
+import { createNotifications } from '../lib/notifications';
 
 function buildOCHtml(orden: any, items: any[], pdfUrl?: string): string {
   const folio = orden.folio || 'OC-' + String(orden.id).padStart(6, '0');
@@ -309,6 +314,14 @@ export async function updateEntrega(req: AuthRequest, res: Response) {
       return res.status(400).json({ error: 'Estado de entrega inválido' });
     }
 
+    const orden = await ordenesModel.getOrdenById(Number(id));
+    if (!orden) {
+      return res.status(404).json({ error: 'Orden de compra no encontrada' });
+    }
+    if ((orden as any).estado === 'Anulada') {
+      return res.status(400).json({ error: 'No se puede cambiar el estado de entrega de una orden anulada' });
+    }
+
     const updated = await ordenesModel.updateEstadoEntrega(Number(id), estado_entrega, req.user?.id || null);
 
     if (!updated) {
@@ -319,6 +332,97 @@ export async function updateEntrega(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error('Error al actualizar entrega:', error);
     res.status(500).json({ error: 'Error al actualizar estado de entrega' });
+  }
+}
+
+export async function anularOrden(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const usuarioId = req.user?.id || null;
+
+    const orden = await ordenesModel.getOrdenById(id);
+    if (!orden) {
+      return res.status(404).json({ error: 'Orden de compra no encontrada' });
+    }
+    if ((orden as any).estado === 'Anulada') {
+      return res.status(400).json({ error: 'La orden de compra ya se encuentra anulada' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // 1. Set OC estado = 'Anulada'
+      await ordenesModel.updateOrdenEstado(id, 'Anulada', usuarioId, client);
+
+      // 2. Liberar presupuesto si existe
+      const proyectoId = (orden as any).proyecto_id;
+      if (proyectoId) {
+        const presupuesto = await presupuestosModel.getPresupuestoByProyecto(proyectoId);
+        if (presupuesto) {
+          const monto = Number((orden as any).total_final || (orden as any).total || 0);
+          await presupuestosModel.releasePresupuesto(presupuesto.id, monto, client);
+          await presupuestosModel.insertMovimiento({
+            presupuesto_id: presupuesto.id,
+            orden_compra_id: id,
+            tipo: 'Liberación',
+            monto,
+            descripcion: `Anulación OC ${(orden as any).folio || 'OC-' + String(id).padStart(6, '0')}`,
+            created_by: usuarioId,
+          }, client);
+        }
+      }
+
+      // 3. Cambiar solicitud_cotizacion a 'Observación' si aplica
+      const solicitudCotizacionId = (orden as any).solicitud_cotizacion_id;
+      if (solicitudCotizacionId) {
+        await client.query(
+          "UPDATE solicitud_cotizacion SET estado = 'Observación', updated_at = NOW() WHERE id = $1",
+          [solicitudCotizacionId]
+        );
+      }
+
+      // 4. Revertir solicitud de materiales si aplica
+      const solicitudId = (orden as any).solicitud_id;
+      if (solicitudId) {
+        const { rows: [{ count }] } = await client.query(
+          `SELECT COUNT(*) as count FROM ordenes_compra
+           WHERE solicitud_id = $1 AND id != $2 AND estado = 'Vigente'`,
+          [solicitudId, id]
+        );
+        if (Number(count) === 0) {
+          await solicitudesModel.updateSolicitudEstado(solicitudId, 'Pendiente', usuarioId, client);
+        }
+      }
+
+      await client.query('COMMIT');
+
+      // 4. Notificación (fire-and-forget)
+      const folio = (orden as any).folio || 'OC-' + String(id).padStart(6, '0');
+      const proyectoNombre = (orden as any).proyecto_nombre || '';
+      if (usuarioId) {
+        createNotifications([{
+          usuario_destino_id: usuarioId,
+          tipo: 'orden.anulada',
+          titulo: 'Orden de Compra Anulada',
+          mensaje: `La OC ${folio} del proyecto ${proyectoNombre} ha sido anulada.`,
+          entidad_tipo: 'orden_compra',
+          entidad_id: id,
+          payload: { folio, proyecto: proyectoNombre },
+        }]).catch(() => {});
+      }
+
+      const updated = await ordenesModel.getOrdenById(id);
+      res.json(updated);
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error: any) {
+    console.error('Error al anular orden de compra:', error);
+    res.status(500).json({ error: error.message || 'Error al anular la orden de compra' });
   }
 }
 

@@ -150,7 +150,7 @@ export async function getSolicitudCotizacionForOC(solicitudCotizacionId: number,
 export async function checkExistingOC(solicitudCotizacionId: number, db?: Queryable): Promise<number | null> {
   const conn = getDb(db);
   const { rows } = await conn.query(
-    'SELECT id FROM ordenes_compra WHERE solicitud_cotizacion_id = $1',
+    "SELECT id FROM ordenes_compra WHERE solicitud_cotizacion_id = $1 AND estado = 'Vigente'",
     [solicitudCotizacionId]
   );
   return rows[0]?.id || null;
@@ -223,6 +223,17 @@ export async function updateFolio(id: number, folio: string, db?: Queryable): Pr
   );
 
   return orden || null;
+}
+
+export async function updateOrdenEstado(id: number, estado: string, updatedByUsuarioId?: number | null, db?: Queryable): Promise<OrdenCompra | null> {
+  const conn = getDb(db);
+  const estadoEntregaUpdate = estado === 'Anulada' ? ", estado_entrega = 'Anulada'" : '';
+  const { rows: [updated] } = await conn.query(
+    `UPDATE ordenes_compra SET estado = $1${estadoEntregaUpdate}, updated_at = NOW()
+     WHERE id = $2 RETURNING *`,
+    [estado, id]
+  );
+  return updated || null;
 }
 
 export async function updateEstadoEntrega(id: number, estado: string, updatedByUsuarioId?: number | null): Promise<OrdenCompra | null> {

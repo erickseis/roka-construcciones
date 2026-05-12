@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus, Eye, Truck, PackageCheck, FileText } from 'lucide-react';
+import { Plus, Eye, Truck, PackageCheck, FileText, XCircle } from 'lucide-react';
 import { DataTable } from '../ui/DataTable';
 import { StatusBadge } from '../ui/StatusBadge';
 import { Modal } from '../ui/Modal';
@@ -12,7 +12,7 @@ import { CrearOCModal } from './CrearOCModal';
 import { useApi } from '@/hooks/useApi';
 import { formatCLP } from '@/lib/utils';
 import {
-  getOrdenes, updateEstadoEntrega, getOrden
+  getOrdenes, updateEstadoEntrega, anularOrden, getOrden
 } from '@/lib/api';
 
 export default function OrdenesPage() {
@@ -55,6 +55,7 @@ export default function OrdenesPage() {
           { value: 'Pendiente', label: 'Pendiente' },
           { value: 'Recibido parcial', label: 'Recibido parcial' },
           { value: 'Completado', label: 'Completado' },
+          { value: 'Anulada', label: 'Anulada' },
         ]
       },
       { key: 'proveedor', label: 'Proveedor', type: 'select', options: proveedores.map(p => ({ value: p, label: p })) },
@@ -72,6 +73,17 @@ export default function OrdenesPage() {
       refetch();
     } catch {
       alert('Error al actualizar estado');
+    }
+  };
+
+  const handleAnular = async (id: number) => {
+    const confirmed = window.confirm('¿Estás seguro de anular esta Orden de Compra? Se liberará el presupuesto y la solicitud de materiales volverá a Pendiente.');
+    if (!confirmed) return;
+    try {
+      await anularOrden(id);
+      refetch();
+    } catch (err: any) {
+      alert(err.message || 'Error al anular orden de compra');
     }
   };
 
@@ -141,9 +153,24 @@ export default function OrdenesPage() {
       render: (row: any) => <StatusBadge status={row.estado_entrega} />,
     },
     {
+      key: 'estado',
+      header: 'Estado',
+      sortable: true,
+      render: (row: any) => {
+        const isAnulada = row.estado === 'Anulada';
+        return (
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+            isAnulada ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+          }`}>
+            {isAnulada ? 'Anulada' : 'Vigente'}
+          </span>
+        );
+      },
+    },
+    {
       key: 'actions',
       header: '',
-      className: 'w-40',
+      className: 'w-48',
       render: (row: any) => (
         <div className="flex gap-1">
           <button
@@ -160,7 +187,7 @@ export default function OrdenesPage() {
           >
             <Eye size={14} />
           </button>
-          {row.estado_entrega === 'Pendiente' && (
+          {row.estado !== 'Anulada' && row.estado_entrega === 'Pendiente' && (
             <button
               onClick={(e) => { e.stopPropagation(); handleUpdateEntrega(row.id, 'Recibido parcial'); }}
               className="rounded-lg p-1.5 text-slate-400 hover:bg-sky-50 hover:text-sky-600 transition-colors cursor-pointer"
@@ -169,13 +196,22 @@ export default function OrdenesPage() {
               <Truck size={14} />
             </button>
           )}
-          {row.estado_entrega === 'Recibido parcial' && (
+          {row.estado !== 'Anulada' && row.estado_entrega === 'Recibido parcial' && (
             <button
               onClick={(e) => { e.stopPropagation(); handleUpdateEntrega(row.id, 'Completado'); }}
               className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors cursor-pointer"
               title="Marcar completado"
             >
               <PackageCheck size={14} />
+            </button>
+          )}
+          {(!row.estado || row.estado === 'Vigente') && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleAnular(row.id); }}
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
+              title="Anular orden de compra"
+            >
+              <XCircle size={14} />
             </button>
           )}
         </div>
@@ -217,11 +253,12 @@ export default function OrdenesPage() {
       </motion.div>
 
       {/* Stats */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
+          { label: 'Vigentes', value: ordenes?.filter((o: any) => !o.estado || o.estado === 'Vigente').length || 0, color: 'text-emerald-600 dark:text-emerald-400' },
           { label: 'Pendientes', value: ordenes?.filter((o: any) => o.estado_entrega === 'Pendiente').length || 0, color: 'text-amber-600 dark:text-amber-400' },
           { label: 'Recibido Parcial', value: ordenes?.filter((o: any) => o.estado_entrega === 'Recibido parcial').length || 0, color: 'text-sky-600 dark:text-sky-400' },
-          { label: 'Completadas', value: ordenes?.filter((o: any) => o.estado_entrega === 'Completado').length || 0, color: 'text-emerald-600 dark:text-emerald-400' },
+          { label: 'Anuladas', value: ordenes?.filter((o: any) => o.estado === 'Anulada').length || 0, color: 'text-red-600 dark:text-red-400' },
         ].map(stat => (
           <div key={stat.label} className="rounded-xl bg-white p-4 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700">
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stat.label}</p>
@@ -326,6 +363,14 @@ export default function OrdenesPage() {
               <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Estado Entrega</p>
                 <StatusBadge status={showDetail.estado_entrega} size="md" />
+              </div>
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
+                <p className="text-[10px] font-bold uppercase text-slate-400">Estado OC</p>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                  showDetail.estado === 'Anulada' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                }`}>
+                  {showDetail.estado === 'Anulada' ? 'Anulada' : 'Vigente'}
+                </span>
               </div>
             </div>
             <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-4 text-center dark:bg-emerald-950/20 dark:border-emerald-900">

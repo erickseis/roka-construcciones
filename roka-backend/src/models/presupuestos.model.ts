@@ -266,6 +266,26 @@ export async function commitCategoria(id: number, monto: number, db?: Queryable)
   );
 }
 
+export async function releasePresupuesto(id: number, monto: number, db?: Queryable): Promise<void> {
+  const conn = getDb(db);
+  await conn.query(
+    `UPDATE presupuestos_proyecto
+     SET monto_comprometido = GREATEST(monto_comprometido - $1, 0), updated_at = NOW()
+     WHERE id = $2`,
+    [monto, id]
+  );
+}
+
+export async function releaseCategoria(id: number, monto: number, db?: Queryable): Promise<void> {
+  const conn = getDb(db);
+  await conn.query(
+    `UPDATE presupuesto_categorias
+     SET monto_comprometido = GREATEST(monto_comprometido - $1, 0), updated_at = NOW()
+     WHERE id = $2`,
+    [monto, id]
+  );
+}
+
 export async function insertMovimiento(data: {
   presupuesto_id: number;
   categoria_id?: number | null;

@@ -174,4 +174,18 @@ Para ver la orden de compra:
       };
     }
   );
+
+  server.tool(
+    "anular_orden_compra",
+    "Anula una orden de compra vigente. Libera el presupuesto comprometido y revierte la solicitud de materiales a Pendiente si no hay otras OC activas.",
+    {
+      id: z.number().describe("ID de la orden de compra"),
+    },
+    async (args) => {
+      const res = await client.patch(`ordenes/${args.id}/anular`, {});
+      return {
+        content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }],
+      };
+    }
+  );
 }

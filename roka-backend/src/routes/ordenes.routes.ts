@@ -7,6 +7,7 @@ import {
   create,
   createManual,
   updateEntrega,
+  anularOrden,
   exportarHtml,
   exportarPdf,
   generarPdfLink,
@@ -29,6 +30,9 @@ router.post('/manual', authMiddleware, requirePermission('ordenes.create'), crea
 
 // PATCH /api/ordenes/:id/entrega — Actualizar estado de entrega
 router.patch('/:id/entrega', authMiddleware, updateEntrega);
+
+// PATCH /api/ordenes/:id/anular — Anular orden de compra
+router.patch('/:id/anular', authMiddleware, requirePermission('ordenes.create'), anularOrden);
 
 // GET /api/ordenes/:id/exportar — Exportar OC como HTML
 router.get('/:id/exportar', authMiddleware, exportarHtml);

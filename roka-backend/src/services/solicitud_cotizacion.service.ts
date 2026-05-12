@@ -300,7 +300,7 @@ export async function crearBatchSolicitudesCotizacion(input: BatchCreateSolicitu
 }
 
 export async function cambiarEstadoSolicitudCotizacion(id: number, estado: string, usuarioId: number | null) {
-  const validStates = ['Borrador', 'Enviada', 'Respondida', 'Anulada'];
+  const validStates = ['Borrador', 'Enviada', 'Respondida', 'Observación', 'Anulada'];
   if (!validStates.includes(estado)) {
     throw Object.assign(new Error('Estado no válido'), { statusCode: 400 });
   }

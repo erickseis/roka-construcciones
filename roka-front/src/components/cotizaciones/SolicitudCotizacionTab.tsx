@@ -119,6 +119,7 @@ export default function SolicitudCotizacionTab() {
           { value: 'Borrador', label: 'Borrador' },
           { value: 'Enviada', label: 'Enviada' },
           { value: 'Respondida', label: 'Respondida' },
+          { value: 'Observación', label: 'Observación' },
           { value: 'Anulada', label: 'Anulada' },
         ]
       },
@@ -252,6 +253,24 @@ export default function SolicitudCotizacionTab() {
               <FileText size={14} />
             </button>
           )}
+          {row.estado?.toUpperCase() === 'OBSERVACIÓN' && (
+            <>
+              {row.orden_id && (
+                <button onClick={(e) => { e.stopPropagation(); handlePreviewOC(row.orden_id); }}
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600 cursor-pointer" title="Ver OC anulada">
+                  <FileText size={14} />
+                </button>
+              )}
+              <button onClick={(e) => { e.stopPropagation(); setCrearOCFromSC(row.id); }}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 cursor-pointer" title="Crear Orden de Compra">
+                <ShoppingCart size={14} />
+              </button>
+              <button onClick={(e) => handleAnular(row.id, e)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 cursor-pointer" title="Anular Solicitud de Cotización">
+                <Ban size={14} />
+              </button>
+            </>
+          )}
           {row.estado?.toUpperCase() === 'BORRADOR' && (
             <>
               <button onClick={(e) => { e.stopPropagation(); handleEstado(row.id, 'Enviada'); }}
@@ -379,6 +398,7 @@ export default function SolicitudCotizacionTab() {
           { label: 'Borrador', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'BORRADOR').length || 0, color: 'text-slate-500 dark:text-slate-400', toggle: false },
           { label: 'Enviadas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'ENVIADA').length || 0, color: 'text-blue-600 dark:text-blue-400', toggle: false },
           { label: 'Respondidas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'RESPONDIDA').length || 0, color: 'text-emerald-600 dark:text-emerald-400', toggle: false },
+          { label: 'Observación', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'OBSERVACIÓN').length || 0, color: 'text-amber-600 dark:text-amber-400', toggle: false },
           { label: 'Anuladas', value: list?.filter((c: any) => c.estado?.toUpperCase() === 'ANULADA').length || 0, color: 'text-red-600 dark:text-red-400', toggle: true },
         ].map(stat => (
           <div

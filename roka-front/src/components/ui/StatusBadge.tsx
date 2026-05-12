@@ -28,6 +28,7 @@ const statusConfig: Record<string, { bg: string; text: string; dot: string }> = 
   'BORRADOR':          { bg: 'bg-slate-100 dark:bg-slate-800/60', text: 'text-slate-600 dark:text-slate-400', dot: 'bg-slate-400' },
   'ENVIADA':           { bg: 'bg-blue-50 dark:bg-blue-900/40',    text: 'text-blue-700 dark:text-blue-400',    dot: 'bg-blue-500' },
   'RESPONDIDA':        { bg: 'bg-emerald-50 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
+  'OBSERVACIÓN':       { bg: 'bg-amber-50 dark:bg-amber-900/40', text: 'text-amber-700 dark:text-amber-400', dot: 'bg-amber-500' },
   'ANULADA':           { bg: 'bg-red-50 dark:bg-red-900/40',    text: 'text-red-700 dark:text-red-400',    dot: 'bg-red-500' },
 };
 

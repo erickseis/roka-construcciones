@@ -377,10 +377,15 @@ export const createOrdenManual = (data: {
 }) =>
   fetchApi<any>('/ordenes/manual', { method: 'POST', body: JSON.stringify(data) });
 
-export const updateEstadoEntrega = (id: number, estado_entrega: string) =>
-  fetchApi<any>(`/ordenes/${id}/entrega`, {
+ export const updateEstadoEntrega = (id: number, estado_entrega: string) =>
+   fetchApi<any>(`/ordenes/${id}/entrega`, {
+     method: 'PATCH',
+     body: JSON.stringify({ estado_entrega }),
+   });
+
+export const anularOrden = (id: number) =>
+  fetchApi<any>(`/ordenes/${id}/anular`, {
     method: 'PATCH',
-    body: JSON.stringify({ estado_entrega }),
   });
 
 // ---- Notificaciones ----

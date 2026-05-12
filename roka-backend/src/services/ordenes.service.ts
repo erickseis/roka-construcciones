@@ -51,9 +51,9 @@ export async function generarOrdenCompra(input: GenerarOCInput, usuarioId: numbe
       await client.query('ROLLBACK');
       throw Object.assign(new Error('Solicitud de cotización no encontrada'), { statusCode: 404 });
     }
-    if (sc.estado !== 'Respondida') {
+    if (sc.estado !== 'Respondida' && sc.estado !== 'Observación') {
       await client.query('ROLLBACK');
-      throw Object.assign(new Error('La solicitud de cotización debe estar respondida para generar una OC'), { statusCode: 400 });
+      throw Object.assign(new Error('La solicitud de cotización debe estar respondida o en observación para generar una OC'), { statusCode: 400 });
     }
 
     // 2. Verificar que no exista OC duplicada
