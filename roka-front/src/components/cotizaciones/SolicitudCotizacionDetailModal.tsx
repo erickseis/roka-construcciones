@@ -40,6 +40,9 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
       const updated = await getSolicitudCotizacion(id);
       setData(updated);
       onSuccess();
+      if (estado === 'Anulada') {
+        window.dispatchEvent(new CustomEvent('solicitud-estado-cambio'));
+      }
     } catch (err: any) {
       alert(err.message || 'Error al cambiar estado');
     }
@@ -103,6 +106,7 @@ export default function SolicitudCotizacionDetailModal({ id, isOpen, onClose, on
       await deleteSolicitudCotizacion(id);
       onSuccess();
       onClose();
+      window.dispatchEvent(new CustomEvent('solicitud-estado-cambio'));
     } catch { alert('Error al eliminar'); }
   };
 

@@ -173,23 +173,26 @@ export async function deleteSolicitudCotizacion(id: number, db?: Queryable): Pro
   );
 
   if ((rowCount || 0) > 0) {
-    // Verificar si quedan cotizaciones activas para esta solicitud
-    const { rows: [{ count }] } = await conn.query(
-      `SELECT COUNT(*) as count FROM solicitud_cotizacion WHERE solicitud_id = $1 AND LOWER(estado) NOT IN ('anulada')`,
-      [sc.solicitud_id]
-    );
-
-    if (Number(count) === 0) {
-      // Si no quedan cotizaciones activas, volver a estado Pendiente
-      await conn.query(
-        "UPDATE solicitudes_material SET estado = 'Pendiente', updated_at = NOW() WHERE id = $1 AND estado != 'Anulada'",
-        [sc.solicitud_id]
-      );
-    }
+    await revertirSolicitudSiSinSCActivas(sc.solicitud_id, conn);
     return true;
   }
   
   return false;
+}
+
+export async function revertirSolicitudSiSinSCActivas(solicitudId: number, db?: Queryable): Promise<void> {
+  const conn = getDb(db);
+  const { rows: [{ count }] } = await conn.query(
+    `SELECT COUNT(*) as count FROM solicitud_cotizacion WHERE solicitud_id = $1 AND LOWER(estado) NOT IN ('anulada')`,
+    [solicitudId]
+  );
+
+  if (Number(count) === 0) {
+    await conn.query(
+      `UPDATE solicitudes_material SET estado = 'Pendiente', updated_at = NOW() WHERE id = $1 AND estado NOT IN ('Aprobado', 'Anulada')`,
+      [solicitudId]
+    );
+  }
 }
 
 export async function checkAllItemsCovered(solicitudId: number, db?: Queryable): Promise<boolean> {

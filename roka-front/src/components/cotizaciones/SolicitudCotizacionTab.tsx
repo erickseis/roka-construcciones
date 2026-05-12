@@ -139,11 +139,16 @@ export default function SolicitudCotizacionTab() {
     }
   }, []);
 
+  const notifySolicitudCambio = () => {
+    window.dispatchEvent(new CustomEvent('solicitud-estado-cambio'));
+  };
+
   const handleEstado = async (id: number, estado: string) => {
     try {
       await changeSolicitudCotizacionEstado(id, estado);
       refetch();
       refetchPendientes();
+      if (estado === 'Anulada') notifySolicitudCambio();
     } catch (err: any) {
       alert(err.message || 'Error al cambiar estado');
     }
@@ -166,6 +171,7 @@ export default function SolicitudCotizacionTab() {
         await changeSolicitudCotizacionEstado(id, 'Anulada');
         refetch();
         refetchPendientes();
+        notifySolicitudCambio();
       } catch { alert('Error al anular'); }
     }
   };
@@ -177,6 +183,7 @@ export default function SolicitudCotizacionTab() {
       await deleteSolicitudCotizacion(id);
       refetch();
       refetchPendientes();
+      notifySolicitudCambio();
     } catch { alert('Error al eliminar'); }
   };
 

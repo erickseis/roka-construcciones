@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Plus, FileText, Eye, Trash2, Upload, Download, Send, PackageCheck, Ban, UserCheck } from 'lucide-react';
 import * as XLSX from 'xlsx-js-style';
@@ -43,6 +43,18 @@ export default function SolicitudesPage() {
   const [showAnuladas, setShowAnuladas] = useState(false);
   const { data: solicitudes, loading, refetch } = useApi(() => getSolicitudes(showAnuladas ? { estado: 'Anulada' } : {}), [showAnuladas]);
   const { data: proyectos } = useApi(() => getProyectos(), []);
+
+  // Refetch cuando una solicitud de cotización es anulada/eliminada o al volver a la pestaña
+  useEffect(() => {
+    const handleCambio = () => refetch();
+    window.addEventListener('solicitud-estado-cambio', handleCambio);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') refetch();
+    });
+    return () => {
+      window.removeEventListener('solicitud-estado-cambio', handleCambio);
+    };
+  }, [refetch]);
 
   // Filters state
   const [filters, setFilters] = useState<Record<string, string>>({

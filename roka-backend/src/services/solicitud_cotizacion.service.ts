@@ -6,6 +6,7 @@ import {
   updateSolicitudCotizacionEstado,
   checkAllItemsCovered,
   updateSolicitudEstadoIfPendiente,
+  revertirSolicitudSiSinSCActivas,
 } from '../models/solicitud_cotizacion.model';
 import {
   createNotifications,
@@ -305,6 +306,15 @@ export async function cambiarEstadoSolicitudCotizacion(id: number, estado: strin
     throw Object.assign(new Error('Estado no válido'), { statusCode: 400 });
   }
 
+  // Obtener SC para validaciones que necesitan solicitud_id
+  const { rows: [scData] } = await pool.query(
+    'SELECT solicitud_id FROM solicitud_cotizacion WHERE id = $1',
+    [id]
+  );
+  if (!scData) {
+    throw Object.assign(new Error('Solicitud de cotización no encontrada'), { statusCode: 404 });
+  }
+
   // Validación para estado Respondida
   if (estado === 'Respondida') {
     const { rows: [sc] } = await pool.query(
@@ -315,10 +325,6 @@ export async function cambiarEstadoSolicitudCotizacion(id: number, estado: strin
       [id]
     );
 
-    if (!sc) {
-      throw Object.assign(new Error('Solicitud de cotización no encontrada'), { statusCode: 404 });
-    }
-
     if (!sc.archivo_adjunto_path && Number(sc.has_prices) === 0) {
       throw Object.assign(new Error('No se puede marcar como Respondida sin haber cargado la respuesta del vendedor (precios o archivo)'), { statusCode: 400 });
     }
@@ -328,6 +334,12 @@ export async function cambiarEstadoSolicitudCotizacion(id: number, estado: strin
   if (!sc) {
     throw Object.assign(new Error('Solicitud de cotización no encontrada'), { statusCode: 404 });
   }
+
+  // Si se anula, verificar si quedan SC activas para la misma solicitud
+  if (estado === 'Anulada') {
+    await revertirSolicitudSiSinSCActivas(scData.solicitud_id);
+  }
+
   return sc;
 }
 
