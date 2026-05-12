@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { execSync } from 'child_process';
 import puppeteer, { Browser } from 'puppeteer-core';
 
 function detectChromePath(): string | undefined {
@@ -28,24 +29,50 @@ let browserInstance: Browser | null = null;
 async function killOrphanedChrome(): Promise<void> {
   if (!browserInstance) return;
   try {
-    await browserInstance.close();
-  } catch {
-    try {
-      const pid = (browserInstance as any).process()?.pid;
-      if (pid) process.kill(pid, 'SIGKILL');
-    } catch {}
-  }
+    const pid = (browserInstance as any).process()?.pid;
+    if (pid) {
+      if (process.platform === 'win32') {
+        execSync(`taskkill /F /PID ${pid} /T`, { stdio: 'ignore' });
+      } else {
+        process.kill(pid, 'SIGKILL');
+      }
+    }
+  } catch {}
   browserInstance = null;
   browserPromise = null;
+  // Time for OS to release the userDataDir
+  await new Promise(r => setTimeout(r, 1000));
+}
+
+async function launchBrowser(retries = 3): Promise<Browser> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await puppeteer.launch({
+        executablePath: CHROME_EXECUTABLE,
+        userDataDir: USER_DATA_DIR,
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-extensions',
+          '--no-first-run',
+        ],
+      });
+    } catch (err: any) {
+      if (attempt < retries - 1 && err.message?.includes?.('already running')) {
+        await new Promise(r => setTimeout(r, (attempt + 1) * 2000));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('Failed to launch browser');
 }
 
 function getBrowser(): Promise<Browser> {
   if (browserInstance?.isConnected()) {
     return Promise.resolve(browserInstance);
-  }
-
-  if (browserInstance) {
-    killOrphanedChrome().catch(() => {});
   }
 
   if (!browserPromise) {
@@ -57,30 +84,17 @@ function getBrowser(): Promise<Browser> {
       fs.mkdirSync(USER_DATA_DIR, { recursive: true });
     }
 
-    browserPromise = puppeteer
-      .launch({
-        executablePath: CHROME_EXECUTABLE,
-        userDataDir: USER_DATA_DIR,
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-extensions',
-          '--no-first-run',
-        ],
-      })
-      .then((browser) => {
-        browserInstance = browser;
-        browser.on('disconnected', () => {
-          killOrphanedChrome().catch(() => {});
-        });
-        return browser;
-      })
-      .catch((err) => {
+    browserPromise = killOrphanedChrome().then(() => launchBrowser()).then((browser) => {
+      browserInstance = browser;
+      browser.on('disconnected', () => {
+        browserInstance = null;
         browserPromise = null;
-        throw err;
       });
+      return browser;
+    }).catch((err) => {
+      browserPromise = null;
+      throw err;
+    });
   }
 
   return browserPromise;
