@@ -20,33 +20,60 @@ function detectChromePath(): string | undefined {
 }
 
 const CHROME_EXECUTABLE = detectChromePath();
+const USER_DATA_DIR = path.join(os.tmpdir(), 'roka-puppeteer');
 
-// Singleton browser — una instancia para toda la vida del proceso.
-// Chrome en Windows usa mutex global: no permite múltiples procesos simultáneos.
 let browserPromise: Promise<Browser> | null = null;
 let browserInstance: Browser | null = null;
+
+async function killOrphanedChrome(): Promise<void> {
+  if (!browserInstance) return;
+  try {
+    await browserInstance.close();
+  } catch {
+    try {
+      const pid = (browserInstance as any).process()?.pid;
+      if (pid) process.kill(pid, 'SIGKILL');
+    } catch {}
+  }
+  browserInstance = null;
+  browserPromise = null;
+}
 
 function getBrowser(): Promise<Browser> {
   if (browserInstance?.isConnected()) {
     return Promise.resolve(browserInstance);
   }
+
+  if (browserInstance) {
+    killOrphanedChrome().catch(() => {});
+  }
+
   if (!browserPromise) {
     if (!CHROME_EXECUTABLE) {
       return Promise.reject(new Error('Chrome executable not found. Set CHROME_PATH env var.'));
     }
-    const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_'));
+
+    if (!fs.existsSync(USER_DATA_DIR)) {
+      fs.mkdirSync(USER_DATA_DIR, { recursive: true });
+    }
+
     browserPromise = puppeteer
       .launch({
         executablePath: CHROME_EXECUTABLE,
-        userDataDir,
+        userDataDir: USER_DATA_DIR,
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-extensions',
+          '--no-first-run',
+        ],
       })
       .then((browser) => {
         browserInstance = browser;
         browser.on('disconnected', () => {
-          browserInstance = null;
-          browserPromise = null;
+          killOrphanedChrome().catch(() => {});
         });
         return browser;
       })
@@ -55,6 +82,7 @@ function getBrowser(): Promise<Browser> {
         throw err;
       });
   }
+
   return browserPromise;
 }
 
