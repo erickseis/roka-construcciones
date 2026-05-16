@@ -417,55 +417,67 @@ REGLAS:
       const client = getNvidiaClient();
       parsed = await callNvidiaWithRetry(client, systemPrompt, content);
     } else if (ext === '.pdf') {
-      const imagePaths = await convertPdfToImages(archivoPath);
-      tempDir = path.join(path.dirname(archivoPath), 'ocr_temp');
-
       const pdfText = await extractPdfText(archivoPath);
-      let baseUserText = userText;
-      if (pdfText && pdfText.trim().length > 0) {
-        const truncated = pdfText.substring(0, 4000);
-        baseUserText = `${userText}\n\nTEXTO CRUDO EXTRAÍDO DEL PDF:\n"""\n${truncated}\n"""`;
-      }
-
-      const totalPages = Math.min(imagePaths.length, 2);
-
-      const allRawItems: any[] = [];
-      let globalData: any = {};
+      const hasUsableText = pdfText && pdfText.trim().length >= 200;
       const client = getNvidiaClient();
 
-      for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
-        const pageBase64 = encodeImageBase64(imagePaths[pageIdx]);
-        const pageNum = pageIdx + 1;
-
-        const pagePrompt = totalPages > 1
-          ? `PÁGINA ${pageNum} DE ${totalPages}\n\n${baseUserText}`
-          : baseUserText;
-
-        const pageContent: any[] = [
-          { type: 'text', text: pagePrompt },
-          { type: 'image_url', image_url: { url: `data:image/png;base64,${pageBase64}` } }
+      if (hasUsableText) {
+        // Text layer present → send text-only. Avoids pdfjs Helvetica path-resolution
+        // bug that produces blank PNGs and leads VLM to return schema template.
+        const truncated = pdfText.substring(0, 8000);
+        const textContent = [
+          { type: 'text', text: `${userText}\n\nCONTENIDO DEL PDF (texto extraído):\n"""\n${truncated}\n"""` }
         ];
+        parsed = await callNvidiaWithRetry(client, systemPrompt, textContent);
+        content = [];
+      } else {
+        // No text layer (scanned PDF) → fall back to image-based OCR
+        const imagePaths = await convertPdfToImages(archivoPath);
+        tempDir = path.join(path.dirname(archivoPath), 'ocr_temp');
 
-        const pageParsed = await callNvidiaWithRetry(client, systemPrompt, pageContent);
-
-        if (pageParsed.items) allRawItems.push(...pageParsed.items);
-
-        if (pageIdx === 0) {
-          globalData = {
-            numero_cov: pageParsed.numero_cov,
-            proveedor_nombre: pageParsed.proveedor_nombre,
-            proveedor_rut: pageParsed.proveedor_rut,
-            monto_total: pageParsed.monto_total,
-            monto_total_raw: pageParsed.monto_total_raw,
-            condiciones_pago: pageParsed.condiciones_pago,
-            plazo_entrega: pageParsed.plazo_entrega,
-            datos_raw: pageParsed,
-          };
+        let baseUserText = userText;
+        if (pdfText && pdfText.trim().length > 0) {
+          baseUserText = `${userText}\n\nTEXTO CRUDO EXTRAÍDO DEL PDF:\n"""\n${pdfText.substring(0, 4000)}\n"""`;
         }
-      }
 
-      parsed = { ...globalData, items: allRawItems };
-      content = []; // dummy, not used after this point
+        const totalPages = Math.min(imagePaths.length, 2);
+        const allRawItems: any[] = [];
+        let globalData: any = {};
+
+        for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
+          const pageBase64 = encodeImageBase64(imagePaths[pageIdx]);
+          const pageNum = pageIdx + 1;
+
+          const pagePrompt = totalPages > 1
+            ? `PÁGINA ${pageNum} DE ${totalPages}\n\n${baseUserText}`
+            : baseUserText;
+
+          const pageContent: any[] = [
+            { type: 'text', text: pagePrompt },
+            { type: 'image_url', image_url: { url: `data:image/png;base64,${pageBase64}` } }
+          ];
+
+          const pageParsed = await callNvidiaWithRetry(client, systemPrompt, pageContent);
+
+          if (pageParsed.items) allRawItems.push(...pageParsed.items);
+
+          if (pageIdx === 0) {
+            globalData = {
+              numero_cov: pageParsed.numero_cov,
+              proveedor_nombre: pageParsed.proveedor_nombre,
+              proveedor_rut: pageParsed.proveedor_rut,
+              monto_total: pageParsed.monto_total,
+              monto_total_raw: pageParsed.monto_total_raw,
+              condiciones_pago: pageParsed.condiciones_pago,
+              plazo_entrega: pageParsed.plazo_entrega,
+              datos_raw: pageParsed,
+            };
+          }
+        }
+
+        parsed = { ...globalData, items: allRawItems };
+        content = [];
+      }
     } else if (ext === '.csv') {
       const csvContent = fs.readFileSync(archivoPath, 'utf-8');
       content = [
