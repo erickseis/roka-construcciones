@@ -41,23 +41,58 @@ export const login = (credentials: any) =>
 
 export const getMe = () => fetchApi<any>('/auth/me');
 
+export const getAuthPermisos = () => fetchApi<string[]>('/auth/permisos');
+
 // ---- Usuarios ----
 export const getUsers = () => fetchApi<any[]>('/users');
 export const createUser = (data: any) =>
   fetchApi<any>('/users', { method: 'POST', body: JSON.stringify(data) });
+export const updateUser = (id: number, data: any) =>
+  fetchApi<any>(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteUser = (id: number) =>
   fetchApi<any>(`/users/${id}`, { method: 'DELETE' });
+export const updateUserPassword = (id: number, password: string) =>
+  fetchApi<any>(`/users/${id}/password`, { method: 'PUT', body: JSON.stringify({ password }) });
 
 // ---- Configuración Estructural ----
 export const getDepartamentos = () => fetchApi<any[]>('/config/departamentos');
 export const createDepartamento = (data: any) =>
   fetchApi<any>('/config/departamentos', { method: 'POST', body: JSON.stringify(data) });
+export const updateDepartamento = (id: number, data: any) =>
+  fetchApi<any>(`/config/departamentos/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteDepartamento = (id: number, migrar_a_id?: number) =>
+  fetchApi<any>(`/config/departamentos/${id}`, { method: 'DELETE', body: JSON.stringify({ migrar_a_id }) });
 
 export const getCargos = () => fetchApi<any[]>('/config/cargos');
 export const createCargo = (data: any) =>
   fetchApi<any>('/config/cargos', { method: 'POST', body: JSON.stringify(data) });
+export const updateCargo = (id: number, data: any) =>
+  fetchApi<any>(`/config/cargos/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteCargo = (id: number, migrar_a_id?: number) =>
+  fetchApi<any>(`/config/cargos/${id}`, { method: 'DELETE', body: JSON.stringify({ migrar_a_id }) });
 
-export const getRoles = () => fetchApi<any[]>('/config/roles');
+export const getRoles = (params?: { incluir_inactivos?: boolean }) => {
+  const qs = params?.incluir_inactivos ? '?incluir_inactivos=true' : '';
+  return fetchApi<any[]>(`/config/roles${qs}`);
+};
+export const createRole = (data: any) =>
+  fetchApi<any>('/config/roles', { method: 'POST', body: JSON.stringify(data) });
+export const updateRole = (id: number, data: any) =>
+  fetchApi<any>(`/config/roles/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteRole = (id: number, migrar_a_id?: number) =>
+  fetchApi<any>(`/config/roles/${id}`, { method: 'DELETE', body: JSON.stringify({ migrar_a_id }) });
+export const reactivateRole = (id: number) =>
+  fetchApi<any>(`/config/roles/${id}/reactivar`, { method: 'PATCH' });
+
+export const getConfigPermisos = () => fetchApi<any[]>('/config/permisos');
+
+export const getPermisosByRol = (rolId: number) => fetchApi<string[]>(`/config/roles/${rolId}/permisos`);
+
+export const updatePermisosByRol = (rolId: number, codigos: string[]) =>
+  fetchApi<any>(`/config/roles/${rolId}/permisos`, {
+    method: 'PUT',
+    body: JSON.stringify({ codigos }),
+  });
 
 // ---- Proyectos ----
 export const getProyectos = () => fetchApi<any[]>('/dashboard/proyectos');
@@ -135,6 +170,27 @@ export const downloadLicitacionArchivo = (id: number, nombreArchivo: string) => 
     });
 };
 
+export const downloadMaterialesArchivo = (id: number, nombreArchivo: string) => {
+  const token = localStorage.getItem('roka_token');
+  const headers: HeadersInit = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return fetch(`${API_BASE}/proyectos/${id}/materiales-archivo`, { headers })
+    .then(res => {
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      return res.blob();
+    })
+    .then(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = nombreArchivo;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    });
+};
+
 // ---- Presupuestos ----
 export const getPresupuestos = () => fetchApi<any[]>('/presupuestos');
 export const getPresupuestoProyecto = (proyectoId: number) =>
@@ -174,25 +230,106 @@ export const updateSolicitudEstado = (id: number, estado: string) =>
 export const deleteSolicitud = (id: number) =>
   fetchApi<any>(`/solicitudes/${id}`, { method: 'DELETE' });
 
-// ---- Cotizaciones ----
-export const getCotizaciones = (params?: { solicitud_id?: number; estado?: string }) => {
+export const exportarSolicitudHtml = (id: number) => {
+  const baseUrl = import.meta.env.VITE_API_URL + '/roka/api';
+  const token = localStorage.getItem('roka_token') || '';
+  const url = `${baseUrl}/solicitudes/${id}/html`;
+
+  const win = window.open('', '_blank');
+  if (!win) {
+    alert('Por favor permite ventanas emergentes para imprimir el documento.');
+    return;
+  }
+
+  fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    .then(r => r.text())
+    .then(html => {
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+      win.addEventListener('load', () => { win.focus(); win.print(); });
+    })
+    .catch(() => {
+      win.close();
+      alert('Error al generar el documento para imprimir.');
+    });
+};
+
+// ---- Solicitudes de Cotización ----
+export const getSolicitudesCotizacion = (params?: { solicitud_id?: number; estado?: string; proveedor?: string; proyecto_id?: number }) => {
   const query = new URLSearchParams();
   if (params?.solicitud_id) query.set('solicitud_id', String(params.solicitud_id));
   if (params?.estado) query.set('estado', params.estado);
+  if (params?.proveedor) query.set('proveedor', params.proveedor);
+  if (params?.proyecto_id) query.set('proyecto_id', String(params.proyecto_id));
   const qs = query.toString();
-  return fetchApi<any[]>(`/cotizaciones${qs ? `?${qs}` : ''}`);
+  return fetchApi<any[]>(`/solicitud-cotizacion${qs ? `?${qs}` : ''}`);
 };
 
-export const getCotizacion = (id: number) => fetchApi<any>(`/cotizaciones/${id}`);
+export const getSolicitudCotizacion = (id: number) => fetchApi<any>(`/solicitud-cotizacion/${id}`);
 
-export const createCotizacion = (data: any) =>
-  fetchApi<any>('/cotizaciones', { method: 'POST', body: JSON.stringify(data) });
+export const createSolicitudCotizacion = (data: any) =>
+  fetchApi<any>('/solicitud-cotizacion', { method: 'POST', body: JSON.stringify(data) });
 
-export const aprobarCotizacion = (id: number) =>
-  fetchApi<any>(`/cotizaciones/${id}/aprobar`, { method: 'PATCH' });
+export const createBatchSolicitudesCotizacion = (data: any) =>
+  fetchApi<any>('/solicitud-cotizacion/batch', { method: 'POST', body: JSON.stringify(data) });
 
-export const rechazarCotizacion = (id: number) =>
-  fetchApi<any>(`/cotizaciones/${id}/rechazar`, { method: 'PATCH' });
+export const changeSolicitudCotizacionEstado = (id: number, estado: string) =>
+  fetchApi<any>(`/solicitud-cotizacion/${id}/estado`, {
+    method: 'PATCH',
+    body: JSON.stringify({ estado }),
+  });
+
+export const deleteSolicitudCotizacion = (id: number) =>
+  fetchApi<any>(`/solicitud-cotizacion/${id}`, { method: 'DELETE' });
+
+export const descargarSolicitudCotizacionPdf = (id: number) => {
+  const baseUrl = import.meta.env.VITE_API_URL + '/roka/api';
+  // Open in new window - the browser will handle the PDF download
+  window.open(`${baseUrl}/solicitud-cotizacion/${id}/descargar`, '_blank');
+};
+
+export const importarRespuestaSC = (solicitudCotizacionId: number, file: File) => {
+  const formData = new FormData();
+  formData.append('solicitud_cotizacion_id', String(solicitudCotizacionId));
+  formData.append('archivo_sc', file);
+  const baseUrl = import.meta.env.VITE_API_URL + '/roka/api';
+  const token = localStorage.getItem('roka_token');
+  return fetch(`${baseUrl}/solicitud-cotizacion/importar`, {
+    method: 'POST',
+    headers: {
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  }).then(res => {
+    if (!res.ok) return res.json().then(err => { throw new Error(err.error || 'Error al importar'); });
+    return res.json();
+  });
+};
+
+export const confirmarImportacionSC = (data: {
+  solicitud_cotizacion_id: number;
+  archivo_path?: string;
+  archivo_nombre?: string;
+  numero_cov?: string;
+  condiciones_pago?: string;
+  plazo_entrega?: string;
+  descuento_global?: number;
+  proveedor_nombre?: string;
+  items: Array<{
+    solicitud_item_id?: number | null;
+    precio_unitario: number;
+    descuento_porcentaje?: number;
+    codigo_proveedor?: string;
+    nombre_extraido?: string;
+    cantidad_extraida?: number;
+    unidad_extraida?: string;
+  }>;
+}) =>
+  fetchApi<any>('/solicitud-cotizacion/importar/confirmar', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 
 // ---- Órdenes de Compra ----
 export const getOrdenes = (params?: { estado_entrega?: string; proyecto_id?: number }) => {
@@ -206,9 +343,10 @@ export const getOrdenes = (params?: { estado_entrega?: string; proyecto_id?: num
 export const getOrden = (id: number) => fetchApi<any>(`/ordenes/${id}`);
 
 export const generarOrden = (data: {
-  cotizacion_id: number;
+  solicitud_cotizacion_id: number;
   condiciones_pago?: string;
   folio?: string;
+  numero_cov?: string;
   descuento_tipo?: 'none' | 'porcentaje' | 'monto';
   descuento_valor?: number;
   plazo_entrega?: string;
@@ -218,10 +356,36 @@ export const generarOrden = (data: {
 }) =>
   fetchApi<any>('/ordenes', { method: 'POST', body: JSON.stringify(data) });
 
-export const updateEstadoEntrega = (id: number, estado_entrega: string) =>
-  fetchApi<any>(`/ordenes/${id}/entrega`, {
+export const createOrdenManual = (data: {
+  proyecto_id: number;
+  proveedor: string;
+  proveedor_rut?: string;
+  proveedor_direccion?: string;
+  proveedor_telefono?: string;
+  proveedor_correo?: string;
+  items: { nombre_material: string; cantidad: number; unidad: string; precio_unitario: number; codigo?: string }[];
+  condiciones_pago?: string;
+  plazo_entrega?: string;
+  condiciones_entrega?: string;
+  atencion_a?: string;
+  observaciones?: string;
+  descuento_tipo?: 'none' | 'porcentaje' | 'monto';
+  descuento_valor?: number;
+  folio?: string;
+  solicitud_id?: number;
+  codigo_obra?: string;
+}) =>
+  fetchApi<any>('/ordenes/manual', { method: 'POST', body: JSON.stringify(data) });
+
+ export const updateEstadoEntrega = (id: number, estado_entrega: string) =>
+   fetchApi<any>(`/ordenes/${id}/entrega`, {
+     method: 'PATCH',
+     body: JSON.stringify({ estado_entrega }),
+   });
+
+export const anularOrden = (id: number) =>
+  fetchApi<any>(`/ordenes/${id}/anular`, {
     method: 'PATCH',
-    body: JSON.stringify({ estado_entrega }),
   });
 
 // ---- Notificaciones ----
@@ -311,3 +475,67 @@ export const updateProveedor = (id: number, data: any) =>
 
 export const deleteProveedor = (id: number) =>
   fetchApi<any>(`/proveedores/${id}`, { method: 'DELETE' });
+
+// ---- Notificaciones Email ----
+export const getEmailNotificationEventos = () =>
+  fetchApi<any[]>('/config/email/eventos');
+
+export const updateEmailNotificationEvento = (codigo: string, habilitado: boolean) =>
+  fetchApi<any>(`/config/email/eventos/${codigo}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ habilitado }),
+  });
+
+export const getEmailSystemConfig = () =>
+  fetchApi<Record<string, string>>('/config/email/sistema');
+
+export const updateEmailSystemConfig = (config: Record<string, string>) =>
+  fetchApi<any>('/config/email/sistema', { method: 'PUT', body: JSON.stringify(config) });
+
+export const testEmailConnection = (destinatario: string) =>
+  fetchApi<any>('/config/email/test', { method: 'POST', body: JSON.stringify({ destinatario }) });
+
+export const getEmailLogs = (limit?: number) =>
+  fetchApi<any[]>(`/config/email/logs${limit ? `?limit=${limit}` : ''}`);
+
+export const enviarSCProveedor = (id: number) =>
+  fetchApi<any>(`/solicitud-cotizacion/${id}/enviar-proveedor`, { method: 'POST' });
+
+export const enviarOCProveedor = (id: number) =>
+  fetchApi<any>(`/ordenes/${id}/enviar-proveedor`, { method: 'POST' });
+
+// ---- Alertas de Fecha de Entrega ----
+export interface AlertaEmailConfig {
+  id: number;
+  habilitada: boolean;
+  umbral_tipo: 'horas' | 'dias';
+  umbral_valor: number;
+  recordatorios_habilitados: boolean;
+  recordatorios_cantidad: number;
+  recordatorios_frecuencia_hs: number;
+  destinatarios_usuario_ids: number[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UsuarioAlerta {
+  id: number;
+  nombre: string;
+  apellido: string;
+  correo: string;
+}
+
+export const getEmailAlertasConfig = () =>
+  fetchApi<AlertaEmailConfig>('/config/email/alertas');
+
+export const updateEmailAlertasConfig = (data: Partial<AlertaEmailConfig>) =>
+  fetchApi<AlertaEmailConfig>('/config/email/alertas', { method: 'PUT', body: JSON.stringify(data) });
+
+export const getUsuariosAlertas = () =>
+  fetchApi<UsuarioAlerta[]>('/config/email/alertas/usuarios');
+
+// ---- Configuración de Triage ----
+export const getTriageConfig = () => fetchApi<any[]>('/config/triage');
+
+export const updateTriageConfig = (codigo: string, valor: number) =>
+  fetchApi<any>('/config/triage', { method: 'PUT', body: JSON.stringify({ codigo, valor }) });

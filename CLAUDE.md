@@ -132,6 +132,18 @@ El esquema se construye incrementalmente con migraciones:
 - `005_master_data_materials.sql`: unidades y maestro de materiales, link opcional de `solicitud_items` a `materiales`.
 - `006_material_categories.sql`: normaliza categorias de materiales en tabla dedicada.
 - `007_licitaciones.sql`: campos de licitacion en `proyectos` (numero, descripcion, fecha_apertura, monto_referencial, archivo_path, archivo_nombre).
+- `008_proveedores.sql`: catalogo de proveedores, tabla `proveedores`, vinculo con cotizaciones.
+- `009_ordenes_formato_comercial.sql`: formato comercial de OC (folio, descuentos, impuestos, totales).
+- `010_codigo_solicitud_items.sql`: campo `codigo` en `solicitud_items`.
+- `011_proveedores_condiciones.sql`: condiciones comerciales de proveedores (pago, despacho, plazo, moneda).
+- `012_proyectos_mandante.sql`: campo `mandante` en proyectos.
+- `013_proyectos_moneda.sql`: campo `moneda` en proyectos.
+- `014_ordenes_manual.sql`: OC manual sin cotizacion (cotizacion_id nullable, campos de proveedor directo).
+- `015_orden_compra_items.sql`: items detallados en OC.
+- `016_solicitud_cotizacion.sql`: solicitud de cotizacion (envio a proveedor sin precios), migracion de datos existentes.
+- `017_oc_mejoras.sql`: mejoras en OC (autorizado_por, solicitud_id, codigo_obra).
+- `018_proyectos_plazo_ejecucion.sql`: campo `plazo_ejecucion_dias` en proyectos.
+- `019_solicitudes_fecha_requerida.sql`: campo `fecha_requerida` en solicitudes.
 
 ### Entidades core (vision de negocio)
 

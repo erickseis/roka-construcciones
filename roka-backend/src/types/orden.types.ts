@@ -2,7 +2,13 @@ import { Queryable } from './index';
 
 export interface OrdenCompra {
   id: number;
-  cotizacion_id: number;
+  solicitud_cotizacion_id: number | null;
+  proyecto_id: number | null;
+  proveedor: string | null;
+  proveedor_rut: string | null;
+  proveedor_direccion: string | null;
+  proveedor_telefono: string | null;
+  proveedor_correo: string | null;
   condiciones_pago: string | null;
   total: number;
   folio: string | null;
@@ -18,20 +24,23 @@ export interface OrdenCompra {
   observaciones: string | null;
   estado_entrega: string;
   created_by_usuario_id: number | null;
+  autorizado_por_usuario_id?: number | null;
+  solicitud_id?: number | null;
+  codigo_obra?: string | null;
+  numero_cov?: string | null;
   created_at: Date;
   updated_at: Date;
-  proveedor?: string;
-  solicitud_id?: number;
   proyecto_nombre?: string;
 }
 
 export interface OrdenCompraDetalle extends OrdenCompra {
-  cotizacion_total: number;
+  sc_total: number;
   solicitante: string;
   fecha_solicitud: string;
   solicitud_estado: string;
   proyecto_ubicacion: string | null;
   proyecto_numero_licitacion: string | null;
+  proyecto_numero_obra?: string | null;
   proyecto_descripcion_licitacion: string | null;
   proveedor_rut: string | null;
   proveedor_razon_social: string | null;
@@ -47,10 +56,12 @@ export interface OrdenCompraDetalle extends OrdenCompra {
 
 export interface OrdenItem {
   id: number;
-  cotizacion_id: number;
+  solicitud_cotizacion_detalle_id?: number;
   solicitud_item_id: number;
   precio_unitario: number;
   subtotal: number;
+  descuento_porcentaje?: number;
+  codigo_proveedor?: string;
   nombre_material?: string;
   cantidad_requerida?: number;
   unidad?: string;
@@ -58,7 +69,7 @@ export interface OrdenItem {
 }
 
 export interface GenerarOCInput {
-  cotizacion_id: number;
+  solicitud_cotizacion_id: number;
   condiciones_pago?: string;
   folio?: string;
   descuento_tipo?: string;
@@ -67,4 +78,7 @@ export interface GenerarOCInput {
   condiciones_entrega?: string;
   atencion_a?: string;
   observaciones?: string;
+  autorizado_por_usuario_id?: number | null;
+  codigo_obra?: string;
+  numero_cov?: string | null;
 }

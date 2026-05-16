@@ -42,6 +42,10 @@ export function registerProveedoresTools(server: McpServer, client: ApiClient) {
       contacto_nombre: z.string().optional().describe("Nombre de la persona de contacto"),
       contacto_telefono: z.string().optional().describe("Teléfono de contacto"),
       contacto_correo: z.string().optional().describe("Correo de contacto"),
+      condiciones_pago: z.string().optional().describe("Condiciones de pago (ej: Neto 30 días)"),
+      condicion_despacho: z.string().optional().describe("Condición de despacho (ej: Despacho a obra)"),
+      plazo_entrega: z.string().optional().describe("Plazo de entrega (ej: 5 días hábiles)"),
+      moneda: z.string().optional().describe("Moneda (ej: CLP, USD)"),
     },
     async (args) => {
       const res = await client.post("proveedores", args);
@@ -66,6 +70,10 @@ export function registerProveedoresTools(server: McpServer, client: ApiClient) {
       contacto_telefono: z.string().optional(),
       contacto_correo: z.string().optional(),
       is_active: z.boolean().optional(),
+      condiciones_pago: z.string().optional().describe("Condiciones de pago"),
+      condicion_despacho: z.string().optional().describe("Condición de despacho"),
+      plazo_entrega: z.string().optional().describe("Plazo de entrega"),
+      moneda: z.string().optional().describe("Moneda"),
     },
     async ({ id, ...body }) => {
       const res = await client.put(`proveedores/${id}`, body);

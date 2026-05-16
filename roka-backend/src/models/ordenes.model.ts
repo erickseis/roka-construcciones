@@ -9,12 +9,17 @@ export interface OrdenFilters {
 export async function getAllOrdenes(filters: OrdenFilters): Promise<OrdenCompra[]> {
   const db = getDb();
   let query = `
-    SELECT oc.*, c.proveedor, c.solicitud_id,
-           p.nombre AS proyecto_nombre
+    SELECT oc.*,
+           COALESCE(sc.proveedor, oc.proveedor) AS proveedor,
+           sc.solicitud_id,
+           sm.fecha_requerida,
+           p.nombre AS proyecto_nombre,
+           p.numero_obra AS proyecto_numero_obra,
+           COALESCE(sm.proyecto_id, oc.proyecto_id) AS proyecto_id
     FROM ordenes_compra oc
-    JOIN cotizaciones c ON c.id = oc.cotizacion_id
-    JOIN solicitudes_material sm ON sm.id = c.solicitud_id
-    JOIN proyectos p ON p.id = sm.proyecto_id
+    LEFT JOIN solicitud_cotizacion sc ON sc.id = oc.solicitud_cotizacion_id
+    LEFT JOIN solicitudes_material sm ON sm.id = COALESCE(oc.solicitud_id, sc.solicitud_id)
+    LEFT JOIN proyectos p ON p.id = COALESCE(sm.proyecto_id, oc.proyecto_id)
     WHERE 1=1
   `;
   const params: any[] = [];
@@ -25,7 +30,7 @@ export async function getAllOrdenes(filters: OrdenFilters): Promise<OrdenCompra[
   }
   if (filters.proyecto_id) {
     params.push(filters.proyecto_id);
-    query += ` AND sm.proyecto_id = $${params.length}`;
+    query += ` AND COALESCE(sm.proyecto_id, oc.proyecto_id) = $${params.length}`;
   }
 
   query += ' ORDER BY oc.created_at DESC';
@@ -37,26 +42,34 @@ export async function getAllOrdenes(filters: OrdenFilters): Promise<OrdenCompra[
 export async function getOrdenById(id: number): Promise<OrdenCompraDetalle | null> {
   const db = getDb();
   const { rows: [orden] } = await db.query(`
-    SELECT oc.*, c.proveedor, c.proveedor_id, c.solicitud_id, c.total AS cotizacion_total,
-           sm.solicitante, sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
+    SELECT oc.*,
+           COALESCE(sc.proveedor, oc.proveedor) AS proveedor,
+           sc.proveedor_id, sc.solicitud_id AS cotizacion_solicitud_id,
+            sm.solicitante, sm.fecha_requerida, sm.fecha AS fecha_solicitud, sm.estado AS solicitud_estado,
            p.nombre AS proyecto_nombre, p.ubicacion AS proyecto_ubicacion,
            p.numero_licitacion AS proyecto_numero_licitacion,
+           p.numero_obra AS proyecto_numero_obra,
            p.descripcion_licitacion AS proyecto_descripcion_licitacion,
-           pr.rut AS proveedor_rut,
+           COALESCE(pr.rut, oc.proveedor_rut) AS proveedor_rut,
            pr.razon_social AS proveedor_razon_social,
-           pr.direccion AS proveedor_direccion,
-           pr.telefono AS proveedor_telefono,
-           pr.correo AS proveedor_correo,
+           COALESCE(pr.direccion, oc.proveedor_direccion) AS proveedor_direccion,
+           COALESCE(pr.telefono, oc.proveedor_telefono) AS proveedor_telefono,
+           COALESCE(pr.correo, oc.proveedor_correo) AS proveedor_correo,
            pr.contacto_nombre AS proveedor_contacto_nombre,
            pr.contacto_telefono AS proveedor_contacto_telefono,
            pr.contacto_correo AS proveedor_contacto_correo,
-           CONCAT(u.nombre, ' ', u.apellido) AS autorizado_por_nombre
+            CONCAT(ua.nombre, ' ', ua.apellido) AS autorizado_por_nombre,
+            COALESCE(oc.numero_cov, sc.numero_cov) AS numero_cov,
+           NULLIF(CONCAT(u_ent.nombre, ' ', u_ent.apellido), ' ') AS entrega_updated_by_nombre,
+           NULLIF(CONCAT(ur.nombre, ' ', ur.apellido), ' ') AS responsable_nombre
     FROM ordenes_compra oc
-    JOIN cotizaciones c ON c.id = oc.cotizacion_id
-    JOIN solicitudes_material sm ON sm.id = c.solicitud_id
-    JOIN proyectos p ON p.id = sm.proyecto_id
-    LEFT JOIN proveedores pr ON pr.id = c.proveedor_id
-    LEFT JOIN usuarios u ON u.id = oc.created_by_usuario_id
+    LEFT JOIN solicitud_cotizacion sc ON sc.id = oc.solicitud_cotizacion_id
+    LEFT JOIN solicitudes_material sm ON sm.id = COALESCE(oc.solicitud_id, sc.solicitud_id)
+    LEFT JOIN proyectos p ON p.id = COALESCE(sm.proyecto_id, oc.proyecto_id)
+    LEFT JOIN proveedores pr ON pr.id = sc.proveedor_id
+    LEFT JOIN usuarios ua ON ua.id = COALESCE(oc.autorizado_por_usuario_id, oc.created_by_usuario_id)
+    LEFT JOIN usuarios u_ent ON u_ent.id = oc.entrega_updated_by_usuario_id
+    LEFT JOIN usuarios ur ON ur.id = p.responsable_usuario_id
     WHERE oc.id = $1
   `, [id]);
 
@@ -64,21 +77,35 @@ export async function getOrdenById(id: number): Promise<OrdenCompraDetalle | nul
 }
 
 export async function getOrdenItems(cotizacionId: number): Promise<OrdenItem[]> {
+  if (!cotizacionId || cotizacionId === 0) return [];
   const db = getDb();
   const { rows } = await db.query(`
-    SELECT ci.*, si.nombre_material, si.cantidad_requerida, si.unidad,
-           m.sku AS material_sku
-    FROM cotizacion_items ci
-    JOIN solicitud_items si ON si.id = ci.solicitud_item_id
+    SELECT scd.*, si.nombre_material, si.cantidad_requerida, si.unidad,
+           COALESCE(m.sku, si.codigo) AS material_sku
+    FROM solicitud_cotizacion_detalle scd
+    JOIN solicitud_items si ON si.id = scd.solicitud_item_id
     LEFT JOIN materiales m ON m.id = si.material_id
-    WHERE ci.cotizacion_id = $1
-    ORDER BY ci.id
+    WHERE scd.solicitud_cotizacion_id = $1 AND scd.precio_unitario IS NOT NULL
+    ORDER BY scd.id
   `, [cotizacionId]);
 
   return rows;
 }
 
-export async function getCotizacionForOC(cotizacionId: number, db: Queryable): Promise<{
+export async function getOrdenItemsByOC(ordenCompraId: number): Promise<OrdenItem[]> {
+  const db = getDb();
+  const { rows } = await db.query(`
+    SELECT id, nombre_material, cantidad AS cantidad_requerida, unidad,
+           precio_unitario, subtotal, codigo AS material_sku, descuento_porcentaje
+    FROM orden_compra_items
+    WHERE orden_compra_id = $1
+    ORDER BY id
+  `, [ordenCompraId]);
+
+  return rows;
+}
+
+export async function getSolicitudCotizacionForOC(solicitudCotizacionId: number, db: Queryable): Promise<{
   id: number;
   solicitud_id: number;
   total: number;
@@ -90,35 +117,55 @@ export async function getCotizacionForOC(cotizacionId: number, db: Queryable): P
   presupuesto_categoria_id: number | null;
   solicitud_estado: string;
 } | null> {
-  const { rows: [cotizacion] } = await db.query(
-    `SELECT c.*, s.id AS solicitud_id_ref, s.estado AS solicitud_estado,
+  // Calcular total desde solicitud_cotizacion_detalle (donde precio_unitario IS NOT NULL)
+  const { rows: [sc] } = await db.query(
+    `SELECT sc.*, 
+            s.id AS solicitud_id_ref, s.estado AS solicitud_estado,
             s.proyecto_id, s.presupuesto_categoria_id,
-            p.nombre AS proyecto_nombre
-     FROM cotizaciones c
-     JOIN solicitudes_material s ON s.id = c.solicitud_id
+            p.nombre AS proyecto_nombre,
+            COALESCE(
+              (SELECT SUM(
+                CASE 
+                  WHEN scd.descuento_porcentaje > 0 THEN 
+                    (si.cantidad_requerida * scd.precio_unitario) * (1 - scd.descuento_porcentaje / 100)
+                  ELSE 
+                    si.cantidad_requerida * scd.precio_unitario
+                END
+              )
+              FROM solicitud_cotizacion_detalle scd
+              JOIN solicitud_items si ON si.id = scd.solicitud_item_id
+              WHERE scd.solicitud_cotizacion_id = sc.id AND scd.precio_unitario IS NOT NULL),
+              0
+            ) AS total
+     FROM solicitud_cotizacion sc
+     JOIN solicitudes_material s ON s.id = sc.solicitud_id
      JOIN proyectos p ON p.id = s.proyecto_id
-     WHERE c.id = $1`,
-    [cotizacionId]
+     WHERE sc.id = $1`,
+    [solicitudCotizacionId]
   );
 
-  return cotizacion || null;
+  return sc || null;
 }
 
-export async function checkExistingOC(cotizacionId: number, db?: Queryable): Promise<number | null> {
+export async function checkExistingOC(solicitudCotizacionId: number, db?: Queryable): Promise<number | null> {
   const conn = getDb(db);
   const { rows } = await conn.query(
-    'SELECT id FROM ordenes_compra WHERE cotizacion_id = $1',
-    [cotizacionId]
+    "SELECT id FROM ordenes_compra WHERE solicitud_cotizacion_id = $1 AND estado = 'Vigente'",
+    [solicitudCotizacionId]
   );
   return rows[0]?.id || null;
 }
 
 export async function createOrden(data: {
-  cotizacion_id: number;
+  solicitud_cotizacion_id: number;
   condiciones_pago: string;
   total: number;
   created_by_usuario_id: number | null;
+  autorizado_por_usuario_id?: number | null;
+  solicitud_id?: number | null;
+  codigo_obra?: string | null;
   folio: string | null;
+  numero_cov?: string | null;
   descuento_tipo: string;
   descuento_valor: number;
   descuento_monto: number;
@@ -133,19 +180,24 @@ export async function createOrden(data: {
   const conn = getDb(db);
   const { rows: [orden] } = await conn.query(
     `INSERT INTO ordenes_compra (
-        cotizacion_id, condiciones_pago, total, created_by_usuario_id,
-        folio, descuento_tipo, descuento_valor, descuento_monto,
+        solicitud_cotizacion_id, condiciones_pago, total, created_by_usuario_id,
+        autorizado_por_usuario_id, solicitud_id, codigo_obra,
+        folio, numero_cov, descuento_tipo, descuento_valor, descuento_monto,
         subtotal_neto, impuesto_monto, total_final,
         plazo_entrega, condiciones_entrega, atencion_a, observaciones
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
      RETURNING *`,
     [
-      data.cotizacion_id,
+      data.solicitud_cotizacion_id,
       data.condiciones_pago,
       data.total,
       data.created_by_usuario_id,
+      data.autorizado_por_usuario_id ?? null,
+      data.solicitud_id ?? null,
+      data.codigo_obra ?? null,
       data.folio,
+      data.numero_cov ?? null,
       data.descuento_tipo,
       data.descuento_valor,
       data.descuento_monto,
@@ -173,12 +225,23 @@ export async function updateFolio(id: number, folio: string, db?: Queryable): Pr
   return orden || null;
 }
 
-export async function updateEstadoEntrega(id: number, estado: string): Promise<OrdenCompra | null> {
-  const db = getDb();
-  const { rows: [updated] } = await db.query(
-    `UPDATE ordenes_compra SET estado_entrega = $1, updated_at = NOW()
+export async function updateOrdenEstado(id: number, estado: string, updatedByUsuarioId?: number | null, db?: Queryable): Promise<OrdenCompra | null> {
+  const conn = getDb(db);
+  const estadoEntregaUpdate = estado === 'Anulada' ? ", estado_entrega = 'Anulada'" : '';
+  const { rows: [updated] } = await conn.query(
+    `UPDATE ordenes_compra SET estado = $1${estadoEntregaUpdate}, updated_at = NOW()
      WHERE id = $2 RETURNING *`,
     [estado, id]
+  );
+  return updated || null;
+}
+
+export async function updateEstadoEntrega(id: number, estado: string, updatedByUsuarioId?: number | null): Promise<OrdenCompra | null> {
+  const db = getDb();
+  const { rows: [updated] } = await db.query(
+    `UPDATE ordenes_compra SET estado_entrega = $1, updated_at = NOW(), entrega_updated_by_usuario_id = $3, entrega_updated_at = NOW()
+     WHERE id = $2 RETURNING *`,
+    [estado, id, updatedByUsuarioId || null]
   );
 
   return updated || null;

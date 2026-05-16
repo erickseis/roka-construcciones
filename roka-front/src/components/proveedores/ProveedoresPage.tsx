@@ -46,8 +46,8 @@ export default function ProveedoresPage() {
       header: 'Proveedor',
       render: (row: any) => (
         <div>
-          <p className="font-bold text-slate-800">{row.nombre}</p>
-          {row.razon_social && <p className="text-xs text-slate-500">{row.razon_social}</p>}
+          <p className="font-bold text-slate-800 dark:text-slate-100">{row.nombre}</p>
+          {row.razon_social && <p className="text-xs text-slate-500 dark:text-slate-400">{row.razon_social}</p>}
         </div>
       ),
     },
@@ -96,13 +96,13 @@ export default function ProveedoresPage() {
         <div className="flex gap-1">
           <button
             onClick={(e) => { e.stopPropagation(); handleEdit(row); }}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
           >
             <Edit size={14} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 cursor-pointer"
           >
             <Trash2 size={14} />
           </button>
@@ -117,16 +117,16 @@ export default function ProveedoresPage() {
         <p className="mb-1 text-xs font-bold uppercase tracking-widest text-amber-600">Catálogos</p>
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-slate-900">
+            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               Proveedores
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Gestiona el catálogo de proveedores para cotizaciones y órdenes de compra.
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Gestiona el catálogo de proveedores para solicitudes de cotización y órdenes de compra.
             </p>
           </div>
           <button
             onClick={openNewForm}
-            className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 hover:shadow-amber-500/30 active:scale-[0.98]"
+            className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 hover:shadow-amber-500/30 active:scale-[0.98] cursor-pointer"
           >
             <Plus size={18} />
             Nuevo Proveedor
@@ -135,7 +135,7 @@ export default function ProveedoresPage() {
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <div className="rounded-xl bg-white p-6 shadow-sm">
+        <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-[#111827]/40 dark:border dark:border-slate-800">
           <DataTable
             columns={columns}
             data={proveedores || []}

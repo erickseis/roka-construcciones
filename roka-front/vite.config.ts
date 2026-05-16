@@ -15,7 +15,20 @@ export default defineConfig(({mode}) => {
         '@': path.resolve(__dirname, 'src'),
       },
     },
-server: {
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+            'vendor-xlsx': ['xlsx-js-style'],
+            'vendor-charts': ['recharts'],
+            'vendor-ui': ['lucide-react', 'motion', 'react-select', 'sweetalert2'],
+          },
+        },
+      },
+      chunkSizeWarningLimit: 300,
+    },
+ server: {
       hmr: process.env.DISABLE_HMR !== 'true',
       proxy: {
         '/api/roka': {
@@ -24,6 +37,10 @@ server: {
           rewrite: (path) => path.replace(/^\/api\/roka/, ''),
         },
         '/api': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+        },
+        '/uploads': {
           target: 'http://localhost:3001',
           changeOrigin: true,
         },

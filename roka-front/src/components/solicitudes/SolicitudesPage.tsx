@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Plus, FileText, Eye, Trash2, Upload } from 'lucide-react';
+import { Plus, FileText, Eye, Trash2, Upload, Download, Send, PackageCheck, Ban, UserCheck } from 'lucide-react';
+import * as XLSX from 'xlsx-js-style';
 import { DataTable } from '../ui/DataTable';
 import { StatusBadge } from '../ui/StatusBadge';
 import { Modal } from '../ui/Modal';
 import FlowStepper from '../ui/FlowStepper';
+import AuditTrailBadge from '../ui/AuditTrailBadge';
+import FilterPanel, { FilterField } from '../ui/FilterPanel';
+import CreatableSelect from 'react-select/creatable';
 import { useApi } from '@/hooks/useApi';
 import {
   getSolicitudes,
@@ -15,25 +19,98 @@ import {
   getMaterialesMaster,
   getUnidadesMedida,
   createMaterialMaster,
-  getCotizaciones
+  exportarSolicitudHtml
 } from '@/lib/api';
+import { showConfirm, showAlert, showToast } from '@/lib/alerts';
+import { usePermissions } from '@/context/PermissionsContext';
+import { useAuth } from '@/context/AuthContext';
 import MaterialModal from '../materiales/MaterialModal';
 import BulkImportModal from './BulkImportModal';
 import { MaterialInput } from '@/types';
 
 
 export default function SolicitudesPage() {
+  const { hasPermission } = usePermissions();
+  const { user } = useAuth();
+  const canViewAll = hasPermission('solicitudes.view_all');
+  const userName = user ? `${user.nombre} ${user.apellido}`.trim() : '';
+
   const [showForm, setShowForm] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showDetail, setShowDetail] = useState<any | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
-  const { data: solicitudes, loading, refetch } = useApi(() => getSolicitudes(), []);
+  const [showAnuladas, setShowAnuladas] = useState(false);
+  const { data: solicitudes, loading, refetch } = useApi(() => getSolicitudes(showAnuladas ? { estado: 'Anulada' } : {}), [showAnuladas]);
   const { data: proyectos } = useApi(() => getProyectos(), []);
+
+  // Refetch cuando una solicitud de cotización es anulada/eliminada o al volver a la pestaña
+  useEffect(() => {
+    const handleCambio = () => refetch();
+    window.addEventListener('solicitud-estado-cambio', handleCambio);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') refetch();
+    });
+    return () => {
+      window.removeEventListener('solicitud-estado-cambio', handleCambio);
+    };
+  }, [refetch]);
+
+  // Filters state
+  const [filters, setFilters] = useState<Record<string, string>>({
+    estado: '',
+    proyecto_id: '',
+    solicitante: '',
+    fecha_desde: '',
+    fecha_hasta: '',
+  });
+  const handleFilterChange = (key: string, value: string) => setFilters(prev => ({ ...prev, [key]: value }));
+  const handleResetFilters = () => setFilters({ estado: '', proyecto_id: '', solicitante: '', fecha_desde: '', fecha_hasta: '' });
+  const activeFilterCount = Object.values(filters).filter(v => v !== '').length;
+
+  // Sort + filter: Pendiente first, then Cotizando, then Aprobado, then others
+  const sortedSolicitudes = React.useMemo(() => {
+    if (!solicitudes) return [];
+    const order: Record<string, number> = { 'Pendiente': 0, 'Cotizando': 1, 'Aprobado': 2 };
+    let result = [...solicitudes];
+
+    // Apply filters
+    if (filters.estado) result = result.filter((s: any) => s.estado === filters.estado);
+    if (filters.proyecto_id) result = result.filter((s: any) => String(s.proyecto_id) === filters.proyecto_id);
+    if (filters.solicitante) result = result.filter((s: any) => (s.solicitante || '').toLowerCase().includes(filters.solicitante.toLowerCase()));
+    if (filters.fecha_desde) result = result.filter((s: any) => s.fecha && s.fecha.slice(0, 10) >= filters.fecha_desde);
+    if (filters.fecha_hasta) result = result.filter((s: any) => s.fecha && s.fecha.slice(0, 10) <= filters.fecha_hasta);
+
+    return result.sort((a: any, b: any) => {
+      const orderA = order[a.estado] ?? 3;
+      const orderB = order[b.estado] ?? 3;
+      if (orderA !== orderB) return orderA - orderB;
+      // Within same status, sort by date descending (newest first)
+      return new Date(b.created_at || b.fecha).getTime() - new Date(a.created_at || a.fecha).getTime();
+    });
+  }, [solicitudes, filters]);
+
+  const filterFields: FilterField[] = React.useMemo(() => [
+    {
+      key: 'estado', label: 'Estado', type: 'select',
+      options: [
+        { value: 'Pendiente', label: 'Pendiente' },
+        { value: 'Cotizando', label: 'Cotizando' },
+        { value: 'Aprobado', label: 'Aprobado' },
+        { value: 'Anulada', label: 'Anulada' },
+      ]
+    },
+    {
+      key: 'proyecto_id', label: 'Proyecto', type: 'select',
+      options: (proyectos || []).map((p: any) => ({ value: String(p.id), label: p.nombre }))
+    },
+    { key: 'solicitante', label: 'Solicitante', type: 'text', placeholder: 'Nombre...' },
+    { key: 'fecha_desde', label: 'Fecha desde', type: 'date' },
+    { key: 'fecha_hasta', label: 'Fecha hasta', type: 'date' },
+  ], [proyectos]);
   const { data: masterMateriales, refetch: refetchMateriales } = useApi(() => getMaterialesMaster(), []);
   const { data: masterUnidades } = useApi(() => getUnidadesMedida(), []);
-  const { data: cotizaciones } = useApi(() => getCotizaciones(), []);
-  
+
   // Material Modal state
   const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
 
@@ -41,14 +118,15 @@ export default function SolicitudesPage() {
   const [form, setForm] = useState({
     proyecto_id: '',
     solicitante: '',
-    items: [{ material_id: null as number | null, nombre_material: '', cantidad_requerida: '', unidad: 'Unidades' }],
+    fecha_requerida: '',
+    items: [{ material_id: null as number | null, nombre_material: '', cantidad_requerida: '', unidad: 'Unidades', codigo: '' }],
   });
   const [submitting, setSubmitting] = useState(false);
 
   const addItem = () => {
     setForm(prev => ({
       ...prev,
-      items: [...prev.items, { material_id: null, nombre_material: '', cantidad_requerida: '', unidad: 'Unidades' }],
+      items: [...prev.items, { material_id: null, nombre_material: '', cantidad_requerida: '', unidad: 'Unidades', codigo: '' }],
     }));
   };
 
@@ -70,18 +148,21 @@ export default function SolicitudesPage() {
       await createSolicitud({
         proyecto_id: Number(form.proyecto_id),
         solicitante: form.solicitante,
+        fecha_requerida: form.fecha_requerida || null,
         items: form.items.map(i => ({
           material_id: i.material_id,
           nombre_material: i.nombre_material,
           cantidad_requerida: Number(i.cantidad_requerida),
           unidad: i.unidad,
+          ...(i.codigo ? { codigo: i.codigo } : {}),
         })),
       });
       setShowForm(false);
       setForm({
         proyecto_id: '',
         solicitante: '',
-        items: [{ material_id: null, nombre_material: '', cantidad_requerida: '', unidad: 'Unidades' }],
+        fecha_requerida: '',
+        items: [{ material_id: null, nombre_material: '', cantidad_requerida: '', unidad: 'Unidades', codigo: '' }],
       });
       refetch();
     } catch (err) {
@@ -91,13 +172,42 @@ export default function SolicitudesPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('¿Eliminar esta solicitud?')) return;
+  const handleDelete = async (id: number, currentEstado: string) => {
+    if (currentEstado !== 'Anulada') {
+      const result = await showConfirm({
+        title: '¿Descartar Solicitud?',
+        text: 'La solicitud se marcará como descartada y se ocultará de los procesos activos.',
+        confirmButtonText: 'Sí, descartar',
+        cancelButtonText: 'No, cancelar',
+        confirmButtonColor: '#ef4444'
+      });
+      if (!result.isConfirmed) return;
+    } else {
+      const result = await showConfirm({
+        title: '¿Eliminar Permanentemente?',
+        text: 'Esta acción borrará definitivamente el registro de la base de datos. ¡No se puede deshacer!',
+        icon: 'error',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#ef4444'
+      });
+      if (!result.isConfirmed) return;
+    }
+
     try {
       await deleteSolicitud(id);
       refetch();
-    } catch {
-      alert('Error al eliminar');
+      if (showDetail && showDetail.id === id) setShowDetail(null);
+      showToast({
+        title: currentEstado === 'Anulada' ? 'Eliminada permanentemente' : 'Solicitud descartada',
+        icon: 'success'
+      });
+    } catch (err: any) {
+      showAlert({
+        title: 'Error',
+        text: err.message || 'Error al procesar la solicitud',
+        icon: 'error'
+      });
     }
   };
 
@@ -107,10 +217,22 @@ export default function SolicitudesPage() {
       header: 'ID',
       sortable: true,
       render: (row: any) => (
-        <span className="font-mono text-xs font-bold text-amber-600">SOL-{String(row.id).padStart(3, '0')}</span>
+        <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400">SOL-{String(row.id).padStart(3, '0')}</span>
       ),
     },
-    { key: 'proyecto_nombre', header: 'Proyecto', sortable: true },
+    { 
+      key: 'proyecto_nombre', 
+      header: 'Proyecto', 
+      sortable: true,
+      render: (row: any) => (
+        <div className="flex flex-col">
+          <span className="font-semibold text-slate-800 dark:text-slate-200">{row.proyecto_nombre}</span>
+          {row.proyecto_numero_obra && (
+            <span className="text-[10px] font-mono text-slate-400">N° {row.proyecto_numero_obra}</span>
+          )}
+        </div>
+      )
+    },
     { key: 'solicitante', header: 'Solicitante', sortable: true },
     {
       key: 'fecha',
@@ -122,7 +244,7 @@ export default function SolicitudesPage() {
       key: 'total_items',
       header: 'Ítems',
       render: (row: any) => (
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
           {row.total_items}
         </span>
       ),
@@ -140,6 +262,13 @@ export default function SolicitudesPage() {
       render: (row: any) => (
         <div className="flex gap-1">
           <button
+            onClick={(e) => { e.stopPropagation(); exportarSolicitudHtml(row.id); }}
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-500 transition-colors cursor-pointer"
+            title="Descargar PDF"
+          >
+            <Download size={14} />
+          </button>
+          <button
             onClick={async (e) => {
               e.stopPropagation();
               setLoadingDetail(true);
@@ -153,22 +282,93 @@ export default function SolicitudesPage() {
                 setLoadingDetail(false);
               }
             }}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
+            title="Ver detalle"
           >
             <Eye size={14} />
           </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-          >
-            <Trash2 size={14} />
-          </button>
+          {row.estado !== 'Aprobado' && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDelete(row.id, row.estado); }}
+              className={`rounded-lg p-1.5 transition-colors ${row.estado === 'Anulada'
+                ? 'text-red-600 hover:bg-red-100'
+                : 'text-slate-400 hover:bg-amber-50 hover:text-amber-500'
+                } cursor-pointer`}
+              title={row.estado === 'Anulada' ? 'Eliminar permanentemente' : 'Descartar solicitud'}
+            >
+              {row.estado === 'Anulada' ? <Trash2 size={14} /> : <Ban size={14} />}
+            </button>
+          )}
         </div>
       ),
     },
   ];
 
   const unidadesStatic = ['Unidades', 'kg', 'm³', 'Toneladas', 'Sacos', 'Galones', 'Piezas', 'ml', 'Litros'];
+
+  const downloadTemplate = () => {
+    // Hoja de Datos
+    const templateData = [
+      { 'Material': 'Cemento Gris', 'Cantidad': 10, 'Unidad': 'Sacos', 'SKU': 'CEM-001' },
+      { 'Material': 'Varilla 1/2', 'Cantidad': 50, 'Unidad': 'Piezas', 'SKU': 'VAR-002' },
+      { 'Material': 'Arena de Río', 'Cantidad': 5.5, 'Unidad': 'm3', 'SKU': '' },
+      { 'Material': 'Grava 3/4', 'Cantidad': 3, 'Unidad': 'm3', 'SKU': '' },
+    ];
+
+    // Hoja de Instrucciones
+    const instructionData = [
+      { 'Campo': 'Material', 'Descripción': 'Nombre del material o insumo (Obligatorio)', 'Ejemplo': 'Cemento Gris' },
+      { 'Campo': 'Cantidad', 'Descripción': 'Cantidad requerida en formato numérico (Obligatorio)', 'Ejemplo': '10' },
+      { 'Campo': 'Unidad', 'Descripción': 'Unidad de medida (Opcional, por defecto: Unidades)', 'Ejemplo': 'Sacos' },
+      { 'Campo': 'SKU', 'Descripción': 'Código interno del material (Opcional, ayuda a vincular con el catálogo)', 'Ejemplo': 'CEM-001' },
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wsIns = XLSX.utils.json_to_sheet(instructionData);
+
+    // Apply Styles to Headers (Datos)
+    const headerStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "F59E0B" } }, // Amber-500
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+
+    ['A1', 'B1', 'C1', 'D1'].forEach(cell => {
+      if (ws[cell]) ws[cell].s = headerStyle;
+    });
+
+    // Apply Styles to Headers (Instrucciones)
+    const insHeaderStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "0F172A" } }, // Slate-900
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+
+    ['A1', 'B1', 'C1'].forEach(cell => {
+      if (wsIns[cell]) wsIns[cell].s = insHeaderStyle;
+    });
+
+    // Configurar anchos de columna para la hoja principal
+    ws['!cols'] = [
+      { wch: 30 }, // Material
+      { wch: 10 }, // Cantidad
+      { wch: 15 }, // Unidad
+      { wch: 15 }, // SKU
+    ];
+
+    // Configurar anchos para instrucciones
+    wsIns['!cols'] = [
+      { wch: 15 },
+      { wch: 50 },
+      { wch: 20 },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Datos para Importar');
+    XLSX.utils.book_append_sheet(wb, wsIns, 'Instrucciones');
+
+    XLSX.writeFile(wb, 'Plantilla_Solicitud_Materiales.xlsx');
+  };
 
   const onNewMaterialSaved = async (data: MaterialInput) => {
     try {
@@ -188,24 +388,53 @@ export default function SolicitudesPage() {
         <p className="mb-1 text-xs font-bold uppercase tracking-widest text-amber-600">Módulo 1</p>
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-slate-900">
+            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               Solicitudes de Materiales
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Gestiona las solicitudes de materiales para cada proyecto de obra.
             </p>
+            {!canViewAll && (
+              <div className="mt-2 flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200 px-3 py-1.5">
+                <UserCheck size={14} className="text-blue-500" />
+                <span className="text-xs font-bold text-blue-700">Solo se muestran tus solicitudes</span>
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
-              onClick={() => setShowBulkImport(true)}
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
+              onClick={downloadTemplate}
+              className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              title="Descargar plantilla Excel para importación"
             >
-              <Upload size={18} />
-              Importar
+              <Download size={18} className="text-amber-500" />
+              Plantilla
             </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => setShowAnuladas(!showAnuladas)}
+                className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${showAnuladas
+                  ? 'bg-slate-800 text-white shadow-lg dark:bg-slate-700 cursor-pointer'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 shadow-sm dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 dark:hover:bg-slate-800 cursor-pointer'
+                  }`}
+              >
+                {showAnuladas ? 'Ver Activas' : 'Ver Anuladas'}
+              </button>
+
+              <button
+                onClick={() => setShowBulkImport(true)}
+                className="cursor-pointer flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98] dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 dark:hover:bg-slate-800"
+              >
+                <Upload size={18} className="text-slate-400" />
+                Importación Masiva
+              </button>
+            </div>
             <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 hover:shadow-amber-500/30 active:scale-[0.98]"
+              onClick={() => {
+                setForm(prev => ({ ...prev, solicitante: userName }));
+                setShowForm(true);
+              }}
+              className="cursor-pointer flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 hover:shadow-amber-500/30 active:scale-[0.98]"
             >
               <Plus size={18} />
               Nueva Solicitud
@@ -216,25 +445,45 @@ export default function SolicitudesPage() {
       </motion.div>
 
       {/* Stats Row */}
-      <div className="mb-6 grid grid-cols-3 gap-4">
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: 'Pendientes', value: solicitudes?.filter((s: any) => s.estado === 'Pendiente').length || 0, color: 'text-amber-600' },
-          { label: 'Cotizando', value: solicitudes?.filter((s: any) => s.estado === 'Cotizando').length || 0, color: 'text-blue-600' },
-          { label: 'Aprobadas', value: solicitudes?.filter((s: any) => s.estado === 'Aprobado').length || 0, color: 'text-emerald-600' },
+          { label: 'Pendientes por Cotizar', value: solicitudes?.filter((s: any) => s.estado === 'Pendiente').length || 0, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50', iconBg: 'bg-amber-100 dark:bg-amber-900/30', icon: <FileText size={18} />, title: 'Solicitudes de materiales que aún no tienen cotizaciones enviadas a proveedores. Necesitan crear solicitudes de cotización.' },
+          { label: 'En Cotización', value: solicitudes?.filter((s: any) => s.estado === 'Cotizando').length || 0, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50', iconBg: 'bg-blue-100 dark:bg-blue-900/30', icon: <Send size={18} />, title: 'Solicitudes con cotizaciones ya enviadas a proveedores, esperando respuesta de precios' },
+          { label: 'Aprobadas / Con OC', value: solicitudes?.filter((s: any) => s.estado === 'Aprobado').length || 0, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50', iconBg: 'bg-emerald-100 dark:bg-emerald-900/30', icon: <PackageCheck size={18} />, title: 'Solicitudes con cotización aprobada u orden de compra generada' },
         ].map(stat => (
-          <div key={stat.label} className="rounded-xl bg-white p-4 shadow-sm border border-slate-100">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stat.label}</p>
-            <p className={`text-2xl font-black ${stat.color}`}>{stat.value}</p>
+          <div key={stat.label} title={stat.title} className="rounded-xl bg-white p-4 shadow-sm border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stat.label}</p>
+                <p className={`text-xl font-black ${stat.color}`}>{stat.value}</p>
+              </div>
+              <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${stat.iconBg} ${stat.color}`}>
+                {stat.icon}
+              </div>
+            </div>
           </div>
         ))}
       </div>
 
+      {/* Filters */}
+      <FilterPanel
+        fields={filterFields}
+        values={filters}
+        onChange={handleFilterChange}
+        onReset={handleResetFilters}
+        activeCount={activeFilterCount}
+      />
+
       {/* Table */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <div className="rounded-xl bg-white p-6 shadow-sm">
+        <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-[#111827]/40 dark:border dark:border-slate-800">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            Ordenadas por prioridad: Pendientes → En Cotización → Aprobadas
+            {activeFilterCount > 0 && <span className="ml-2 text-amber-600">• {sortedSolicitudes.length} resultado{sortedSolicitudes.length !== 1 ? 's' : ''} con filtros</span>}
+          </p>
           <DataTable
             columns={columns}
-            data={solicitudes || []}
+            data={sortedSolicitudes}
             loading={loading}
             searchable
             searchPlaceholder="Buscar por proyecto, solicitante..."
@@ -253,7 +502,7 @@ export default function SolicitudesPage() {
         size="xl"
       >
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Proyecto</label>
               <select
@@ -261,7 +510,7 @@ export default function SolicitudesPage() {
                 value={form.proyecto_id}
                 onChange={e => setForm({ ...form, proyecto_id: e.target.value })}
                 title="Proyecto para el cual se solicitan los materiales"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               >
                 <option value="">Seleccionar proyecto...</option>
                 {proyectos?.map((p: any) => (
@@ -276,9 +525,21 @@ export default function SolicitudesPage() {
                 type="text"
                 value={form.solicitante}
                 onChange={e => setForm({ ...form, solicitante: e.target.value })}
-                placeholder="Nombre del solicitante"
-                title="Nombre de la persona que solicita los materiales en obra"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                placeholder="Nombre de quien solicita"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Fecha requerida en terreno</label>
+              <input
+                type="date"
+                value={form.fecha_requerida}
+                onChange={e => setForm({ ...form, fecha_requerida: e.target.value })}
+                title="Fecha en que se necesita el material físicamente en terreno"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
           </div>
@@ -287,100 +548,191 @@ export default function SolicitudesPage() {
           <div>
             <div className="mb-3 flex items-center justify-between">
               <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Materiales</label>
-              <button type="button" onClick={addItem} className="flex items-center gap-1 text-xs font-bold text-amber-600 hover:text-amber-700">
+              <button
+                type="button"
+                onClick={addItem}
+                className="flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-600 shadow-sm border border-amber-100 transition-all hover:bg-amber-100 hover:shadow-md active:scale-95 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400 dark:hover:bg-amber-500/20 cursor-pointer"
+              >
                 <Plus size={14} /> Agregar ítem
               </button>
             </div>
-            <div className="space-y-4">
-              {form.items.map((item, idx) => (
-                <div key={idx} className="space-y-2 border-b border-slate-100 pb-4 last:border-0 last:pb-0">
-                  <div className="flex items-end gap-2">
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                         <label className="text-[10px] font-bold uppercase text-slate-400">Material / Insumo</label>
-                         <button 
-                          type="button" 
-                          onClick={() => setIsMaterialModalOpen(true)}
-                          className="text-[10px] font-bold text-amber-600 hover:underline"
-                          title="Registrar nuevo material en el catálogo"
-                         >
-                           + Nuevo en catálogo
-                         </button>
+            <div className="space-y-3">
+              {(() => {
+                const materialOptions = masterMateriales?.map((m: any) => ({
+                  value: m.id,
+                  label: `${m.nombre} ${m.sku ? `(${m.sku})` : ''} — ${m.unidad_abreviatura}`,
+                  material: m
+                })) || [];
+
+                return form.items.map((item, idx) => {
+                  const selectedOption = item.material_id
+                    ? materialOptions.find((opt: any) => opt.value === item.material_id)
+                    : item.nombre_material ? { value: item.nombre_material, label: item.nombre_material, isManual: true } : null;
+
+                  return (
+                    <div key={idx} className="flex flex-col md:flex-row items-stretch md:items-start gap-2 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+
+                      {/* Búsqueda o Entrada Manual */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] font-bold uppercase text-slate-400">Material / Insumo</label>
+                          <button
+                            type="button"
+                            onClick={() => setIsMaterialModalOpen(true)}
+                            className="flex items-center gap-1 rounded-md bg-amber-50/50 px-2 py-0.5 text-[10px] font-bold text-amber-600 border border-amber-100/50 transition-all hover:bg-amber-100 hover:text-amber-700 dark:bg-amber-500/5 dark:border-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/10 cursor-pointer"
+                            title="Registrar nuevo material en el catálogo"
+                          >
+                            <Plus size={10} /> Nuevo en catálogo
+                          </button>
+                        </div>
+                        <CreatableSelect
+                          isClearable
+                          menuPortalTarget={document.body}
+                          placeholder="Buscar catálogo o escribir nuevo..."
+                          noOptionsMessage={() => "No encontrado. Escribe para crear manual."}
+                          formatCreateLabel={(inputValue) => `Usar ingreso manual: "${inputValue}"`}
+                          options={materialOptions}
+                          value={selectedOption}
+                          onChange={(newValue: any, actionMeta) => {
+                            if (actionMeta.action === 'create-option' || (newValue && newValue.isManual)) {
+                              // Ingreso manual
+                              setForm(prev => ({
+                                ...prev,
+                                items: prev.items.map((it, i) => i === idx ? {
+                                  ...it,
+                                  material_id: null,
+                                  nombre_material: newValue.value,
+                                } : it)
+                              }));
+                            } else if (newValue && newValue.material) {
+                              // Selección de catálogo
+                              const mat = newValue.material;
+                              setForm(prev => ({
+                                ...prev,
+                                items: prev.items.map((it, i) => i === idx ? {
+                                  ...it,
+                                  material_id: mat.id,
+                                  nombre_material: mat.nombre,
+                                  unidad: mat.unidad_abreviatura,
+                                  codigo: mat.sku || '',
+                                } : it)
+                              }));
+                            } else {
+                              // Limpiado
+                              setForm(prev => ({
+                                ...prev,
+                                items: prev.items.map((it, i) => i === idx ? {
+                                  ...it,
+                                  material_id: null,
+                                  nombre_material: '',
+                                } : it)
+                              }));
+                            }
+                          }}
+                          styles={{
+                            control: (base, state) => ({
+                              ...base,
+                              minHeight: '38px',
+                              borderRadius: '0.375rem',
+                              borderColor: state.isFocused ? '#fbbf24' : '#e2e8f0',
+                              boxShadow: state.isFocused ? '0 0 0 1px #fbbf24' : 'none',
+                              backgroundColor: 'inherit',
+                              color: 'inherit',
+                              '&:hover': {
+                                borderColor: state.isFocused ? '#fbbf24' : '#cbd5e1'
+                              },
+                              fontSize: '0.875rem'
+                            }),
+                            singleValue: (base) => ({
+                              ...base,
+                              color: 'inherit'
+                            }),
+                            placeholder: (base) => ({
+                              ...base,
+                              color: '#94a3b8'
+                            }),
+                            input: (base) => ({
+                              ...base,
+                              color: 'inherit'
+                            }),
+                            menuPortal: (base) => ({
+                              ...base,
+                              zIndex: 9999
+                            }),
+                            menu: (base) => ({
+                              ...base,
+                              fontSize: '0.875rem',
+                              backgroundColor: '#1e293b',
+                              color: '#f8fafc'
+                            }),
+                            option: (base, state) => ({
+                              ...base,
+                              backgroundColor: state.isSelected ? '#f59e0b' : state.isFocused ? '#334155' : 'transparent',
+                              color: state.isSelected ? 'white' : '#f8fafc',
+                              '&:active': {
+                                backgroundColor: '#f59e0b'
+                              }
+                            })
+                          }}
+                        />
                       </div>
-                      <select
-                        required
-                        value={item.material_id || ''}
-                        onChange={e => {
-                          const matId = Number(e.target.value);
-                          const mat = masterMateriales?.find((m: any) => m.id === matId);
-                          setForm(prev => ({
-                            ...prev,
-                            items: prev.items.map((it, i) => i === idx ? { 
-                              ...it, 
-                              material_id: matId,
-                              nombre_material: mat?.nombre || '',
-                              unidad: mat?.unidad_abreviatura || it.unidad
-                            } : it)
-                          }));
-                        }}
-                        className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-sm outline-none focus:border-amber-400"
-                      >
-                        <option value="">Buscar en catálogo...</option>
-                        {masterMateriales?.map((m: any) => (
-                          <option key={m.id} value={m.id}>
-                            {m.nombre} {m.sku ? `(${m.sku})` : ''} — {m.unidad_abreviatura}
-                          </option>
-                        ))}
-                        <option value="legacy" disabled>———— O especifica manual ————</option>
-                      </select>
-                    </div>
-                    
-                    <div className="w-24">
-                      <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Cant.</label>
-                      <input
-                        required
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        value={item.cantidad_requerida}
-                        onChange={e => updateItem(idx, 'cantidad_requerida', e.target.value)}
-                        className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-sm outline-none focus:border-amber-400"
-                      />
-                    </div>
 
-                    <div className="w-28">
-                       <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Unidad</label>
-                       <select
-                        value={item.unidad}
-                        onChange={e => updateItem(idx, 'unidad', e.target.value)}
-                        className="w-full rounded-md border border-slate-200 bg-white px-2 py-2 text-sm outline-none focus:border-amber-400"
-                      >
-                        {masterUnidades?.map((u: any) => (
-                          <option key={u.id} value={u.abreviatura}>{u.nombre} ({u.abreviatura})</option>
-                        )) || unidadesStatic.map(u => <option key={u} value={u}>{u}</option>)}
-                      </select>
-                    </div>
+                      <div className="flex gap-2">
+                        {/* Código */}
+                        <div className="w-24">
+                          <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Código</label>
+                          <input
+                            type="text"
+                            placeholder="Opcional"
+                            value={item.codigo}
+                            onChange={e => updateItem(idx, 'codigo', e.target.value)}
+                            className="w-full h-[38px] rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-mono outline-none focus:border-amber-400 focus:bg-white transition-colors dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-amber-500/50 dark:focus:bg-slate-800 dark:placeholder-slate-600"
+                          />
+                        </div>
 
-                    {form.items.length > 1 && (
-                      <button type="button" onClick={() => removeItem(idx)} className="mb-2 p-1 text-slate-400 hover:text-red-500">
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                  
-                  {/* Fallback Manual Name (hidden if material selected, but kept for logic) */}
-                  {!item.material_id && (
-                    <input
-                      required
-                      type="text"
-                      placeholder="Nombre manual del material (Si no está en catálogo)"
-                      value={item.nombre_material}
-                      onChange={e => updateItem(idx, 'nombre_material', e.target.value)}
-                      className="w-full rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs italic outline-none focus:border-amber-400"
-                    />
-                  )}
-                </div>
-              ))}
+                        {/* Cantidad */}
+                        <div className="w-20">
+                          <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Cant.</label>
+                          <input
+                            required
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            value={item.cantidad_requerida}
+                            onChange={e => updateItem(idx, 'cantidad_requerida', e.target.value)}
+                            className="w-full h-[38px] rounded-md border border-slate-200 bg-white px-2 py-1 text-sm outline-none focus:border-amber-400 transition-colors dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-amber-500/50 dark:focus:bg-slate-800"
+                          />
+                        </div>
+
+                        {/* Unidad */}
+                        <div className="w-24">
+                          <label className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Unidad</label>
+                          <select
+                            value={item.unidad}
+                            onChange={e => updateItem(idx, 'unidad', e.target.value)}
+                            className="w-full h-[38px] rounded-md border border-slate-200 bg-white px-2 py-1 text-sm outline-none focus:border-amber-400 transition-colors dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-amber-500/50 dark:focus:bg-slate-800"
+                          >
+                            {masterUnidades?.map((u: any) => (
+                              <option key={u.id} value={u.abreviatura}>{u.abreviatura}</option>
+                            )) || unidadesStatic.map(u => <option key={u} value={u}>{u}</option>)}
+                          </select>
+                        </div>
+
+                        {/* Botón Eliminar */}
+                        <div className="flex items-end pb-[6px]">
+                          {form.items.length > 1 ? (
+                            <button type="button" onClick={() => removeItem(idx)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors cursor-pointer" title="Eliminar ítem">
+                              <Trash2 size={16} />
+                            </button>
+                          ) : (
+                            <div className="w-[28px]"></div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </div>
 
@@ -388,14 +740,14 @@ export default function SolicitudesPage() {
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100"
+              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 disabled:opacity-60"
+              className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 disabled:opacity-60 cursor-pointer"
             >
               <FileText size={16} />
               {submitting ? 'Creando...' : 'Crear Solicitud'}
@@ -409,101 +761,146 @@ export default function SolicitudesPage() {
         isOpen={!!showDetail}
         onClose={() => setShowDetail(null)}
         title={showDetail ? `Solicitud SOL-${String(showDetail.id).padStart(3, '0')}` : ''}
-        subtitle={showDetail?.proyecto_nombre}
+        subtitle={showDetail?.proyecto_nombre + (showDetail?.proyecto_numero_obra ? ` (N° ${showDetail.proyecto_numero_obra})` : '')}
         size="lg"
       >
         {showDetail && (
           <div className="space-y-4">
             <FlowStepper currentStep={0} estado={showDetail.estado} tipo="solicitud" />
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="rounded-lg bg-slate-50 p-3">
+            {/* Audit Trail - Trazabilidad */}
+            <div className="flex flex-wrap gap-3">
+              {showDetail.estado === 'Aprobado' && (
+                <AuditTrailBadge
+                  label="Aprobado por"
+                  nombre={showDetail.aprobado_by_nombre}
+                  fecha={showDetail.aprobado_at}
+                  icon="aprobado"
+                />
+              )}
+              {showDetail.estado === 'Anulada' && (
+                <AuditTrailBadge
+                  label="Anulada por"
+                  nombre={showDetail.rechazado_by_nombre}
+                  fecha={showDetail.rechazado_at}
+                  icon="rechazado"
+                />
+              )}
+              {(showDetail.estado === 'Cotizando' || showDetail.estado === 'Pendiente') && showDetail.estado_changed_by_nombre && (
+                <AuditTrailBadge
+                  label="Estado actualizado por"
+                  nombre={showDetail.estado_changed_by_nombre}
+                  fecha={showDetail.estado_changed_at}
+                  icon="enviado"
+                />
+              )}
+              {showDetail.estado_changed_by_nombre && showDetail.estado !== 'Aprobado' && showDetail.estado !== 'Anulada' && (
+                <AuditTrailBadge
+                  label="Último cambio por"
+                  nombre={showDetail.estado_changed_by_nombre}
+                  fecha={showDetail.estado_changed_at}
+                />
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Solicitante</p>
-                <p className="text-sm font-bold text-slate-800">{showDetail.solicitante}</p>
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{showDetail.solicitante}</p>
               </div>
-              <div className="rounded-lg bg-slate-50 p-3">
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Fecha</p>
-                <p className="text-sm font-bold text-slate-800">{new Date(showDetail.fecha).toLocaleDateString('es-ES')}</p>
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{new Date(showDetail.fecha).toLocaleDateString('es-ES')}</p>
               </div>
-              <div className="rounded-lg bg-slate-50 p-3">
+              <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Estado</p>
                 <StatusBadge status={showDetail.estado} size="md" />
               </div>
             </div>
 
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-2">Ítems de la solicitud</p>
-            <div className="rounded-lg border border-slate-200 overflow-hidden">
-              <table className="min-w-full text-sm">
-                <thead className="bg-slate-50"><tr>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Material</th>
-                  <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Cantidad</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500">Unidad</th>
-                  <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Precio Ref.</th>
-                  <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Subtotal</th>
-                </tr></thead>
-                <tbody>
-                  {loadingDetail ? (
-                    <tr><td colSpan={5} className="px-3 py-4 text-center text-xs text-slate-400">Cargando ítems...</td></tr>
-                  ) : showDetail.items ? showDetail.items.map((item: any) => {
-                    const subtotal = item.precio_referencial ? Number(item.precio_referencial) * Number(item.cantidad_requerida) : null;
+            {showDetail.fecha_requerida && (
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 dark:bg-amber-900/20 dark:border-amber-800">
+                <p className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-500">Fecha requerida en terreno</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-bold text-amber-800 dark:text-amber-200">
+                    {(() => {
+                      const d = new Date(showDetail.fecha_requerida);
+                      return isNaN(d.getTime()) ? showDetail.fecha_requerida : d.toLocaleDateString('es-CL');
+                    })()}
+                  </span>
+                  {(() => {
+                    const d = new Date(showDetail.fecha_requerida);
+                    if (isNaN(d.getTime())) return null;
+                    const now = new Date();
+                    now.setHours(0, 0, 0, 0);
+                    d.setHours(0, 0, 0, 0);
+                    const diffDays = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                    let label = `${diffDays} día(s)`;
+                    let colorClass = 'text-emerald-600 bg-emerald-100 dark:text-emerald-400 dark:bg-emerald-900/30';
+                    if (diffDays < 0) {
+                      label = `Vencida hace ${Math.abs(diffDays)} día(s)`;
+                      colorClass = 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30';
+                    } else if (diffDays <= 2) {
+                      label = `Crítico — ${diffDays} día(s)`;
+                      colorClass = 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30';
+                    } else if (diffDays <= 5) {
+                      label = `Atrasado — ${diffDays} día(s)`;
+                      colorClass = 'text-amber-600 bg-amber-100 dark:text-amber-400 dark:bg-amber-900/30';
+                    }
                     return (
-                      <tr key={item.id} className="border-t border-slate-100">
-                        <td className="px-3 py-2">
-                          <div className="flex flex-col">
-                             <span className="font-medium text-slate-800">{item.material_oficial_nombre || item.nombre_material}</span>
-                             {item.material_sku && <span className="text-[9px] font-mono text-slate-400">{item.material_sku}</span>}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 text-right font-mono text-slate-600">{Number(item.cantidad_requerida).toLocaleString()}</td>
-                        <td className="px-3 py-2 text-slate-500">{item.unidad_abreviatura || item.unidad}</td>
-                        <td className="px-3 py-2 text-right font-mono text-slate-600">${item.precio_referencial ? Number(item.precio_referencial).toLocaleString('es-CL', { minimumFractionDigits: 2 }) : '—'}</td>
-                        <td className="px-3 py-2 text-right font-mono text-slate-600 font-bold">${subtotal ? subtotal.toLocaleString('es-CL', { minimumFractionDigits: 2 }) : '—'}</td>
-                      </tr>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${colorClass}`}>
+                        {label}
+                      </span>
                     );
-                  }) : (
-                    <tr><td colSpan={5} className="px-3 py-4 text-center text-xs text-slate-400">Sin ítems</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {!loadingDetail && showDetail.items && (
-              <div className="rounded-lg bg-blue-50 p-3 border border-blue-200">
-                <p className="text-[10px] font-bold uppercase text-blue-600 mb-2">Total Estimado</p>
-                <p className="text-2xl font-black text-blue-900">
-                  ${showDetail.items
-                    .reduce((sum: number, item: any) => {
-                      const subtotal = item.precio_referencial ? Number(item.precio_referencial) * Number(item.cantidad_requerida) : 0;
-                      return sum + subtotal;
-                    }, 0)
-                    .toLocaleString('es-CL', { minimumFractionDigits: 2 })}
-                </p>
+                  })()}
+                </div>
               </div>
             )}
 
-            {cotizaciones && cotizaciones.filter((c: any) => c.solicitud_id === showDetail.id).length > 0 && (
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Cotizaciones relacionadas</p>
-                <div className="space-y-2">
-                  {cotizaciones
-                    .filter((c: any) => c.solicitud_id === showDetail.id)
-                    .map((cot: any) => (
-                      <div key={cot.id} className="flex items-center justify-between rounded-lg border border-slate-200 p-2 text-xs">
-                        <div>
-                          <span className="font-bold text-slate-800">{cot.proveedor}</span>
-                          <StatusBadge status={cot.estado} size="sm" />
-                        </div>
-                        <span className="font-mono text-slate-600">${Number(cot.total).toLocaleString('es-CL', { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    ))}
-                </div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-2">Ítems de la solicitud</p>
+            <div className="rounded-lg border border-slate-200 overflow-x-auto dark:border-slate-700">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-50 dark:bg-slate-900"><tr>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Material</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Código/SKU</th>
+                  <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Cantidad</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Unidad</th>
+                </tr></thead>
+                <tbody>
+                  {loadingDetail ? (
+                    <tr><td colSpan={4} className="px-3 py-4 text-center text-xs text-slate-400">Cargando ítems...</td></tr>
+                  ) : showDetail.items ? showDetail.items.map((item: any) => (
+                    <tr key={item.id} className="border-t border-slate-100 dark:border-slate-800">
+                      <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">
+                        {item.material_oficial_nombre || item.nombre_material}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs text-slate-500 dark:text-slate-400">
+                        {item.material_sku || item.codigo || '—'}
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono text-slate-600 dark:text-slate-300">{Number(item.cantidad_requerida).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{item.unidad_abreviatura || item.unidad}</td>
+                    </tr>
+                  )) : (
+                    <tr><td colSpan={4} className="px-3 py-4 text-center text-xs text-slate-400">Sin ítems</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>            {showDetail.estado !== 'Aprobado' && showDetail.estado !== 'Anulada' && (
+              <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  onClick={() => handleDelete(showDetail.id, showDetail.estado)}
+                  className="flex items-center gap-2 rounded-xl bg-red-50 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-100 transition-all active:scale-95 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 cursor-pointer"
+                >
+                  <Ban size={16} />
+                  Descartar Solicitud
+                </button>
               </div>
             )}
           </div>
         )}
       </Modal>
 
-      <MaterialModal 
+      <MaterialModal
         isOpen={isMaterialModalOpen}
         onClose={() => setIsMaterialModalOpen(false)}
         onSave={onNewMaterialSaved}

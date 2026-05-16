@@ -38,6 +38,10 @@ export async function runMigrations() {
 
     // 4. Ejecutar migraciones pendientes
     for (const file of files) {
+      if (appliedMigrations.has(file)) {
+        console.log(`  ↩ Skipping ${file} (already executed)`);
+        continue;
+      }
       if (!appliedMigrations.has(file)) {
         console.log(`🚀 Aplicando migración: ${file}`);
         

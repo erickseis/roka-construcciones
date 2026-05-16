@@ -4,8 +4,10 @@ import jwt from 'jsonwebtoken';
 import { AuthRequest } from '../middleware/authMiddleware';
 import { findUserByEmail, findUserById } from '../models/auth.model';
 import { LoginResult, JwtPayload } from '../types/usuario.types';
+import pool from '../db';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'roka_super_secret_key_123';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
 
 export async function login(req: Request, res: Response) {
   const { correo, password } = req.body;
@@ -59,5 +61,28 @@ export async function me(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error('Error en /me:', error);
     res.status(500).json({ error: 'Error en el servidor' });
+  }
+}
+
+export async function permisos(req: AuthRequest, res: Response) {
+  try {
+    const rolId = req.user?.rol_id;
+    if (!rolId) {
+      return res.json([]);
+    }
+
+    const { rows } = await pool.query(
+      `SELECT p.codigo
+       FROM rol_permisos rp
+       JOIN permisos p ON p.id = rp.permiso_id
+       WHERE rp.rol_id = $1
+       ORDER BY p.codigo`,
+      [rolId]
+    );
+
+    res.json(rows.map((r: any) => r.codigo));
+  } catch (error) {
+    console.error('Error al obtener permisos:', error);
+    res.status(500).json({ error: 'Error al obtener permisos' });
   }
 }

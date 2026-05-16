@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "updated_at": "2026-05-09T14:30:00.000Z",
+  "status": "idle",
+  "tarea_activa": null,
+  "ultimas_tareas": ["configurar-alertas-email-fecha-entrega", "eliminar-cotizaciones-venta", "solicitudes-pdf", "refactorizacion-F0"]
+}

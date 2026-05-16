@@ -50,3 +50,13 @@ export async function proyectos(_req: Request, res: Response) {
     res.status(500).json({ error: 'Error al obtener proyectos' });
   }
 }
+
+export async function solicitudesUrgentes(_req: Request, res: Response) {
+  try {
+    const result = await dashboardModel.getSolicitudesUrgentes();
+    res.json(result);
+  } catch (error) {
+    console.error('Error solicitudes urgentes:', error);
+    res.status(500).json({ error: 'Error al obtener solicitudes urgentes' });
+  }
+}

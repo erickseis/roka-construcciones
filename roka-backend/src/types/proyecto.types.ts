@@ -12,6 +12,11 @@ export interface Proyecto {
   monto_referencial_licitacion: number | null;
   archivo_licitacion_path: string | null;
   archivo_licitacion_nombre: string | null;
+  archivo_materiales_path: string | null;
+  archivo_materiales_nombre: string | null;
+  mandante: string | null;
+  moneda: string | null;
+  plazo_ejecucion_dias: number | null;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -46,4 +51,9 @@ export interface CreateProyectoInput {
   monto_referencial_licitacion?: number | null;
   archivo_licitacion_path?: string | null;
   archivo_licitacion_nombre?: string | null;
+  archivo_materiales_path?: string | null;
+  archivo_materiales_nombre?: string | null;
+  mandante?: string | null;
+  moneda?: string | null;
+  plazo_ejecucion_dias?: number | null;
 }

@@ -1,17 +1,29 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'motion/react';
 import { Lock, Mail, ChevronRight, AlertCircle, Construction } from 'lucide-react';
 import logoRoka from '../assets/image.png';
 
 export default function LoginPage() {
+  const { user, loading: authLoading, login } = useAuth();
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
   const navigate = useNavigate();
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-[#05070a]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,9 +40,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
-      <div className="flex w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl shadow-slate-200">
-        
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6 dark:bg-[#05070a]">
+      <div className="flex w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl shadow-slate-200 dark:bg-slate-900 dark:shadow-black/20 dark:border dark:border-slate-800">
+
         {/* Visual Side */}
         <div className="hidden w-1/2 bg-slate-900 p-12 lg:flex lg:flex-col lg:justify-between">
           <div className="flex items-center gap-3">
@@ -52,7 +64,7 @@ export default function LoginPage() {
                 'Control de Materiales',
                 'Gestión de Cotizaciones',
                 'Órdenes de Compra',
-                'Administración de Personal'
+
               ].map(item => (
                 <div key={item} className="flex items-center gap-3 text-slate-400">
                   <div className="h-1.5 w-1.5 rounded-full bg-amber-500"></div>
@@ -74,19 +86,19 @@ export default function LoginPage() {
         </div>
 
         {/* Form Side */}
-        <div className="w-full p-12 lg:w-1/2">
+        <div className="w-full p-12 lg:w-1/2 dark:bg-slate-900">
           <div className="mx-auto max-w-sm">
             <div className="mb-10 text-center lg:text-left">
-              <h3 className="text-3xl font-black tracking-tight text-slate-900">Iniciar Sesión</h3>
-              <p className="mt-2 text-sm text-slate-500">Ingresa tus credenciales para acceder al sistema administrativo.</p>
+              <h3 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Iniciar Sesión</h3>
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Ingresa tus credenciales para acceder al sistema administrativo.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }} 
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2 rounded-xl bg-red-50 p-4 text-xs font-bold text-red-600 border border-red-100"
+                  className="flex items-center gap-2 rounded-xl bg-red-50 p-4 text-xs font-bold text-red-600 border border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-900/30"
                 >
                   <AlertCircle size={14} />
                   {error}
@@ -104,16 +116,16 @@ export default function LoginPage() {
                     onChange={(e) => setCorreo(e.target.value)}
                     placeholder="ejemplo@roka.cl"
                     title="Correo corporativo institucional para acceder al sistema de gestión de compras"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-black outline-none transition-all placeholder:text-black focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-amber-400 focus:ring-4 focus:ring-amber-100 dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:placeholder:text-slate-500 dark:focus:ring-amber-500/10"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
+                {/* <div className="flex items-center justify-between">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Contraseña</label>
                   <a href="#" className="text-[10px] font-bold text-amber-600 hover:underline">¿Olvidaste tu contraseña?</a>
-                </div>
+                </div> */}
                 <div className="relative flex items-center">
                   <Lock className="absolute left-3 text-slate-400" size={18} />
                   <input
@@ -123,7 +135,7 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     title="Contraseña de acceso al sistema, mínimo 6 caracteres"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-black outline-none transition-all placeholder:text-black focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-amber-400 focus:ring-4 focus:ring-amber-100 dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:placeholder:text-slate-500 dark:focus:ring-amber-500/10"
                   />
                 </div>
               </div>
@@ -136,18 +148,14 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-500 py-3.5 text-sm font-black text-white shadow-xl shadow-amber-500/30 transition-all hover:bg-amber-600 hover:translate-y-[-2px] active:scale-[0.98] disabled:opacity-60"
+                className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-500 py-3.5 text-sm font-black text-white shadow-xl shadow-amber-500/30 transition-all hover:bg-amber-600 hover:translate-y-[-2px] active:scale-[0.98] disabled:opacity-60 cursor-pointer"
               >
                 {loading ? 'Accediendo...' : 'Entrar al Sistema'}
                 <ChevronRight className="transition-transform group-hover:translate-x-1" size={18} />
               </button>
             </form>
 
-            <div className="mt-12 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 opacity-50">
-                Soporte Técnico Stitch IT
-              </p>
-            </div>
+
           </div>
         </div>
 

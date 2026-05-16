@@ -8,6 +8,7 @@ interface AuthContextType {
   loading: boolean;
   login: (credentials: any) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,8 +57,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     navigate('/login', { replace: true });
   };
 
+  const refreshUser = async () => {
+    try {
+      const u = await getMe();
+      setUser(u);
+    } catch (error) {
+      console.error('Error al refrescar usuario:', error);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -8,25 +8,32 @@ interface StatusBadgeProps {
 
 const statusConfig: Record<string, { bg: string; text: string; dot: string }> = {
   // Solicitudes
-  'Pendiente':         { bg: 'bg-amber-50 dark:bg-amber-900/40',  text: 'text-amber-700 dark:text-amber-400',  dot: 'bg-amber-500' },
-  'Cotizando':         { bg: 'bg-blue-50 dark:bg-blue-900/40',   text: 'text-blue-700 dark:text-blue-400',   dot: 'bg-blue-500' },
-  'Aprobado':          { bg: 'bg-emerald-50 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
+  'PENDIENTE':         { bg: 'bg-amber-50 dark:bg-amber-900/40',  text: 'text-amber-700 dark:text-amber-400',  dot: 'bg-amber-500' },
+  'COTIZANDO':         { bg: 'bg-blue-50 dark:bg-blue-900/40',   text: 'text-blue-700 dark:text-blue-400',   dot: 'bg-blue-500' },
+  'APROBADO':          { bg: 'bg-emerald-50 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
+  'APROBADA':          { bg: 'bg-emerald-50 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
   // Cotizaciones
-  'Aprobada':          { bg: 'bg-emerald-50 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
-  'Rechazada':         { bg: 'bg-red-50 dark:bg-red-900/40',    text: 'text-red-700 dark:text-red-400',    dot: 'bg-red-500' },
+  'RECHAZADA':         { bg: 'bg-red-50 dark:bg-red-900/40',    text: 'text-red-700 dark:text-red-400',    dot: 'bg-red-500' },
   // Órdenes
-  'Recibido parcial':  { bg: 'bg-sky-50 dark:bg-sky-900/40',    text: 'text-sky-700 dark:text-sky-400',    dot: 'bg-sky-500' },
-  'Completado':        { bg: 'bg-emerald-50 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
+  'RECIBIDO PARCIAL':  { bg: 'bg-sky-50 dark:bg-sky-900/40',    text: 'text-sky-700 dark:text-sky-400',    dot: 'bg-sky-500' },
+  'COMPLETADO':        { bg: 'bg-emerald-50 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
   // Proyectos
-  'En Curso':          { bg: 'bg-amber-50 dark:bg-amber-900/40',  text: 'text-amber-700 dark:text-amber-400',  dot: 'bg-amber-500' },
-  'Planificación':     { bg: 'bg-violet-50 dark:bg-violet-900/40', text: 'text-violet-700 dark:text-violet-400', dot: 'bg-violet-500' },
+  'EN CURSO':          { bg: 'bg-amber-50 dark:bg-amber-900/40',  text: 'text-amber-700 dark:text-amber-400',  dot: 'bg-amber-500' },
+  'PLANIFICACIÓN':     { bg: 'bg-violet-50 dark:bg-violet-900/40', text: 'text-violet-700 dark:text-violet-400', dot: 'bg-violet-500' },
+  'PLANIFICACION':     { bg: 'bg-violet-50 dark:bg-violet-900/40', text: 'text-violet-700 dark:text-violet-400', dot: 'bg-violet-500' },
   // Materiales (Catalogo)
-  'Activo':            { bg: 'bg-emerald-50 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
-  'Inactivo':          { bg: 'bg-slate-50 dark:bg-slate-800/60', text: 'text-slate-500 dark:text-slate-400', dot: 'bg-slate-400' },
+  'ACTIVO':            { bg: 'bg-emerald-50 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
+  'INACTIVO':          { bg: 'bg-slate-50 dark:bg-slate-800/60', text: 'text-slate-500 dark:text-slate-400', dot: 'bg-slate-400' },
+  // Solicitudes de Cotización
+  'BORRADOR':          { bg: 'bg-slate-100 dark:bg-slate-800/60', text: 'text-slate-600 dark:text-slate-400', dot: 'bg-slate-400' },
+  'ENVIADA':           { bg: 'bg-blue-50 dark:bg-blue-900/40',    text: 'text-blue-700 dark:text-blue-400',    dot: 'bg-blue-500' },
+  'RESPONDIDA':        { bg: 'bg-emerald-50 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
+  'OBSERVACIÓN':       { bg: 'bg-amber-50 dark:bg-amber-900/40', text: 'text-amber-700 dark:text-amber-400', dot: 'bg-amber-500' },
+  'ANULADA':           { bg: 'bg-red-50 dark:bg-red-900/40',    text: 'text-red-700 dark:text-red-400',    dot: 'bg-red-500' },
 };
 
 export function StatusBadge({ status, size = 'sm' }: StatusBadgeProps) {
-  const config = statusConfig[status] || { bg: 'bg-slate-100', text: 'text-slate-600', dot: 'bg-slate-400' };
+  const config = statusConfig[status?.toUpperCase()] || { bg: 'bg-slate-100', text: 'text-slate-600', dot: 'bg-slate-400' };
 
   return (
     <span className={cn(

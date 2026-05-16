@@ -20,6 +20,10 @@ export interface Proyecto {
   archivo_licitacion_nombre?: string;
   updated_at?: string;
   created_at: string;
+  presupuesto_total?: number;
+  presupuesto_comprometido?: number;
+  presupuesto_disponible?: number;
+  presupuesto_porcentaje_uso?: number;
 }
 
 export interface ProyectoInput {
@@ -88,6 +92,7 @@ export interface SolicitudItem {
   cantidad_requerida: number;
   unidad: string;
   unidad_abreviatura?: string;
+  codigo?: string | null;
 }
 
 export interface SolicitudItemInput {
@@ -116,42 +121,83 @@ export interface SolicitudInput {
   items: SolicitudItemInput[];
 }
 
-// --- Cotizaciones ---
+// --- Importación de Precios desde Archivo ---
 
-export type CotizacionEstado = 'Pendiente' | 'Aprobada' | 'Rechazada';
-
-export interface CotizacionItem {
-  id: number;
-  cotizacion_id: number;
-  solicitud_item_id: number;
-  nombre_material?: string;
-  cantidad_requerida?: number;
-  unidad?: string;
-  precio_unitario: number;
-  subtotal: number;
+export interface ParsedItem {
+  codigo: string;
+  descripcion: string;
+  cantidad: number;
+  unidad: string;
+  precio_neto_unitario: number;
+  descuento_porcentaje: number;
+  total_linea: number;
 }
 
-export interface CotizacionItemInput {
-  solicitud_item_id: number;
-  precio_unitario: number;
-}
-
-export interface Cotizacion {
-  id: number;
-  solicitud_id: number;
-  proveedor: string;
+export interface ParsedQuotation {
+  proveedor_rut: string;
+  proveedor_nombre: string;
+  proveedor_direccion: string | null;
+  proveedor_telefono: string | null;
+  proveedor_correo: string | null;
+  numero_cov: string;
+  fecha: string;
+  vendedor: string | null;
+  validez: string | null;
+  items: ParsedItem[];
+  condicion_pago: string | null;
+  condicion_entrega: string | null;
+  subtotal_neto: number;
+  iva: number;
   total: number;
-  archivo_adjunto?: string;
-  estado: CotizacionEstado;
-  items?: CotizacionItem[];
-  solicitud?: Solicitud;
-  created_at: string;
+  observaciones: string | null;
+  descuento_global_porcentaje: number | null;
+  descuento_global_monto: number | null;
 }
 
-export interface CotizacionInput {
+export interface ImportItemMatch {
+  parsed: ParsedItem;
+  solicitud_item: {
+    id: number;
+    solicitud_item_id: number;
+    nombre_material: string;
+    cantidad_requerida: number;
+    unidad: string;
+    codigo: string | null;
+  } | null;
+  match_tipo: 'exact_code' | 'similar_name' | 'none';
+  cantidad_ok: boolean;
+  warning: string | null;
+}
+
+export interface ImportPreviewResponse {
+  parsed: ParsedQuotation;
+  solicitud_cotizacion_id: number;
   solicitud_id: number;
-  proveedor: string;
-  items: CotizacionItemInput[];
+  archivo_path: string;
+  archivo_nombre: string;
+  proveedor_catalogo: { id: number; nombre: string; rut: string } | null;
+  validacion: {
+    items_matched: ImportItemMatch[];
+    items_unmatched: ParsedItem[];
+    items_faltantes_en_sc: Array<{
+      id: number;
+      solicitud_item_id: number;
+      nombre_material: string;
+      cantidad_requerida: number;
+      unidad: string;
+      codigo: string | null;
+    }>;
+    resumen: {
+      total_items_archivo: number;
+      total_items_sc: number;
+      total_matched: number;
+      total_unmatched: number;
+      total_faltantes: number;
+      total_archivo: number;
+      diferencia: number;
+      warning: string | null;
+    };
+  };
 }
 
 // --- Órdenes de Compra ---
@@ -161,7 +207,7 @@ export type DescuentoTipo = 'none' | 'porcentaje' | 'monto';
 
 export interface OrdenCompra {
   id: number;
-  cotizacion_id: number;
+  solicitud_cotizacion_id: number;
   fecha_emision: string;
   folio: string;
   condiciones_pago: string;
@@ -177,7 +223,6 @@ export interface OrdenCompra {
   total_final: number;
   estado_entrega: EstadoEntrega;
   total: number;
-  cotizacion?: Cotizacion;
   proveedor?: string;
   proveedor_rut?: string;
   proveedor_razon_social?: string;
@@ -196,7 +241,7 @@ export interface OrdenCompra {
 }
 
 export interface OrdenCompraInput {
-  cotizacion_id: number;
+  solicitud_cotizacion_id: number;
   condiciones_pago?: string;
   folio?: string;
   descuento_tipo?: DescuentoTipo;
@@ -287,8 +332,6 @@ export interface PresupuestoAlerta {
 // --- Notificaciones ---
 
 export type TipoNotificacion =
-  | 'cotizacion.aprobada'
-  | 'cotizacion.rechazada'
   | 'orden.generada'
   | 'presupuesto.umbral'
   | 'presupuesto.sobreconsumo';

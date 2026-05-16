@@ -6,10 +6,23 @@ const PRESUPUESTO_SELECT = `
     pp.*,
     p.nombre AS proyecto_nombre,
     p.estado AS proyecto_estado,
-    COALESCE((pp.monto_comprometido / NULLIF(pp.monto_total, 0)) * 100, 0)::numeric(8,2) AS porcentaje_uso,
-    (pp.monto_total - pp.monto_comprometido)::numeric AS monto_disponible
+    NULLIF(CONCAT(u_cre.nombre, ' ', u_cre.apellido), ' ') AS created_by_nombre,
+    COALESCE(oc_agg.gasto_total, 0)::numeric AS gasto_total,
+    COALESCE((COALESCE(oc_agg.gasto_total, 0) / NULLIF(pp.monto_total, 0)) * 100, 0)::numeric(8,2) AS porcentaje_uso,
+    (pp.monto_total - COALESCE(oc_agg.gasto_total, 0))::numeric AS monto_disponible
   FROM presupuestos_proyecto pp
   JOIN proyectos p ON p.id = pp.proyecto_id
+  LEFT JOIN usuarios u_cre ON u_cre.id = pp.created_by_usuario_id
+  LEFT JOIN (
+    SELECT p2.id AS proyecto_id,
+           COALESCE(SUM(oc.total), 0) AS gasto_total
+    FROM proyectos p2
+    LEFT JOIN solicitudes_material sm ON sm.proyecto_id = p2.id
+    LEFT JOIN solicitud_cotizacion sc ON sc.solicitud_id = sm.id AND sc.estado = 'Respondida'
+    LEFT JOIN ordenes_compra oc ON oc.solicitud_cotizacion_id = sc.id
+    GROUP BY p2.id
+  ) oc_agg ON oc_agg.proyecto_id = p.id
+  WHERE 1=1
 `;
 
 const CATEGORIA_SELECT = `
@@ -60,6 +73,21 @@ export async function getPresupuestoById(id: number): Promise<PresupuestoProyect
   return row || null;
 }
 
+export async function getPresupuestoByIdEnriched(id: number): Promise<PresupuestoProyecto | null> {
+  const db = getDb();
+  const { rows: [presupuesto] } = await db.query(
+    `${PRESUPUESTO_SELECT} AND pp.id = $1`,
+    [id]
+  );
+  return presupuesto || null;
+}
+
+export async function getCategoriaById(id: number): Promise<PresupuestoCategoria | null> {
+  const db = getDb();
+  const { rows: [row] } = await db.query('SELECT * FROM presupuesto_categorias WHERE id = $1', [id]);
+  return row || null;
+}
+
 export async function getPresupuestoForUpdate(id: number, db: Queryable): Promise<{
   id: number;
   proyecto_id: number;
@@ -104,13 +132,13 @@ export async function checkExistingPresupuesto(proyectoId: number, db?: Queryabl
   return rows[0]?.id || null;
 }
 
-export async function createPresupuesto(data: CreatePresupuestoInput, db?: Queryable): Promise<PresupuestoProyecto> {
+export async function createPresupuesto(data: CreatePresupuestoInput & { created_by_usuario_id?: number | null }, db?: Queryable): Promise<PresupuestoProyecto> {
   const conn = getDb(db);
   const { rows: [presupuesto] } = await conn.query(
-    `INSERT INTO presupuestos_proyecto (proyecto_id, monto_total, umbral_alerta, estado)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO presupuestos_proyecto (proyecto_id, monto_total, umbral_alerta, estado, created_by_usuario_id)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING *`,
-    [data.proyecto_id, data.monto_total, data.umbral_alerta || 80, data.estado || 'Vigente']
+    [data.proyecto_id, data.monto_total, data.umbral_alerta || 80, data.estado || 'Vigente', data.created_by_usuario_id || null]
   );
 
   return presupuesto;
@@ -148,6 +176,12 @@ export async function updatePresupuesto(id: number, data: {
   const nextMontoTotal = typeof data.monto_total !== 'undefined' ? Number(data.monto_total) : Number(current.monto_total);
   if (nextMontoTotal < Number(current.monto_comprometido)) {
     throw new Error('El monto total no puede ser menor al comprometido actual');
+  }
+
+  const { rows: sumRows } = await db.query('SELECT SUM(monto_asignado) as total FROM presupuesto_categorias WHERE presupuesto_id = $1', [id]);
+  const totalAsignadoCategorias = Number(sumRows[0].total || 0);
+  if (nextMontoTotal < totalAsignadoCategorias) {
+    throw new Error(`El monto total no puede ser menor a la suma de las categorías asignadas (${totalAsignadoCategorias.toLocaleString('es-CL')})`);
   }
 
   const { rows: [updated] } = await db.query(
@@ -227,6 +261,26 @@ export async function commitCategoria(id: number, monto: number, db?: Queryable)
   await conn.query(
     `UPDATE presupuesto_categorias
      SET monto_comprometido = monto_comprometido + $1, updated_at = NOW()
+     WHERE id = $2`,
+    [monto, id]
+  );
+}
+
+export async function releasePresupuesto(id: number, monto: number, db?: Queryable): Promise<void> {
+  const conn = getDb(db);
+  await conn.query(
+    `UPDATE presupuestos_proyecto
+     SET monto_comprometido = GREATEST(monto_comprometido - $1, 0), updated_at = NOW()
+     WHERE id = $2`,
+    [monto, id]
+  );
+}
+
+export async function releaseCategoria(id: number, monto: number, db?: Queryable): Promise<void> {
+  const conn = getDb(db);
+  await conn.query(
+    `UPDATE presupuesto_categorias
+     SET monto_comprometido = GREATEST(monto_comprometido - $1, 0), updated_at = NOW()
      WHERE id = $2`,
     [monto, id]
   );

@@ -35,7 +35,7 @@ export function CopilotButton() {
           isOpen
             ? 'bg-slate-700 hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500 shadow-slate-900/20'
             : 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/40 hover:shadow-amber-500/50 hover:scale-105'
-        }`}
+        } cursor-pointer`}
         title={isOpen ? 'Minimizar guía de flujo' : 'Abrir guía de flujo de trabajo'}
         aria-label={isOpen ? 'Minimizar guía de flujo' : 'Abrir guía de flujo de trabajo'}
       >

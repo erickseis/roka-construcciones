@@ -46,10 +46,36 @@ export async function getUsersByRoleNames(roleNames: string[], db?: Queryable): 
   return rows.map(r => r.id as number);
 }
 
+export async function getUsersByPermission(codigo: string, db?: Queryable): Promise<number[]> {
+  const conn = getDb(db);
+  const { rows } = await conn.query(
+    `SELECT DISTINCT u.id FROM usuarios u
+     JOIN rol_permisos rp ON rp.rol_id = u.rol_id
+     JOIN permisos p ON p.id = rp.permiso_id
+     WHERE u.is_active = TRUE AND p.codigo = $1`,
+    [codigo]
+  );
+  return rows.map(r => r.id as number);
+}
+
+export async function getUsersByPermissions(codigos: string[], db?: Queryable): Promise<number[]> {
+  if (!codigos.length) return [];
+  const conn = getDb(db);
+  const { rows } = await conn.query(
+    `SELECT DISTINCT u.id FROM usuarios u
+     JOIN rol_permisos rp ON rp.rol_id = u.rol_id
+     JOIN permisos p ON p.id = rp.permiso_id
+     WHERE u.is_active = TRUE AND p.codigo = ANY($1::text[])`,
+    [codigos]
+  );
+  return rows.map(r => r.id as number);
+}
+
 export async function resolveRecipientUserIds(
   options: {
     creatorUserId?: number | null;
     roleNames?: string[];
+    permissionCodes?: string[];
     excludeUserId?: number | null;
   },
   db?: Queryable
@@ -63,9 +89,13 @@ export async function resolveRecipientUserIds(
   const roleNames = options.roleNames || [];
   if (roleNames.length > 0) {
     const roleUsers = await getUsersByRoleNames(roleNames, db);
-    for (const id of roleUsers) {
-      recipients.add(id);
-    }
+    for (const id of roleUsers) recipients.add(id);
+  }
+
+  const permissionCodes = options.permissionCodes || [];
+  if (permissionCodes.length > 0) {
+    const permUsers = await getUsersByPermissions(permissionCodes, db);
+    for (const id of permUsers) recipients.add(id);
   }
 
   if (options.excludeUserId) {
@@ -80,21 +110,28 @@ export async function createNotifications(notifications: NotificationInput[], db
 
   const conn = getDb(db);
 
-  for (const n of notifications) {
+  // Multi-row INSERT con chunking (500 notificaciones por batch)
+  for (let i = 0; i < notifications.length; i += 500) {
+    const chunk = notifications.slice(i, i + 500);
+    const placeholders = chunk.map((_, j) => {
+      const base = j * 8;
+      return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}::jsonb, $${base + 8})`;
+    });
+    const values = chunk.flatMap(n => [
+      n.usuario_destino_id,
+      n.tipo,
+      n.titulo,
+      n.mensaje,
+      n.entidad_tipo || null,
+      n.entidad_id || null,
+      JSON.stringify(n.payload || {}),
+      n.enviado_por_usuario_id || null,
+    ]);
     await conn.query(
       `INSERT INTO notificaciones
          (usuario_destino_id, tipo, titulo, mensaje, entidad_tipo, entidad_id, payload, enviado_por_usuario_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)`,
-      [
-        n.usuario_destino_id,
-        n.tipo,
-        n.titulo,
-        n.mensaje,
-        n.entidad_tipo || null,
-        n.entidad_id || null,
-        JSON.stringify(n.payload || {}),
-        n.enviado_por_usuario_id || null,
-      ]
+       VALUES ${placeholders.join(', ')}`,
+      values
     );
   }
 }

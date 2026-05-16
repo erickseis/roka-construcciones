@@ -83,3 +83,54 @@ export async function remove(req: Request, res: Response) {
     res.status(500).json({ error: 'Error al desactivar usuario' });
   }
 }
+
+export async function update(req: Request, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const { nombre, apellido, rut, correo, telefono, departamento_id, cargo_id, rol_id } = req.body;
+
+    if (rut && !isValidRUT(rut)) {
+      return res.status(400).json({ error: 'El RUT ingresado no es valido' });
+    }
+
+    const updated = await userModel.updateUser(id, {
+      nombre, apellido, rut, correo, telefono,
+      departamento_id: departamento_id ? Number(departamento_id) : null,
+      cargo_id: cargo_id ? Number(cargo_id) : null,
+      rol_id: rol_id ? Number(rol_id) : null,
+    });
+
+    if (!updated) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Error al actualizar usuario:', error);
+    res.status(500).json({ error: 'Error al actualizar usuario' });
+  }
+}
+
+export async function updatePassword(req: Request, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const { password } = req.body;
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password, salt);
+
+    const updated = await userModel.updatePassword(id, password_hash);
+    if (!updated) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    res.json({ message: 'Contraseña actualizada correctamente' });
+  } catch (error) {
+    console.error('Error al actualizar contraseña:', error);
+    res.status(500).json({ error: 'Error al actualizar contraseña' });
+  }
+}

@@ -1,6 +1,52 @@
+# Dependencies
 node_modules/
+**/node_modules/
+
+# Build outputs
 dist/
 build/
+*.tsbuildinfo
+
+# Environment variables
 .env
+.env.*
+!.env.example
+
+# Logs
 *.log
+npm-debug.log*
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Agent memory
+.agent/
+.claude/
+
+# Uploads (user-generated files)
+uploads/licitaciones/
+uploads/ordenes-pdf/
+uploads/solicitudes-pdf/
+uploads/materiales/
+
+# Sensitive files
+client_secret*.json
+secreto*.docx
+credentials.json
+
+# Large files
+roka-backend/Archivador.zip
+
+# Test coverage
+coverage/
+
+# Temporary files
+tmp/
+temp/
