@@ -43,6 +43,8 @@ function getNvidiaClient(): OpenAI {
   return new OpenAI({
     apiKey,
     baseURL: NVIDIA_BASE_URL,
+    timeout: 300000,
+    maxRetries: 0,
   });
 }
 
@@ -158,6 +160,129 @@ function parseChileanAmount(raw: any, moneda: string): { value: number; raw: str
   return { value: isNaN(n) ? 0 : n, raw };
 }
 
+// Detect when the model returned its schema template instead of actual extracted data
+function isTemplateResponse(parsed: any): boolean {
+  if (parsed?.proveedor_nombre === 'string') return true;
+  if (parsed?.numero_cov === 'string') return true;
+  const items = parsed?.items;
+  if (Array.isArray(items) && items.length > 0) {
+    if (items[0]?.nombre_extraido === 'string') return true;
+  }
+  return false;
+}
+
+// Helper: repair common JSON syntax errors (unclosed quotes, missing braces)
+function repairJson(s: string): string {
+  let r = s.trim();
+  // Try to extract JSON from markdown block if present
+  const mdMatch = r.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+  if (mdMatch) r = mdMatch[1].trim();
+  // Count unclosed quotes after the last opening brace
+  const braceIdx = r.indexOf('{');
+  if (braceIdx >= 0) {
+    const afterBrace = r.substring(braceIdx);
+    const quoteCount = (afterBrace.match(/"/g) || []).length;
+    if (quoteCount % 2 !== 0) r += '"';
+  }
+  // Close unclosed braces
+  const openCurl = (r.match(/\{/g) || []).length;
+  const closeCurl = (r.match(/\}/g) || []).length;
+  r += '}'.repeat(openCurl - closeCurl);
+  // Close unclosed brackets
+  const openBrack = (r.match(/\[/g) || []).length;
+  const closeBrack = (r.match(/\]/g) || []).length;
+  r += ']'.repeat(openBrack - closeBrack);
+  return r;
+}
+
+// Call NVIDIA model with retry logic for transient network errors
+async function callNvidiaWithRetry(
+  client: OpenAI,
+  systemPrompt: string,
+  content: any[]
+): Promise<any> {
+  let completion: any;
+  let lastError: any;
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      completion = await client.chat.completions.create({
+        model: NVIDIA_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content }
+        ],
+        max_tokens: 4096,
+        temperature: 0,
+        top_p: 1,
+        stream: false,
+      } as any);
+      break;
+    } catch (err: any) {
+      lastError = err;
+      const isNetworkError = err.code === 'ETIMEDOUT' || err.code === 'ECONNRESET'
+        || err.type === 'system' || err.status === undefined;
+      if (attempt < 3 && isNetworkError) {
+        console.warn(`[sc-import] Attempt ${attempt} failed (${err.code || err.type}), retrying in ${attempt * 2}s...`);
+        await new Promise(r => setTimeout(r, 2000 * attempt));
+        continue;
+      }
+      throw err;
+    }
+  }
+  if (!completion) throw lastError;
+
+  const text = completion.choices?.[0]?.message?.content || '';
+  if (!text) {
+    throw Object.assign(
+      new Error('El modelo de IA no retornó respuesta. Intente con un archivo más claro o legible.'),
+      { statusCode: 500 }
+    );
+  }
+
+  let parsed: any;
+  const rawText = text.trim();
+  // Sanitize placeholder tokens the model emits when it can't read the document
+  const sanitized = rawText
+    .replace(/:\s*XXXXX\b/g, ': null')
+    .replace(/:\s*"XX[^"]*"/g, ': null')
+    .replace(/:\s*XX\.XXX\b/g, ': null');
+  try {
+    if (sanitized.startsWith('{')) {
+      parsed = JSON.parse(sanitized);
+    } else {
+      const jsonMatch = sanitized.match(/\{[\s\S]*"items"[\s\S]*\}/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('No JSON block found');
+      }
+    }
+  } catch {
+    try {
+      console.warn('JSON malformado, intentando reparar:', sanitized.substring(0, 200));
+      const repaired = repairJson(sanitized);
+      parsed = JSON.parse(repaired);
+      console.warn('JSON reparado exitosamente');
+    } catch (repairError) {
+      console.error('Raw AI response:', text.substring(0, 2000));
+      throw Object.assign(
+        new Error('No se pudo parsear la respuesta de IA como JSON. El documento puede ser ilegible o el formato no es claro.'),
+        { statusCode: 500 }
+      );
+    }
+  }
+
+  if (isTemplateResponse(parsed)) {
+    throw Object.assign(
+      new Error('El modelo de IA no pudo leer el documento y retornó un esquema vacío. El PDF puede tener fuentes no embebidas o imágenes de baja calidad.'),
+      { statusCode: 422 }
+    );
+  }
+
+  return parsed;
+}
+
 // Main function: Parse a vendor quotation file and extract items with prices
 export async function parseCotizacionArchivo(
   archivoPath: string,
@@ -247,7 +372,11 @@ VALIDACIÓN OBLIGATORIA:
 - precio_unitario * cantidad_extraida DEBE ser igual a subtotal_linea.
 - La suma de todos los subtotal_linea DEBE ser igual a monto_total (neto, sin IVA).
 - Si no cuadra, RELEE el documento y corrige los valores.
-- El JSON debe ser 100% válido para JSON.parse().`;
+- El JSON debe ser 100% válido para JSON.parse().
+
+ATENCIÓN MULTI-PÁGINA: Si el documento tiene varias páginas, se te enviará cada página por separado.
+Extrae SOLO los ítems visibles en la página actual. No asumas ni repitas ítems de otras páginas.
+Los resultados de todas las páginas se fusionarán automáticamente.`;
 
   const currencyLabel = moneda === 'CLP' ? 'pesos chilenos ($)' : moneda === 'UF' ? 'UF' : 'dólares (USD)';
   const userText = `Extrae los ítems y precios del documento de cotización adjunto (moneda: ${currencyLabel}).
@@ -274,61 +403,82 @@ REGLAS:
   // Prepare image content for the model
   let content: any[];
   let tempDir: string | null = null;
+  let parsed: any;
 
   try {
     if (IMAGE_EXTENSIONS.includes(ext)) {
-      // Direct image - send as-is
       const base64Data = encodeImageBase64(archivoPath);
       const mimeType = getImageMimeType(ext);
       content = [
         { type: 'text', text: userText },
         { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Data}` } }
       ];
+
+      const client = getNvidiaClient();
+      parsed = await callNvidiaWithRetry(client, systemPrompt, content);
     } else if (ext === '.pdf') {
-      // Convert PDF to PNG images using pdfjs-dist + canvas (no external binaries)
       const imagePaths = await convertPdfToImages(archivoPath);
       tempDir = path.join(path.dirname(archivoPath), 'ocr_temp');
 
-      // Extract raw text from PDF (if it has a text layer) and inject it into the prompt.
-      // This preserves Chilean number formatting (e.g. "61.716" as literal chars), letting
-      // the vision model cross-check against the rendered image and avoid the ÷1000 bug.
       const pdfText = await extractPdfText(archivoPath);
-      let userTextWithContext = userText;
+      let baseUserText = userText;
       if (pdfText && pdfText.trim().length > 0) {
         const truncated = pdfText.substring(0, 4000);
-        userTextWithContext = `${userText}
-
-TEXTO CRUDO EXTRAÍDO DEL PDF (úsalo como referencia exacta de números; respeta los puntos como separador de miles tal cual aparecen aquí — NO inventes valores ni los acortes):
-"""
-${truncated}
-"""`;
+        baseUserText = `${userText}\n\nTEXTO CRUDO EXTRAÍDO DEL PDF:\n"""\n${truncated}\n"""`;
       }
 
-      // Send first page (most quotation data is on page 1)
-      // If multiple pages, we could process them all, but start with page 1
-      const base64Data = encodeImageBase64(imagePaths[0]);
-      content = [
-        { type: 'text', text: userTextWithContext },
-        { type: 'image_url', image_url: { url: `data:image/png;base64,${base64Data}` } }
-      ];
+      const totalPages = Math.min(imagePaths.length, 2);
 
-      // If there are more pages, add them (max 3 pages to stay within token limits)
-      for (let i = 1; i < Math.min(imagePaths.length, 3); i++) {
-        const pageBase64 = encodeImageBase64(imagePaths[i]);
-        content.push({ type: 'image_url', image_url: { url: `data:image/png;base64,${pageBase64}` } });
+      const allRawItems: any[] = [];
+      let globalData: any = {};
+      const client = getNvidiaClient();
+
+      for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
+        const pageBase64 = encodeImageBase64(imagePaths[pageIdx]);
+        const pageNum = pageIdx + 1;
+
+        const pagePrompt = totalPages > 1
+          ? `PÁGINA ${pageNum} DE ${totalPages}\n\n${baseUserText}`
+          : baseUserText;
+
+        const pageContent: any[] = [
+          { type: 'text', text: pagePrompt },
+          { type: 'image_url', image_url: { url: `data:image/png;base64,${pageBase64}` } }
+        ];
+
+        const pageParsed = await callNvidiaWithRetry(client, systemPrompt, pageContent);
+
+        if (pageParsed.items) allRawItems.push(...pageParsed.items);
+
+        if (pageIdx === 0) {
+          globalData = {
+            numero_cov: pageParsed.numero_cov,
+            proveedor_nombre: pageParsed.proveedor_nombre,
+            proveedor_rut: pageParsed.proveedor_rut,
+            monto_total: pageParsed.monto_total,
+            monto_total_raw: pageParsed.monto_total_raw,
+            condiciones_pago: pageParsed.condiciones_pago,
+            plazo_entrega: pageParsed.plazo_entrega,
+            datos_raw: pageParsed,
+          };
+        }
       }
+
+      parsed = { ...globalData, items: allRawItems };
+      content = []; // dummy, not used after this point
     } else if (ext === '.csv') {
-      // CSV - send as text (no image needed)
       const csvContent = fs.readFileSync(archivoPath, 'utf-8');
       content = [
         { type: 'text', text: `${userText}\n\nContenido del archivo CSV:\n${csvContent.substring(0, 8000)}` }
       ];
+      const client = getNvidiaClient();
+      parsed = await callNvidiaWithRetry(client, systemPrompt, content);
     } else if (['.xlsx', '.xls'].includes(ext)) {
-      // Excel - try to convert to image or send as text notice
-      // For now, we'll try PDF conversion path or send as text
       content = [
         { type: 'text', text: `${userText}\n\n[Archivo Excel - se requiere conversión manual a imagen o CSV para procesamiento OCR óptimo]` }
       ];
+      const client = getNvidiaClient();
+      parsed = await callNvidiaWithRetry(client, systemPrompt, content);
     } else {
       throw Object.assign(
         new Error(`Formato de archivo no soportado: ${ext}. Formatos aceptados: PDF, PNG, JPG, WEBP, CSV`),
@@ -336,84 +486,9 @@ ${truncated}
       );
     }
 
-    // Call NVIDIA Nemotron Nano VL model
-    const client = getNvidiaClient();
-    const completion = await client.chat.completions.create({
-      model: NVIDIA_MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content }
-      ],
-      max_tokens: 4096,
-      temperature: 0,
-      top_p: 1,
-      stream: false,
-    } as any);
 
-    const text = completion.choices?.[0]?.message?.content || '';
 
-    if (!text) {
-      throw Object.assign(
-        new Error('El modelo de IA no retornó respuesta. Intente con un archivo más claro o legible.'),
-        { statusCode: 500 }
-      );
-    }
 
-    // Parse JSON from response (with enable_thinking:false, output should be clean JSON)
-    let parsed: any;
-    let rawText = text.trim();
-    try {
-      // Try direct parse first (expected with reasoning disabled)
-      if (rawText.startsWith('{')) {
-        parsed = JSON.parse(rawText);
-      } else {
-        // Fallback: extract JSON block if model wrapped it in markdown or reasoning
-        const jsonMatch = rawText.match(/\{[\s\S]*"items"[\s\S]*\}/);
-        if (jsonMatch) {
-          parsed = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error('No JSON block found in response');
-        }
-      }
-    } catch (firstError) {
-      // Attempt JSON repair before giving up
-      try {
-        console.warn('JSON malformado, intentando reparar:', rawText.substring(0, 200));
-        const repaired = repairJson(rawText);
-        parsed = JSON.parse(repaired);
-        console.warn('JSON reparado exitosamente');
-      } catch (repairError) {
-        console.error('Raw AI response:', text.substring(0, 2000));
-        throw Object.assign(
-          new Error('No se pudo parsear la respuesta de IA como JSON. El documento puede ser ilegible o el formato no es claro.'),
-          { statusCode: 500 }
-        );
-      }
-    }
-
-    // Helper: repair common JSON syntax errors (unclosed quotes, missing braces)
-    function repairJson(s: string): string {
-      let r = s.trim();
-      // Try to extract JSON from markdown block if present
-      const mdMatch = r.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
-      if (mdMatch) r = mdMatch[1].trim();
-      // Count unclosed quotes after the last opening brace
-      const braceIdx = r.indexOf('{');
-      if (braceIdx >= 0) {
-        const afterBrace = r.substring(braceIdx);
-        const quoteCount = (afterBrace.match(/"/g) || []).length;
-        if (quoteCount % 2 !== 0) r += '"';
-      }
-      // Close unclosed braces
-      const openCurl = (r.match(/\{/g) || []).length;
-      const closeCurl = (r.match(/\}/g) || []).length;
-      r += '}'.repeat(openCurl - closeCurl);
-      // Close unclosed brackets
-      const openBrack = (r.match(/\[/g) || []).length;
-      const closeBrack = (r.match(/\]/g) || []).length;
-      r += ']'.repeat(openBrack - closeBrack);
-      return r;
-    }
 
     // ---------------------------------------------------------------
     // PROCESAMIENTO NUMÉRICO DETERMINÍSTICO POR MONEDA

@@ -1,6 +1,11 @@
 import fs from 'fs';
 import path from 'path';
+import { createRequire } from 'module';
 import { createCanvas, Path2D, ImageData } from '@napi-rs/canvas';
+
+const _require = createRequire(import.meta.url);
+const _pdfjsDistDir = path.dirname(_require.resolve('pdfjs-dist/package.json'));
+const STANDARD_FONT_DATA_URL = `file://${_pdfjsDistDir}/standard_fonts/`;
 
 // pdfjs-dist v4 needs Path2D and ImageData as globals in Node.js
 (globalThis as any).Path2D = Path2D;
@@ -38,6 +43,7 @@ export async function convertPdfToImages(pdfPath: string): Promise<string[]> {
       data,
       disableWorker: true,
       useSystemFonts: true,
+      standardFontDataUrl: STANDARD_FONT_DATA_URL,
     }).promise;
   } catch (err: any) {
     throw Object.assign(
@@ -53,7 +59,7 @@ export async function convertPdfToImages(pdfPath: string): Promise<string[]> {
   try {
     for (let i = 1; i <= pageCount; i++) {
       const page = await doc.getPage(i);
-      const viewport = page.getViewport({ scale: 3 });
+      const viewport = page.getViewport({ scale: 1.5 });
 
       const canvas = createCanvas(viewport.width, viewport.height);
       const ctx = canvas.getContext('2d')!;
