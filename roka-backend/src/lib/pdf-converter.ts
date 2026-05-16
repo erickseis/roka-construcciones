@@ -1,11 +1,10 @@
 import fs from 'fs';
 import path from 'path';
-import { createRequire } from 'module';
 import { createCanvas, Path2D, ImageData } from '@napi-rs/canvas';
 
-const _require = createRequire(import.meta.url);
-const _pdfjsDistDir = path.dirname(_require.resolve('pdfjs-dist/package.json'));
-const STANDARD_FONT_DATA_URL = `file://${_pdfjsDistDir}/standard_fonts/`;
+// esbuild compiles to CJS → require is available at runtime
+const _pdfjsDistDir = path.dirname((require as any).resolve('pdfjs-dist/package.json'));
+const STANDARD_FONT_DATA_URL = `${_pdfjsDistDir}/standard_fonts/`;
 
 // pdfjs-dist v4 needs Path2D and ImageData as globals in Node.js
 (globalThis as any).Path2D = Path2D;
